@@ -78,7 +78,7 @@ and `scripts/play-whatsnew.py` renders exactly that from the blocks below:
 
 ```bash
 python3 scripts/play-whatsnew.py                 # newest version here, to stdout
-python3 scripts/play-whatsnew.py --version 0.1.0 # a named one
+python3 scripts/play-whatsnew.py --version 0.2.0 # a named one
 ```
 
 It reformats and never retypes, so this document stays the only copy. It exits non-zero if a note is
@@ -94,7 +94,12 @@ note; the feature it made possible is. A release where nothing user-visible chan
 heading — rename it and say so in one line, so the decision is deliberate rather than made by
 default.
 
-### 0.1.0 — the first build
+### 0.2.0 — the first build
+
+Renamed from 0.1.0 rather than rewritten. 0.1.0 never left the repository — no tag, no GitHub
+release, nothing uploaded to Play — so no reader has seen a Gloam release under any version, and
+0.2.0 genuinely is the first build to reach one. The bodies stand because the sentence they make
+is still true, not because nobody looked.
 
 **English** — 18/500:
 
@@ -102,7 +107,7 @@ default.
 The first release.
 ```
 
-**Polish** — 18/500:
+**Polish** — 17/500:
 
 ```
 Pierwsze wydanie.
