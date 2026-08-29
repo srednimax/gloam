@@ -4,10 +4,17 @@ The **live checklist**. Keep it short: when an item closes, tick it, write the *
 long-form record you keep, and delete the detail from here. A session should be able to pick up the
 work by reading this file alone.
 
-## The standing schema gate — never ticked, checked at every bump
+## The standing schema gate — parked, because there is no database
 
-**An update must migrate an existing install without losing anything** (ADR-0001). This item does not
-close. Whenever `APP_SCHEMA_VERSION` changes, all five hold before the release goes out:
+**Gloam has no database** (ADR-0007). It keeps a dim level and a shade-running flag in DataStore,
+where an unrecognised key is ignored and a missing one falls back to the default declared beside it.
+There is no version at which a stored file stops being readable, so nothing below applies today and
+`scripts/schema-gate.py` reports *"no database, nothing to gate"* and passes.
+
+**Everything below is kept word for word and comes back the day a feature adds a table.** That is
+the point of parking it rather than deleting it: adding a table is then a deliberate act with this
+checklist already attached, not a convenience someone reaches for on a Tuesday. Whenever
+`APP_SCHEMA_VERSION` exists and changes, all five hold before the release goes out:
 
 1. `MIGRATION_x_y` written **and registered in** `APP_MIGRATIONS` for every step. A migration Room
    never runs is not a migration, and nothing about the build complains.
@@ -33,9 +40,16 @@ close. Whenever `APP_SCHEMA_VERSION` changes, all five hold before the release g
 - [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
       `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
       the thing most likely to block a first upload, and it is discovered late.
-- [ ] **Replace the placeholder domain.** `data/ItemEntity.kt` and `ui/items/`.
-- [ ] **Choose the palette.** Four seeds in `scripts/gen_scheme.py`, regenerate `theme/Color.kt`,
-      read the contrast report it prints on stderr.
+- [x] **Replace the placeholder domain.** Done: the `Item` domain and the database are gone
+      entirely (ADR-0007), and `ui/dim/` is the app's one screen over `AppPreferences`.
+- [x] **Choose the palette.** Done: dusk amber, warm taupe, twilight violet and warm grey, seeded in
+      `scripts/gen_scheme.py`. All 22 contrast checks pass in both schemes. Re-read the stderr report
+      if you touch a seed — and remember the icon's ground is a *second* copy of `mark.PRIMARY`,
+      which `make-launcher-icon.py` now checks rather than trusting.
+- [ ] **Ask for `POST_NOTIFICATIONS`.** `work/NotificationPermission.kt` exists and nothing calls it.
+      The shade's ongoing notification is the documented way out of a very dark screen, and on
+      Android 13+ it is invisible until this is granted — so the safety property the house rules
+      claim is only half true today.
 - [ ] **Write the listing.** `docs/store-listing.md` — every heading in it is parsed by a script.
 - [ ] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Play requires a
       *hosted* URL, and an offline app has no server of its own.

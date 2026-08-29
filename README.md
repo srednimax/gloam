@@ -8,9 +8,15 @@ earns it there is a one-off tip — it unlocks nothing, it just says thanks.
 
 ## Status
 
-Just bootstrapped from [android-starter](https://github.com/srednimax/android-starter). The release
-pipeline and quality gates are real; the screens are still the template's placeholder app. Nothing
-is on Play yet.
+Bootstrapped from [android-starter](https://github.com/srednimax/android-starter), and now a working
+proof of concept: it dims the screen. A slider sets a dim level, a foreground service draws the shade
+over every other app, and it survives you leaving Gloam — which is the whole point, since the apps
+being dimmed are the ones you are reading.
+
+The template's data layer is gone ([ADR-0007](docs/adr/0007-gloam-stores-settings-not-records-so-it-has-no-database.md)):
+Gloam stores settings, not records, so there is no database. The release pipeline and quality gates
+are real. Nothing is on Play yet, the mark is still a placeholder, and the feature set beyond
+"it dims" is still being decided.
 
 ## Contributing
 
