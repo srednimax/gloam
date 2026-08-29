@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.licensee)
 }
 
@@ -147,10 +146,20 @@ android {
     lint {
         // "A newer version exists" is news, not a defect. Left informational so a red lint run
         // always means something is actually wrong with the code.
+        //
+        // MissingTranslation is here for a sharper reason: it contradicts this project's stated
+        // rule. A branch is meant to merge with every shipped language complete, but adding an
+        // English string is explicitly *not* supposed to redden the build — copy gets translated
+        // once, against reviewed wording, rather than twice. `scripts/translation-gate.py` is what
+        // enforces completeness, at the merge boundary where the decision actually belongs, and it
+        // understands staged drafts and `translatable="false"` where lint does not. Leaving lint to
+        // fail here would mean every English-first commit is red for the entirely normal reason
+        // that its translations have not been written yet.
         informational +=
             setOf(
                 "AndroidGradlePluginVersion",
                 "GradleDependency",
+                "MissingTranslation",
                 "NewerVersionAvailable",
                 "OldTargetApi",
             )
@@ -183,13 +192,6 @@ tasks.withType<Test>().configureEach {
         .files(fileTree(rootProject.layout.projectDirectory.dir("translations")))
         .withPropertyName("stagedTranslationsReadByUnitTests")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-}
-
-// Room exports the compiled schema as JSON, and those files are what make a migration reviewable
-// — and what `MigrationTestHelper` builds an old database from. Generated here and committed.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.generateKotlin", "true")
 }
 
 // Attribution, generated rather than remembered.
@@ -238,15 +240,6 @@ abstract class BundleLicences : DefaultTask() {
 
 androidComponents {
     onVariants { variant ->
-        // The exported schemas, shipped inside the *instrumented test* APK as assets.
-        // `MigrationTestHelper` reads a version's JSON at runtime to build a database at that
-        // version, so `1.json` has to be readable on the device — existing in the repo is not
-        // enough. This one line is what turns a committed schema file into a testable one.
-        variant.androidTest
-            ?.sources
-            ?.assets
-            ?.addStaticSourceDirectory("$projectDir/schemas")
-
         // Per variant on purpose: the debug build ships `ui-tooling` and the release build does
         // not, so one shared list would be wrong for whichever variant it was not generated from.
         // The screen names what *this* binary contains, which is what the obligation is about.
@@ -290,27 +283,12 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-    androidTestImplementation(libs.androidx.room.testing)
-    androidTestImplementation(libs.androidx.work.testing)
     implementation(libs.androidx.datastore.preferences)
+    androidTestImplementation(libs.androidx.work.testing)
 
-    // The export manifest inside a backup zip. JSON rather than a hand-rolled format, because the
-    // manifest is what a restore's promise is sourced from. Enums serialise by *name*, which is the
-    // same rule the database's converters follow.
+    // Nav3 serialises the whole back stack across process death, and every NavKey is
+    // @Serializable — that is what this is for now that there is no backup manifest.
     implementation(libs.kotlinx.serialization.json)
-
-    // Reading the camera's orientation tag so it can be baked into the pixels. The androidx one,
-    // not android.media.ExifInterface — it reads from an InputStream, which is what a content://
-    // Uri from the photo picker gives you.
-    implementation(libs.androidx.exifinterface)
-    androidTestImplementation(libs.androidx.exifinterface)
-
-    // Images on screen. Coil renders a missing file as its `error` painter rather than throwing,
-    // which is the "missing media is a placeholder, never a crash" house rule for free.
-    implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

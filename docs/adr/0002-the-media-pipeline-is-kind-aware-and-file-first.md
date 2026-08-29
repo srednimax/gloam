@@ -53,3 +53,8 @@ else — and "missing media renders as a placeholder" already covers the other d
 - The crop is blind: there is no crop-and-zoom UI, so re-picking is the user's only recourse. Keep
   the crop centred and predictable.
 - Nothing upscales. A 300 px source is stored at 300 px, not blown up with invented pixels.
+
+Amendment, 2026-08-29: superseded in practice by ADR-0007. Gloam stores no images, so there is no
+media pipeline; MediaFiles.kt and the whole photos/thumbnails/documents split are gone. The
+reasoning above is kept intact rather than rewritten, because it is still correct for the app it was
+written about, and it is what comes back if a Gloam feature ever calls for it.

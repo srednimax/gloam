@@ -2,7 +2,7 @@ package app.gloam
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
@@ -19,28 +19,9 @@ import kotlinx.serialization.Serializable
  * for a route with no arguments. A route that carries arguments is a `data class` instead, and
  * `@Serializable` is what lets Nav3 save the whole back stack across process death.
  */
-@Serializable data object Items : NavKey
+@Serializable data object Dim : NavKey
 
 @Serializable data object Settings : NavKey
-
-/**
- * The item detail screen, and the editor behind it.
- *
- * A nullable [itemId] means "adding" — one route for add and edit rather than two, because the two
- * screens differ by which fields start filled and by nothing else. Two routes would be two screens
- * to keep in step.
- */
-@Serializable
-data class ItemDetail(
-    val itemId: String,
-) : NavKey
-
-@Serializable
-data class ItemEditor(
-    val itemId: String? = null,
-) : NavKey
-
-@Serializable data object Backup : NavKey
 
 @Serializable data object Licences : NavKey
 
@@ -64,6 +45,6 @@ enum class TopLevelDestination(
     @param:StringRes val label: Int,
     val icon: ImageVector,
 ) {
-    ItemsTab(Items, R.string.tab_items, Icons.AutoMirrored.Filled.List),
+    DimTab(Dim, R.string.tab_dim, Icons.Filled.Home),
     SettingsTab(Settings, R.string.tab_settings, Icons.Filled.Settings),
 }

@@ -20,27 +20,22 @@
     <string name="app_name" translatable="false">Gloam</string>
 
     <!-- Navigation -->
-    <string name="tab_items">Items</string>
+    <string name="tab_dim">Dim</string>
     <string name="tab_settings">Settings</string>
 
     <!-- Common actions -->
     <string name="action_back">Back</string>
-    <string name="action_save">Save</string>
-    <string name="action_edit">Edit</string>
-    <string name="action_delete">Delete</string>
 
-    <!-- Items -->
-    <string name="item_add">Add an item</string>
-    <string name="item_detail_title">Item</string>
-    <string name="item_title_label">Title</string>
-    <string name="item_notes_label">Notes</string>
-    <string name="item_pick_image">Choose a picture</string>
-    <!-- Says what to do, not that there is nothing. -->
-    <string name="items_empty">Nothing here yet. Tap + to add your first item.</string>
-    <plurals name="items_count">
-        <item quantity="one">%d item</item>
-        <item quantity="other">%d items</item>
-    </plurals>
+    <!-- The dim screen. "Dim level" rather than "brightness" throughout, per CONTEXT.md: the
+         backlight is Android's value and this one runs the other way. -->
+    <string name="dim_title">Dim</string>
+    <string name="dim_level_label">Dim level</string>
+    <string name="dim_level_value">%1$d%%</string>
+    <string name="dim_start">Start dimming</string>
+    <string name="dim_stop">Stop dimming</string>
+    <string name="dim_permission_title">Gloam needs permission to draw over other apps</string>
+    <string name="dim_permission_body">The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath.</string>
+    <string name="dim_permission_grant">Open settings</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
@@ -53,31 +48,16 @@
     <string name="settings_language_system">System</string>
     <string name="settings_language_english" translatable="false">English</string>
     <string name="settings_language_polish" translatable="false">Polski</string>
-    <string name="settings_reminders">Reminders</string>
-    <string name="settings_reminders_enabled">Remind me</string>
-    <string name="settings_reminders_hint">A single daily check. Nothing is sent anywhere.</string>
-    <string name="settings_data">Data</string>
-    <string name="settings_backup">Backup and restore</string>
     <string name="settings_about">About</string>
     <string name="settings_licences">Open-source licences</string>
-
-    <!-- Backup -->
-    <string name="backup_explainer">Everything stays on this phone. A backup is a single file you keep wherever you like.</string>
-    <string name="backup_export_records">Export records</string>
-    <string name="backup_export_everything">Export everything</string>
-    <string name="backup_restore">Restore from a file…</string>
 
     <!-- Licences -->
     <string name="licence_text_missing">The text of this licence is not bundled with the app.</string>
 
     <!-- Notification channels. The convention `channel_<id>_name` / `channel_<id>_description` is
          asserted by ReminderChannelsTest, so a new channel cannot ship with no name. -->
-    <string name="channel_reminders_name">Reminders</string>
-    <string name="channel_reminders_description">The daily check for anything due.</string>
-
-    <!-- The schema gate's screen. Deliberately plain: someone reading it is already worried. -->
-    <string name="schema_mismatch_title">This data was saved by a different version</string>
-    <string name="schema_mismatch_body">The data on this phone was saved at version %1$d, and this build reads version %2$d.</string>
-    <string name="schema_mismatch_copy">A copy has been kept as %1$s. Nothing has been deleted.</string>
-    <string name="schema_mismatch_continue">Continue and start fresh</string>
+    <string name="channel_shade_name">Dimming</string>
+    <string name="channel_shade_description">Shown while the screen is dimmed, so the shade can be turned off from anywhere.</string>
+    <string name="shade_notification_title">Screen dimmed</string>
+    <string name="shade_notification_stop">Stop</string>
 </resources>
