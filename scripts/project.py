@@ -55,11 +55,11 @@ DEBUG_APPLICATION_ID = f"{APPLICATION_ID}.debug"
 
 # The human name, for generated art and log lines. The authority for what the launcher shows is
 # `app_name` in res/values/strings.xml; this is only for things outside the APK.
-APP_NAME = "Starter"
+APP_NAME = "Gloam"
 
 # --- Room -------------------------------------------------------------------------------------
 # The filename passed to Room.databaseBuilder, and so what lands in /data/data/<pkg>/databases/.
-DATABASE_FILE = "app.db"
+DATABASE_FILE = "gloam.db"
 
 # The schema constants `schema-gate.py` reads. Renaming these in Kotlin means renaming them here.
 SCHEMA_VERSION_CONST = "APP_SCHEMA_VERSION"

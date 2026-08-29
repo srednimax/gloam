@@ -1,7 +1,10 @@
-# <app name>
+# Gloam
 
-<One paragraph: what this app does, for whom, and the one constraint that shapes everything —
-"free, ad-free, no server, all data on the device", or whatever replaces it.>
+A screen dimmer that takes the display below Android's minimum brightness, for people who read in
+the dark and find the lowest system setting still too bright. Every feature is free — no ads, no
+server, no account, no premium tier; the only payment is an optional one-off tip that unlocks
+nothing. That constraint decides the arguments: there is no paid branch to keep alive, so a feature
+either ships to everyone or it doesn't ship.
 
 - **Vocabulary:** [`CONTEXT.md`](CONTEXT.md) — use these terms in code and UI.
 - **Decisions and why:** [`docs/adr/`](docs/adr/) — read before changing anything they cover.

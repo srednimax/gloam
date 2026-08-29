@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 import mark
 
 # The three strings this graphic is *about*. Edit them; everything else is layout.
-APP_NAME = "Starter"
+APP_NAME = "Gloam"
 TAGLINE = "Replace this with one line about your app"
 FEATURES = "Private  ·  Offline  ·  No ads  ·  Free"
 

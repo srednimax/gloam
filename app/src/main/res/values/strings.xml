@@ -17,7 +17,7 @@
     purpose so someone lost in a language they cannot read can find their way back.
 -->
 <resources>
-    <string name="app_name" translatable="false">Starter</string>
+    <string name="app_name" translatable="false">Gloam</string>
 
     <!-- Navigation -->
     <string name="tab_items">Items</string>
