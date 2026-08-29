@@ -60,3 +60,8 @@ A completely green migration suite says nothing about whether a real upgrade is 
   whether the destructive button exists at all. Rendering one button that is sometimes destructive is
   how a release build ends up wiping someone's data.
 - `preserved/` is never pruned. It is small and it is the last copy.
+
+Amendment, 2026-08-29: superseded in practice by ADR-0007. Gloam has no database at all, so there is
+no schema to gate and no destructive fallback to guard against. The reasoning above is kept intact
+rather than rewritten, because it is still correct for the app it was written about, and it is what
+comes back if a Gloam feature ever calls for it.

@@ -61,3 +61,8 @@ the user's patience on nudges that do not need any of it. If everything is urgen
   user**. Creating a channel quiet is a decision with no second attempt.
 - Testing any of this on a vendor ROM requires reading the autostart state first. A run against an
   unknown one proves nothing either way — `scripts/device-gate.py` reads it.
+
+Amendment, 2026-08-29: superseded in practice by ADR-0007. Gloam schedules nothing. WorkManager
+remains a dependency for future use, but no worker, no alarm and no SCHEDULE_EXACT_ALARM permission
+survive. The reasoning above is kept intact rather than rewritten, because it is still correct for
+the app it was written about, and it is what comes back if a Gloam feature ever calls for it.

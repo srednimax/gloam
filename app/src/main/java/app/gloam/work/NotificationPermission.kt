@@ -116,7 +116,7 @@ fun Context.openAppNotificationSettings() {
  * there is no version branch to write — but a skin can still decline to export it, so it falls
  * through to the same two screens as above.
  */
-fun Context.openChannelNotificationSettings(channel: ReminderChannel) {
+fun Context.openChannelNotificationSettings(channel: AppChannel) {
     startFirstAvailable(
         Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)

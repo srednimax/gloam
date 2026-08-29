@@ -5,15 +5,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import app.gloam.data.AppPreferences
-import app.gloam.data.ItemRepository
-import app.gloam.data.buildAppDatabase
-import app.gloam.media.MediaFiles
 import kotlinx.coroutines.CoroutineScope
 
 /**
  * `internal` rather than private: [MainApplication] holds the one [AppPreferences] over this store
- * and hands it to the container, because the theme has to read a preference before the container is
- * allowed to exist (ADR-0001's gate).
+ * and hands it to the container, because the theme has to read a preference before the first window
+ * exists.
  *
  * Kotlin note: `by preferencesDataStore(...)` is a property delegate on `Context` — it creates the
  * store once per process and hands the same instance to every caller. Creating a second DataStore
@@ -29,28 +26,21 @@ internal val Context.preferencesStore: DataStore<Preferences> by preferencesData
  * no annotation processor round trip in every build. Migrating to Hilt later is mechanical, because
  * everything here is already constructor injection.
  *
- * The rule that makes it work: **nothing constructs its own dependencies.** A ViewModel takes a
- * repository, a repository takes a DAO and a `MediaFiles`, and only this file calls a constructor.
- * The moment a class reaches for a singleton instead, it stops being testable without a device.
+ * The rule that makes it work: **nothing constructs its own dependencies.** Only this file calls a
+ * constructor. The moment a class reaches for a singleton instead, it stops being testable without
+ * a device.
+ *
+ * **It is nearly empty on purpose.** Gloam stores settings rather than records — a dim level and a
+ * warmth, which DataStore holds — so there is no database, no repository and no media pipeline for
+ * this to assemble. It stays because it is the seam the shade controller and anything else with a
+ * lifetime longer than a screen will hang off, and an empty seam is cheaper to fill than one that
+ * has to be introduced later.
  *
  * Lives at the package root with the app shell: like `Navigation.kt`, it describes how the app hangs
  * together rather than belonging to any one screen.
  */
 class AppContainer(
-    context: Context,
+    @Suppress("unused") private val context: Context,
     val preferences: AppPreferences,
     @Suppress("unused") private val applicationScope: CoroutineScope,
-) {
-    private val appContext = context.applicationContext
-
-    /**
-     * Kotlin note: `by lazy` here is the ordinary decorative kind — build it on first use. It is
-     * **not** the gate; the gate is the `lazy` on `MainApplication.container`, which decides whether
-     * this object is ever constructed at all.
-     */
-    private val database by lazy { buildAppDatabase(appContext) }
-
-    val media by lazy { MediaFiles(appContext) }
-
-    val items by lazy { ItemRepository(database.itemDao(), media) }
-}
+)

@@ -20,7 +20,7 @@ import java.io.File
  * under it, and the file's *contents* are what is in question. Gradle runs unit tests with the
  * module directory as the working directory.
  */
-class ReminderChannelsTest {
+class ChannelsTest {
     private val declared: Set<String> =
         Regex("""<string\s+name="(channel_[^"]+)"""")
             .findAll(File("src/main/res/values/strings.xml").readText())
@@ -29,7 +29,7 @@ class ReminderChannelsTest {
 
     /** The naming convention the enum's `R.string` fields follow, stated once. */
     private val expected: Set<String> =
-        ReminderChannel.entries
+        AppChannel.entries
             .flatMap { channel -> listOf("channel_${channel.id}_name", "channel_${channel.id}_description") }
             .toSet()
 
@@ -39,18 +39,11 @@ class ReminderChannelsTest {
     }
 
     @Test
-    fun `there are exactly five channels, and they are the five this release has behind them`() {
-        // One per thing that posts, and no more. A channel is the owner's only per-kind control:
-        // muting a daily watch nag must not mute an annual vaccination, deciding a monthly "make a
-        // backup" prompt is not for you must not cost either of the other two, and muting doses must
-        // not follow from any of the three. `backup` arrived in 4e, `doses` in 5a and `events` in
-        // 10e — care is a job the app is asking for and an event is a day the owner asked to be
-        // reminded of, which is a distinction the per-channel switch is the only place to act on.
-        // This test is what makes an addition a deliberate act rather than a passing convenience.
-        assertEquals(
-            setOf("reminders"),
-            ReminderChannel.entries.map { it.id }.toSet(),
-        )
+    fun `there is exactly one channel, and it is the shade's`() {
+        // One per thing that posts, and no more. A channel is the user's only per-kind control, so
+        // adding one is a decision about what they are allowed to mute separately — this test is
+        // what makes that a deliberate act rather than a passing convenience.
+        assertEquals(setOf("shade"), AppChannel.entries.map { it.id }.toSet())
     }
 
     @Test
@@ -59,21 +52,33 @@ class ReminderChannelsTest {
         // direction is what makes it worth pinning: a channel created at the wrong importance can
         // never be raised again, only lowered by the user, so it is a decision with no second try.
         assertTrue(
-            ReminderChannel.entries.count { it.importance == NotificationManager.IMPORTANCE_HIGH } <= 1,
+            AppChannel.entries.count { it.importance == NotificationManager.IMPORTANCE_HIGH } <= 1,
         )
     }
 
     @Test
-    fun `no channel is created below IMPORTANCE_DEFAULT`() {
-        // Creating a channel quiet would be making the mute decision on the user's behalf, in
-        // the one direction that cannot be undone.
-        assertTrue(ReminderChannel.entries.all { it.importance >= NotificationManager.IMPORTANCE_DEFAULT })
+    fun `only an ongoing channel may be created below IMPORTANCE_DEFAULT`() {
+        // Creating an *alerting* channel quiet makes the mute decision on the user's behalf, in the
+        // one direction that cannot be undone — so the rule stands for anything that arrives.
+        //
+        // A foreground service's notification never arrives: it is on screen for as long as the
+        // service runs, because Android requires it to be. At DEFAULT it would buzz and peek a
+        // banner at the moment the user asked for a darker screen. `ongoing` is what separates the
+        // two cases, so the exemption has to be claimed explicitly rather than by picking a number.
+        for (channel in AppChannel.entries) {
+            if (!channel.ongoing) {
+                assertTrue(
+                    "${channel.id} alerts, so it may not start below DEFAULT",
+                    channel.importance >= NotificationManager.IMPORTANCE_DEFAULT,
+                )
+            }
+        }
     }
 
     @Test
     fun `channel ids are stable, lowercase and free of the app's package`() {
         // A renamed id is a *new* channel: the user's mute silently goes back to unmuted and there
         // is no migration for it. Nothing enforces that but review — this at least pins the shape.
-        assertTrue(ReminderChannel.entries.all { it.id.matches(Regex("[a-z][a-z_]*")) })
+        assertTrue(AppChannel.entries.all { it.id.matches(Regex("[a-z][a-z_]*")) })
     }
 }

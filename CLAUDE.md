@@ -18,11 +18,17 @@ Don't restate ADR reasoning here; link to it. This file is loaded every session 
 
 ## Working with the person who owns this repo
 
-<Their background, and what to explain rather than assume. For example: "Fluent in
-JavaScript/TypeScript, new to Kotlin. Comment code where a Kotlin/Compose idiom has no direct JS
-analogue — `Flow` vs promises/observables, `suspend` vs `async`, `remember`/`derivedStateOf` vs
-`useMemo`, data class `copy()` vs object spread, sealed classes vs discriminated unions. Explain the
-*why*, don't restate the line. Prefer explicit and readable over clever.">
+Fluent in JavaScript/TypeScript, new to Kotlin. Comment code where a Kotlin/Compose idiom has no
+direct JS analogue — `Flow` vs promises/observables, `suspend` vs `async`, `remember` /
+`derivedStateOf` vs `useMemo`, data class `copy()` vs object spread, sealed classes vs discriminated
+unions, `by` delegation vs a getter. Explain the *why*, don't restate the line. Prefer explicit and
+readable over clever.
+
+The Android **platform** is the other half of the gap and has no JS analogue at all: the manifest as
+a declaration the OS reads before any code runs, permission models that differ per API level, process
+death, and vendor ROMs overriding documented behaviour. Say when a constraint comes from the platform
+rather than from this codebase — that is the difference between "we chose this" and "Android will not
+let us do otherwise".
 
 ## Stack
 
@@ -30,40 +36,42 @@ analogue — `Flow` vs promises/observables, `suspend` vs `async`, `remember`/`d
 | --- | --- |
 | Kotlin, Jetpack Compose, Material 3 | Android only, `minSdk` 26 |
 | **Navigation 3** (`androidx.navigation3`) | Replaces Navigation Compose 2.x — don't reintroduce the old one |
-| Room via KSP | DAOs return `Flow`; schema evolution per ADR-0001 |
+| **DataStore only — there is no database** | Gloam stores settings, not records. See *Storage* below |
 | Manual DI via `AppContainer`, **not Hilt** | Constructor injection is clearer at this size and easy to migrate later |
-| WorkManager + exact alarms | Two mechanisms on purpose — ADR-0003 |
-| Photo Picker + `TakePicture` intent, **not CameraX** | Far less code; the system camera is fine here |
-| Coil 3 images | Compose-native, local files only |
-| On-device storage only | No backend. Backup per ADR-0005 |
+| A foreground service owning one overlay window | `shade/ShadeService.kt` — the app's whole mechanism |
+| On-device storage only | No backend, no account. Platform Auto Backup, no custom agent |
 
 ## House rules
 
-- **An update never loses a user's data.** Any change to `APP_SCHEMA_VERSION` ships with its
-  `MIGRATION_x_y` *registered in* `APP_MIGRATIONS`, the exported `app/schemas/*/N.json` committed, a
-  `SchemaGateTest` assertion that the launch gate lets the upgrade through, and a migration test that
-  proves the rows survive. `scripts/schema-gate.py` enforces the mechanical half in CI.
-  **Every migration test opens the database directly and so walks past the launch gate** — that is
-  how an app ships a refusal screen to every existing install with a green test run behind it.
-  Verify an upgrade on the phone, not only in a test.
+- **Storage is DataStore, and there is no database.** Gloam remembers a dim level and whether the
+  shade should be running — settings, not records. A new preference is a key, a `Flow` that reads it
+  with its default, and a `suspend` setter; keep the default *in the read* rather than writing it on
+  first launch, and there is nothing to migrate, ever.
+  **If a feature ever needs a list the user creates**, the whole Room apparatus comes back with it —
+  `scripts/schema-gate.py`, ADR-0001 and this rule's previous wording are all still in git history
+  for that. Adding a table is a deliberate act with a migration story attached, not a convenience.
+- **The shade must never trap the user.** It is a window over every other app, so two things are
+  load-bearing and neither is obvious: the window carries `FLAG_NOT_TOUCHABLE` and
+  `FLAG_NOT_FOCUSABLE` so every touch passes through, and its alpha is capped below fully opaque
+  (`ShadeService.MAX_SHADE_ALPHA`). Without the flags the phone appears frozen; without the cap the
+  way out is behind the thing you need to get out of. The foreground notification is `ongoing` for
+  the same reason — it is the escape hatch, not a courtesy.
 - **A branch merges with every shipped language complete.** Adding an English string does *not*
   redden your build — completeness is a merge gate (`scripts/translation-gate.py`), not a test, so
   copy is translated **once** rather than against draft wording and again after review. Everything
   else about a translation — format arguments, plural categories per CLDR, orphans,
   `translatable="false"` — is `TranslationTest` and holds continuously. Translate from **English
   only**, per [`docs/translator-brief.md`](docs/translator-brief.md).
-- **Media paths in the DB are relative** and split by kind — `thumbnails/<uuid>.jpg`,
-  `photos/<uuid>.jpg`, `documents/<uuid>.jpg` — resolved against `filesDir` at read time. Absolute
-  paths change across installs and break restored backups; the split makes the backup export scopes a
-  list of directories.
-- **All image writes go through `media/MediaFiles.kt`** — it downsamples and re-encodes per kind,
-  bakes in EXIF rotation, strips metadata (GPS included), and writes the file before the row.
-  Bypassing it puts full-resolution bitmaps in memory and blows up any image grid.
-- **Missing media renders as a placeholder, never a crash.** A restore may legitimately lack files.
-- **DAOs return `Flow`**, screens collect it. Don't hand-roll refresh calls.
-- **Enums with `TypeConverter`s, not loose strings**, for closed vocabularies. Store enums by
-  **name, never ordinal**, so adding a value can't rewrite history.
-- One `ViewModel` per screen, UI state as a single immutable data class.
+- **The stored intent and the live service are different questions.** `shadeRunning` in DataStore is
+  what the user asked for; whether the service is alive is what the ROM allowed. Xiaomi will kill the
+  service without the user changing their mind, so read the preference to decide what *should* be on
+  screen and never infer intent from a running process.
+- **Say `dim level`, `shade`, `backlight`, `floor` and `warmth` exactly as [`CONTEXT.md`](CONTEXT.md)
+  defines them.** Two different mechanisms both look like "brightness" and only one is ours; the
+  vocabulary is the only thing keeping them apart in code.
+- **Preferences are read as `Flow`**, screens collect them. Don't hand-roll refresh calls.
+- One `ViewModel` per screen, UI state as a single immutable data class. A `ViewModel` never holds a
+  `Context` — starting the service is the screen's job, because that is what has one.
 - **Developer-only surface lives in `app/src/debug/`, never in `main/` behind `BuildConfig.DEBUG`.**
   With `isMinifyEnabled = false` a statically-false branch is still compiled into the release AAB —
   a hide, not a strip — and its strings are still inside the translation gate. The seam is
@@ -98,16 +106,14 @@ app/src/main/java/<namespace>/
   MainActivity.kt, MainApplication.kt, AppContainer.kt, Navigation.kt, NavigationKeys.kt
                the app shell and Nav3 wiring stay at the package root, not under ui/ — they describe
                how the app hangs together rather than any one screen
-  AppBackupAgent.kt   Android Auto Backup, taking control of its own file set (ADR-0005)
-  data/        Room entities, DAOs, database, converters, migrations, the schema gate, preferences
-  data/backup/ export, restore, the manifest, the WAL checkpoint
-  media/       MediaFiles.kt — the single path for persisting images, kind-aware
+  data/        AppPreferences.kt — the DataStore keys and their defaults. No database
+  shade/       ShadeService.kt, the overlay window and the foreground service that owns it;
+               OverlayPermission.kt, the SYSTEM_ALERT_WINDOW read and the settings hand-off
   theme/       generated palette, type scale, spacing, the night-mode window half
-  ui/          Compose screens + ViewModels, one package per area
-  work/        WorkManager, receivers, notification channels, permission asks
+  ui/          Compose screens + ViewModels, one package per area. ui/dim/ is the app's one screen
+  work/        notification channels, the notification-permission ask, Xiaomi battery/autostart
 
-app/src/debug/    the developer-only build: the sample-data seeder, Settings' debug section and its
-                  strings, and SeedReceiver for the capture driver
+app/src/debug/    the developer-only build: Settings' debug section, currently an empty seam
 app/src/release/  only the no-op half of that seam, so main/ can call it unconditionally
 scripts/          the Python toolchain. project.py is the one place the app's identity lives
 art/             mark.py is the identity; both generators derive from it
@@ -123,11 +129,12 @@ with a build to prove it.
 
 ## Environment notes
 
-<Fill this in for the machine and phone you actually develop on — it is the section that saves the
-most time, and none of it is discoverable from the code. What belongs here:>
+**No Android Studio — everything is CLI**, `./gradlew` against a physical Xiaomi phone over USB.
+JDK 21, `ANDROID_HOME=~/Android/Sdk`, Python 3.14 for `scripts/`. No emulator is in the loop, so
+anything device-shaped needs the phone plugged in — `adb devices` before assuming it is.
 
-- Whether there is an Android Studio, or everything is CLI against a physical phone over USB.
-- **Vendor ROM behaviour.** On Xiaomi/HyperOS: split-APK installs (`connectedAndroidTest`) prompt on
+- **Vendor ROM behaviour.** The phone is Xiaomi/HyperOS, so everything below is what this device
+  actually does rather than a hypothetical. Split-APK installs (`connectedAndroidTest`) prompt on
   the phone and a missed prompt fails the run with `INSTALL_FAILED_USER_RESTRICTED`; the workaround
   is to install both APKs plain and run the instrumentation directly:
   ```bash

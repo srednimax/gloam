@@ -62,3 +62,9 @@ system — for a feature the platform already provides.
   the format.
 - Media is merged rather than replaced on restore: filenames are UUIDs, so a collision means the same
   file, and keeping files the archive does not mention costs disk where deleting them costs photos.
+
+Amendment, 2026-08-29: superseded in practice by ADR-0007. Both halves are gone. There is no
+database to checkpoint, so the custom AppBackupAgent is removed and the platform's default Auto
+Backup covers the preferences file; and with no media there is nothing for a manual export to carry.
+The reasoning above is kept intact rather than rewritten, because it is still correct for the app it
+was written about, and it is what comes back if a Gloam feature ever calls for it.

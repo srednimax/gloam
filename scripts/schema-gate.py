@@ -64,6 +64,17 @@ def version_at(ref: str) -> int | None:
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
 
+    # An app with no database has no schema to gate, and that is a legitimate shape rather than a
+    # broken checkout: Gloam stores a dim level and a warmth in DataStore, where an unrecognised key
+    # is ignored and a missing one falls back to the default declared beside it. Nothing to migrate,
+    # nothing to lose, nothing for this script to stand in front of.
+    #
+    # Reported and passed rather than crashed, because CI runs this on every branch. If a feature
+    # ever adds a table, the file comes back and so does the gate, unchanged.
+    if not DATABASE.is_file():
+        print(f"schema-gate: no {DATABASE.name} in this project — no database, nothing to gate.")
+        return 0
+
     current = version_in(DATABASE.read_text())
     if current is None:
         print(f"schema-gate: could not read {project.SCHEMA_VERSION_CONST} from {DATABASE}", file=sys.stderr)

@@ -30,7 +30,6 @@ import app.gloam.ui.common.SectionHeader
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onOpenBackup: () -> Unit,
     onOpenLicences: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel =
@@ -65,17 +64,6 @@ fun SettingsScreen(
 
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
-
-            SectionHeader(stringResource(R.string.settings_reminders))
-            SettingsSwitch(
-                title = stringResource(R.string.settings_reminders_enabled),
-                subtitle = stringResource(R.string.settings_reminders_hint),
-                checked = state.remindersEnabled,
-                onChange = viewModel::setRemindersEnabled,
-            )
-
-            SectionHeader(stringResource(R.string.settings_data))
-            SettingsRow(stringResource(R.string.settings_backup), onClick = onOpenBackup)
 
             SectionHeader(stringResource(R.string.settings_about))
             SettingsRow(stringResource(R.string.settings_licences), onClick = onOpenLicences)

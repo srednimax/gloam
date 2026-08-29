@@ -3,30 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        POST_NOTIFICATIONS is a runtime permission on API 33+ and granted at install below it. Never
-        ask it from a bare system dialog on launch: Android allows only two denials before the
-        dialog stops appearing for good, so the ask must follow your own screen explaining what it
-        is for (ADR-0003).
+        SYSTEM_ALERT_WINDOW is the whole app. It is a **special** permission, not a runtime one:
+        there is no dialog Gloam can raise, only a settings screen it can send the user to, and the
+        answer has to be re-read on every resume because it can be revoked there just as easily.
+        `shade/OverlayPermission.kt` is the only place that asks.
 
-        RECEIVE_BOOT_COMPLETED is install-time and invisible to the user. It exists so BootReceiver
-        can put the daily sweep back after a restart.
+        POST_NOTIFICATIONS is a runtime permission on API 33+ and granted at install below it. The
+        shade's foreground service is required by Android to show a notification, and on 33+ a
+        denied permission means it shows none — the service still runs, but the user loses the Stop
+        action that is their way out of a very dark screen.
+
+        FOREGROUND_SERVICE and its `specialUse` type: the shade has to outlive Gloam's own window,
+        because the point is to dim *other* apps. None of the platform's named types (camera,
+        location, mediaPlayback, …) describes drawing an overlay, which is what `specialUse` exists
+        for — and Play requires the justification below to be filled in for it.
     -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!--
-        SCHEDULE_EXACT_ALARM and **not** USE_EXACT_ALARM. The other one is auto-granted and can
-        never be revoked, which sounds like the better deal until you read Play's policy: it is
-        permitted only for apps whose core function is an alarm clock or a calendar. Declaring it in
-        anything else puts the whole listing at risk to save one settings screen.
-
-        This one is **denied by default** from Android 14 at targetSdk 33+, so assume nothing: read
-        `canScheduleExactAlarms()`, and let the inexact path still deliver via `setAndAllowWhileIdle`
-        — late but real (ADR-0003).
-
-        Delete this line if your app has no reason to be precise about a moment. Most do not.
-    -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
         Package visibility (API 30+) for the one OEM screen the app offers to open: Xiaomi's
@@ -65,20 +60,18 @@
         devices ignore the attribute and AppCompat's backport reads the same file, so the list of
         shipped languages stays in one place across the whole supported range (ADR-0004).
 
-        Auto Backup runs through AppBackupAgent, which names its own file set (ADR-0005) — so
-        `backup_rules.xml` and `data_extraction_rules.xml` are absent along with the attributes that
-        would point at them. Static include/exclude XML cannot checkpoint the write-ahead log, and
-        without that the platform is eligible to copy the live database and its `-wal` sidecar
-        mid-write: a backup that appears to work and restores corrupt.
+        Auto Backup is the platform's default here, with no agent and no rules XML.
 
-        `fullBackupOnly` is not optional beside `backupAgent`. Declaring an agent without it puts
-        the app on the key/value path, where the agent's no-op onBackup is what runs.
+        The template shipped an `AppBackupAgent` because static include/exclude XML cannot checkpoint
+        a database's write-ahead log, and without that the platform is eligible to copy the live
+        database and its `-wal` sidecar mid-write — a backup that appears to work and restores
+        corrupt. Gloam has no database, so it has no WAL, so it has nothing to checkpoint and no
+        reason to take over its own file set. What is left to back up is the DataStore preferences
+        file, which the platform's default handles correctly on its own (ADR-0005).
     -->
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
-        android:backupAgent=".AppBackupAgent"
-        android:fullBackupOnly="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
@@ -95,24 +88,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--
-            The camera app writes the photo it takes into a file we own, and hands back a Uri for
-            it. A file:// Uri has been illegal to pass across apps since Android 7, so this provider
-            vends a content:// one instead, scoped to the single cache directory in file_paths.xml.
-            Photo Picker needs none of this — it hands us a Uri of its own — but "take a photo"
-            does. No CAMERA permission is declared on purpose: declaring it would make a camera
-            *required* at install time, and firing the system camera intent needs none.
-        -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
 
         <!--
             **WorkManager initialises on demand, not at process start.** Removing its entry from
@@ -141,39 +116,30 @@
         </provider>
 
         <!--
-            Puts the daily sweep back after a restart, and does nothing else. It reads no persisted
-            schedule because there is none — what is due is derived, and the OS schedule was never
-            the source of truth.
+            The shade. `exported="false"` because nothing outside this app has any business starting
+            it — the notification's Stop action is a PendingIntent, which carries this app's own
+            identity and needs no export.
 
-            `exported="false"` is correct even though the sender is another process: BOOT_COMPLETED
-            is a protected broadcast, which the system is permitted to deliver to a receiver no
-            other app can reach.
-        -->
-        <receiver
-            android:name=".work.BootReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
+            `foregroundServiceType="specialUse"` is required from Android 14, and the `<property>`
+            under it is the justification string Play reads. None of the platform's named types
+            covers "draws a dimming overlay", which is precisely the case specialUse exists for.
 
-        <!--
-            Delivered to this app when it has just been replaced by an update. A schema-bumping
-            update leaves the database at the old version until something opens it, and every
-            background entry point correctly declines to work over one — so without this the first
-            reminder after an update goes unposted and the chain stops until the user opens the app.
-            The receiver only enqueues; the migrating happens in a worker, which has minutes where a
-            receiver has ten seconds. Protected broadcast, so `exported="false"` is right.
+            **`stopWithTask="false"`** is the load-bearing attribute: without it, swiping Gloam out
+            of the recents list takes the shade down with it. That is the opposite of what someone
+            reading in the dark wants — they dim the screen and then leave the app, which is the
+            normal way to use this.
         -->
-        <receiver
-            android:name=".work.PackageReplacedReceiver"
+        <service
+            android:name=".shade.ShadeService"
             android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
-        </receiver>
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Draws a user-controlled dimming overlay above other apps, which must
+                    remain on screen while the user is in those apps." />
+        </service>
 
         <!--
             Not a service anybody starts — `android:enabled="false"` means it can never run. It is a

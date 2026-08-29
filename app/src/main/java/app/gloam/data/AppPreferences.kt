@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -41,9 +42,9 @@ class AppPreferences(
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MATERIAL_YOU = booleanPreferencesKey("material_you")
-        val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
-        val BACKUP_FOLDER_URI = stringPreferencesKey("backup_folder_uri")
+        val DIM_LEVEL = intPreferencesKey("dim_level")
+        val SHADE_RUNNING = booleanPreferencesKey("shade_running")
     }
 
     /**
@@ -69,27 +70,27 @@ class AppPreferences(
      */
     val materialYou: Flow<Boolean> = store.data.map { it[Keys.MATERIAL_YOU] ?: false }
 
-    /**
-     * Whether the user has opted into reminders.
-     *
-     * Separate from the OS notification permission on purpose, and both are checked before anything
-     * is posted. The permission answers "may we", this answers "did they ask us to" — and a user who
-     * granted the permission once and turned reminders off in the app has not revoked the permission.
-     */
-    val remindersEnabled: Flow<Boolean> = store.data.map { it[Keys.REMINDERS_ENABLED] ?: false }
-
     /** Whether first-run setup has been completed. */
     val onboardingDone: Flow<Boolean> = store.data.map { it[Keys.ONBOARDING_DONE] ?: false }
 
     /**
-     * The tree Uri the user picked for automatic backups, if any.
+     * How dark the shade is, 0–100. **Not a brightness** — it runs the other way, and the backlight
+     * is Android's value rather than ours (CONTEXT.md).
      *
-     * Stored as a string because that is what `Uri.toString()`/`Uri.parse()` round-trip, and because
-     * the persisted permission grant it refers to is held by the system, not here. A stored Uri whose
-     * grant has been revoked reads back fine and fails at write time — so treat this as a *hint*, and
-     * handle the failure where the write happens.
+     * Clamped on read as well as on write. A value outside the range can only arrive from a build
+     * that used a different range, and the screen it feeds draws a slider that would throw on one.
+     * Coercing is the behaviour that degrades rather than crashes.
      */
-    val backupFolderUri: Flow<String?> = store.data.map { it[Keys.BACKUP_FOLDER_URI] }
+    val dimLevel: Flow<Int> = store.data.map { (it[Keys.DIM_LEVEL] ?: DEFAULT_DIM_LEVEL).coerceIn(0, 100) }
+
+    /**
+     * Whether the shade should be on screen.
+     *
+     * The user's intent, not the live state of the service — those are different questions and only
+     * this one survives the process being killed. Xiaomi will kill the service; what it cannot do is
+     * change this, which is what lets the shade come back rather than silently staying off.
+     */
+    val shadeRunning: Flow<Boolean> = store.data.map { it[Keys.SHADE_RUNNING] ?: false }
 
     /**
      * The theme mode, read once, before any Activity exists.
@@ -109,17 +110,24 @@ class AppPreferences(
         store.edit { it[Keys.MATERIAL_YOU] = enabled }
     }
 
-    suspend fun setRemindersEnabled(enabled: Boolean) {
-        store.edit { it[Keys.REMINDERS_ENABLED] = enabled }
-    }
-
     suspend fun setOnboardingDone(done: Boolean) {
         store.edit { it[Keys.ONBOARDING_DONE] = done }
     }
 
-    suspend fun setBackupFolderUri(uri: String?) {
-        store.edit { prefs ->
-            if (uri == null) prefs.remove(Keys.BACKUP_FOLDER_URI) else prefs[Keys.BACKUP_FOLDER_URI] = uri
-        }
+    suspend fun setDimLevel(level: Int) {
+        store.edit { it[Keys.DIM_LEVEL] = level.coerceIn(0, 100) }
+    }
+
+    suspend fun setShadeRunning(running: Boolean) {
+        store.edit { it[Keys.SHADE_RUNNING] = running }
     }
 }
+
+/**
+ * Where the slider starts on a first run.
+ *
+ * Deliberately modest. Someone who installs a screen dimmer and lands on a nearly-black screen has
+ * no way to tell a working app from a broken phone, and the control to fix it is the thing they can
+ * no longer see.
+ */
+const val DEFAULT_DIM_LEVEL = 40
