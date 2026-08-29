@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.View
@@ -135,7 +136,23 @@ class ShadeService : Service() {
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT,
-                ).apply { gravity = Gravity.TOP or Gravity.START }
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    // **Measured on a device, not assumed.** With the flags alone the shade stopped
+                    // below the status bar on HyperOS: everything dimmed except a bright strip
+                    // across the top, which reads as a bug rather than as a design. The system's own
+                    // overlays carry this attribute and ours did not.
+                    //
+                    // API 28 for SHORT_EDGES, 30 for ALWAYS. Below 28 there are no cutouts to lay
+                    // out into and the bars were never excluded, so there is nothing to set.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
 
         runCatching { windowManager?.addView(view, params) }
             .onSuccess { shadeView = view }
