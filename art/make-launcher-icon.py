@@ -9,12 +9,16 @@ Writes, all of them derived and none of them hand-editable:
     app/src/main/res/mipmap-{m,h,xh,xxh,xxx}dpi/ic_launcher{,_round}.webp
     art/play-icon-512.png
 
-`ic_launcher_background.xml` is left alone — it is a flat PRIMARY rectangle with no art in it.
+`ic_launcher_background.xml` is not written — it is a flat PRIMARY rectangle with no art in it — but
+its fillColor is *checked* against `mark.PRIMARY` before anything else runs, because it is otherwise
+a second hand-maintained copy of that colour and a recolour silently updating only one of the two is
+the failure this script exists beside.
 
     python3 art/make-launcher-icon.py
 """
 
 import math
+import re
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -129,7 +133,30 @@ def render(size, mask_circle=False):
     return img
 
 
+def check_background():
+    """The one colour this script does not write, checked against the one it does.
+
+    `ic_launcher_background.xml` is a flat PRIMARY rectangle with no art in it, so there is nothing
+    here to generate — but that leaves the icon's ground as a second, hand-maintained copy of
+    `mark.PRIMARY`. Nothing forced the two to agree, and a recolour that updates one and not the
+    other produces a mark painted in the new colour on a ground still in the old one. Cheap to
+    check, so it is checked rather than documented.
+    """
+    path = RES / "drawable" / "ic_launcher_background.xml"
+    found = re.search(r'android:fillColor="(#[0-9A-Fa-f]{6})"', path.read_text())
+    if not found:
+        raise SystemExit(f"{path}: no fillColor found — has the file's shape changed?")
+    want, got = hex_of(mark.PRIMARY).upper(), found.group(1).upper()
+    if want != got:
+        raise SystemExit(
+            f"{path}: fillColor is {got}, but mark.PRIMARY is {want}.\n"
+            f"This file is not generated. Set the fillColor to {want} by hand and re-run."
+        )
+    return f"ground {got} matches mark.PRIMARY"
+
+
 def main():
+    print(check_background())
     data = vector_path_data()
     written = []
 

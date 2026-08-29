@@ -17,10 +17,10 @@ is the one with the widest reach.
 import sys
 from hct import TonalPalette, argb_from_hex, hex_from_argb, xyz_from_argb
 
-SEED_PRIMARY = "4C6FA5"    # Slate blue
-SEED_SECONDARY = "6B7A8F"  # Muted steel
-SEED_TERTIARY = "9A6BA5"   # Heather
-SEED_NEUTRAL = "DCDFE4"    # Cool grey
+SEED_PRIMARY = "B0763C"    # Dusk amber
+SEED_SECONDARY = "8A7561"  # Warm taupe
+SEED_TERTIARY = "8C7BA6"   # Twilight violet
+SEED_NEUTRAL = "E3DCD3"    # Warm grey
 
 PACKAGE = "app.gloam"  # the Kotlin package root; bootstrap.py rewrites this
 

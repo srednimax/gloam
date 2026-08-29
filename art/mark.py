@@ -23,9 +23,9 @@ from dataclasses import dataclass
 # The identity's colours. The mark is near-white, so the ground carries all the colour: recolouring
 # means PRIMARY here *and* the matching fillColor in res/drawable/ic_launcher_background.xml, which
 # make-launcher-icon.py deliberately does not write. Changing one alone is the failure to expect.
-SURFACE = (0xFF, 0xFB, 0xFF)  # the light scheme's `surface`
-PRIMARY = (0x2B, 0x4C, 0x7E)  # `primary`, darkened for contrast against SURFACE at icon sizes
-PRIMARY_DARK = (0x14, 0x25, 0x3F)  # second stop of the feature graphic's gradient
+SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface`
+PRIMARY = (0x6E, 0x42, 0x15)  # `primary`, darkened for contrast against SURFACE at icon sizes
+PRIMARY_DARK = (0x3A, 0x22, 0x08)  # second stop of the feature graphic's gradient
 
 
 @dataclass(frozen=True)

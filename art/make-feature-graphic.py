@@ -28,8 +28,17 @@ S = 4  # supersample factor; everything below is in final pixels, scaled by S at
 PRIMARY, PRIMARY_DARK, SURFACE = mark.PRIMARY, mark.PRIMARY_DARK, mark.SURFACE
 # Two steps down from SURFACE towards the ground, so the three text weights read as one family
 # against the ground. Tinted rather than grey: a neutral grey on a coloured ground looks like a mistake.
-TAGLINE_INK = (0xC6, 0xD4, 0xE8)
-SUBTLE = (0x99, 0xAB, 0xC6)
+#
+# Derived, not pasted. These were literals until the palette changed and they stayed blue on a ground
+# that had gone amber — the exact failure the comment above describes, produced by the comment's own
+# rule being written down instead of executed.
+def _step(t):
+    """SURFACE mixed `t` of the way towards PRIMARY_DARK, componentwise."""
+    return tuple(round(s + (g - s) * t) for s, g in zip(SURFACE, PRIMARY_DARK))
+
+
+TAGLINE_INK = _step(0.22)
+SUBTLE = _step(0.38)
 
 FONT_DIR = Path("/usr/share/fonts/truetype/noto")
 FONT_BOLD = FONT_DIR / "NotoSans-Bold.ttf"
