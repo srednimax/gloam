@@ -107,3 +107,25 @@ The first release.
 ```
 Pierwsze wydanie.
 ```
+
+### 0.2.0 — the first build that goes to Play
+
+0.1.0 was tagged and never uploaded, so this is the first version anyone else sees and the note
+describes the app rather than the diff. The `minSdk` raise to 33 is a breaking change in the
+changelog and simply a requirement here — there is no existing install to strand.
+
+**English** — 271/500:
+
+```
+The first build on Google Play. One slider takes the screen below the darkest the system allows: Gloam lowers the backlight to your phone's floor, then draws a shade over it to go further. An ongoing notification stops it again at any time.
+
+Requires Android 13 or later.
+```
+
+**Polish** — 312/500:
+
+```
+Pierwsza wersja w Google Play. Jeden suwak przyciemnia ekran poniżej najciemniejszego ustawienia systemu: Gloam najpierw obniża podświetlenie do minimum telefonu, a potem rysuje na nim zasłonę, żeby zejść jeszcze niżej. Stałe powiadomienie pozwala ją wyłączyć w dowolnej chwili.
+
+Wymaga Androida 13 lub nowszego.
+```
