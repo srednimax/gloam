@@ -57,3 +57,54 @@ misreading would have quietly made the app worse for no reason.
   the mechanism, is what would move it out of §3.2.
 - The framing sentence in `CLAUDE.md` — every feature free, no paid branch to keep alive — stands
   unamended, and now has a policy reading behind it rather than an assumption.
+
+Amendment, 2026-08-30: **the reading above is correct on the text and was never checked against
+enforcement.** That is the flaw in it. The policy language was re-verified live on this date and has
+not moved — Google's own help page still says a tip where 100% reaches the creator and nothing is
+granted "is a peer-to-peer payment and use of Google Play's billing system is not required", and the
+anti-steering rule still reads "developers may not lead users to a payment method other than Google
+Play's billing system **unless Section 3, 8, or 9** of Payments policy applies". Section 3 is where
+peer-to-peer payments sit. On the text, nothing here was wrong.
+
+What was missing is that apps have been rejected under this rule anyway:
+
+- **StreetComplete, February 2022.** Rejected for displaying Patreon, Liberapay and GitHub Sponsors
+  links in-app, citing the Payments policy. The links were removed. **And the rejection extended to a
+  link to the project's own home page, because that page carried donation information** — which is
+  the finding that matters most here, and the one no reading of the policy text would predict.
+- **The owner's own recollection of the previous app**, which is what reopened this: a Buy Me a
+  Coffee link there was reported as against policy. The original context section above recorded that
+  app as having "investigated and withdrawn" its tip, which understated it.
+- Other developers report the same, including a rejection over a link to a social profile that
+  eventually led to a page carrying payment options.
+
+**None of those is this decision's shape, and the difference is exactly the three conditions above.**
+Patreon sells tiered memberships, so things unlock. Liberapay and GitHub Sponsors fund a *project*,
+not a person. Buy Me a Coffee is a platform that takes a cut, so 100% does not reach the creator, and
+it sells membership tiers too. A single personal payment link, worded as a tip, unlocking nothing, is
+the one shape §3.2 actually describes. But that distinction has to survive a reviewer who is
+skimming for "external payment link", and the reports above show the appeal path is poor.
+
+Two things have also changed since the decision, neither of which helps a tip. The Ninth Circuit
+injunction (October 2025) stopped Google forbidding external links **for users in the US**, and the
+external-links and alternative-billing programs that followed still charge a service fee, with
+reporting obligations from 1 October 2026. For the EEA, which includes Poland, the policy now permits
+leading users outside the app "subject to program requirements" — a sanctioned route that costs
+enrollment and fees. Enrolling in a fee program to collect occasional tips is not a serious option,
+so §3.2 remains the only route that costs nothing, and it remains a reading rather than an approval.
+
+**So the decision is amended, not reversed. The promise stays and the mechanism stays; the risk moves
+out of the first release.**
+
+- **No payment link ships inside the app in v1.** The Support screen (Phase 5) carries no tip link.
+- **The tip lives on the repository and the Pages site**, which the policy explicitly allows:
+  "Outside of your app, you are free to communicate with your users about alternative purchase
+  options."
+- **Nothing the app links to may itself carry the tip.** This is StreetComplete's actual finding, and
+  it constrains the Support screen's source-code link: point it at a page that does not carry a tip
+  button, or accept that the link is the violation.
+- **Revisit once the app is live**, with something to lose and a track record to appeal from, rather
+  than at first submission where a rejection costs the closed-test window.
+
+If it is ever put back in-app, the wording is the whole defence: a tip to a person, not a donation to
+a project, and visibly unlocking nothing.

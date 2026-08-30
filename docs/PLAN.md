@@ -399,11 +399,16 @@ The pipeline half is Phase P. What is left is the polish half, and it is genuine
 the listing copy, the privacy policy, the screenshots. Plus the rest of the Support screen — the
 rate-on-Play link, and:
 
-- **The tip, which ships** — see ADR-0009. An earlier reading had this as probably unshippable; the
-  live policy text says the opposite. Play's §3.2 treats a tip where 100% reaches the creator and
-  nothing unlocks as a **peer-to-peer payment** for which its billing system is not required, and the
-  §4 anti-steering rule carries an explicit exception for §3. So it is an external link on the
-  Support screen, no billing dependency, and the promise in `CLAUDE.md` and `README.md` stands.
+- **The tip, which ships — but not inside the app.** See ADR-0009 **and its 2026-08-30 amendment**,
+  which is the part that decides what Phase 5 builds. Play's §3.2 treats a tip where 100% reaches the
+  creator and nothing unlocks as a **peer-to-peer payment** for which its billing system is not
+  required, and §4's anti-steering rule carries an explicit exception for §3 — so on the policy text
+  an in-app link is permitted. Enforcement has rejected apps for it anyway, StreetComplete included,
+  and that rejection extended to a link to the *project home page* because that page carried donation
+  information. So v1's Support screen carries **no tip link**, the tip lives on the repository and
+  the Pages site, and nothing the app links to carries it either. No billing dependency, no Console
+  product, and the promise in `CLAUDE.md` and `README.md` stands — it just is not collected from
+  inside the app until the app is live and there is something to appeal from.
 
 Languages are not a phase of their own. `scripts/translation-gate.py` makes completeness a merge
 gate, so English and Polish stay in step branch by branch. Adding a third is an opt-in, and the day
