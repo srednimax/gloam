@@ -49,6 +49,9 @@ let us do otherwise".
   shade should be running — settings, not records. A new preference is a key, a `Flow` that reads it
   with its default, and a `suspend` setter; keep the default *in the read* rather than writing it on
   first launch, and there is nothing to migrate, ever.
+  **The test is cardinality, not subject matter.** A *fixed set* is not a *list*, however many
+  members it has: four schedule values are settings, and seven per-day windows would be fourteen
+  settings. What needs a table is the user creating rows nobody knew about at build time.
   **If a feature ever needs a list the user creates**, the whole Room apparatus comes back with it —
   `scripts/schema-gate.py`, ADR-0001 and this rule's previous wording are all still in git history
   for that. Adding a table is a deliberate act with a migration story attached, not a convenience.

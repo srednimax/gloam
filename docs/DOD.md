@@ -63,8 +63,36 @@ checklist already attached, not a convenience someone reaches for on a Tuesday. 
       the build stays green while it is all still undone.
 - [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`) — the
       service account is the one step CI cannot do for itself.
-- [ ] **Decide the `applicationId` deliberately.** It is fixed the moment the Play entry is created —
-      not renameable, not transferable without losing every install and review.
+- [x] **Decide the `applicationId` deliberately.** Done: **`io.github.srednimax.gloam`**. Reverse-DNS
+      on a namespace verifiably yours; Play has never checked domain ownership and package
+      registration is keyed to the **signing key**, not a domain. Short generic names like
+      `app.gloam` are the ones another developer could claim first. `namespace = "app.gloam"` is
+      internal and never reaches Play.
+- [ ] **Verify the developer identity and register the package name.** New, and it has an external
+      lead time: **all Play packages must be registered by 30 September 2026** or they come off the
+      platform. Under-50-install names are first-come, first-served, so this is also how the name is
+      secured.
+- [ ] **Recruit 12 closed testers — start in Phase 1, not when the build is ready.** Production
+      access needs them opted in *continuously for 14 days*. It is the longest lead item in the whole
+      plan and no amount of effort shortens it. (Applies to personal developer accounts registered
+      after Nov 2023; an organisation account is exempt.)
+
+## Opened by the grill session, 2026-08-30
+
+- [ ] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). `sdkmanager`,
+      `avdmanager` and `emulator` are all CLI — no Android Studio needed. The phone stays the only
+      place nits are measured; the emulator is the only place the non-36 range runs at all.
+- [ ] **Resolve four pieces of scaffolding that describe features the app does not have.** A future
+      reader cannot tell an unused defence from a live one:
+      `work/NotificationPermission.kt` (uncalled — wired up by Phase 1's entry gate),
+      `work/BatteryExemption.kt` (uncalled — Phase 4),
+      `onboardingDone` in `AppPreferences` (read by nothing — use it in the first-run flow or delete
+      the key), and `scripts/project.py` still reporting `DATABASE_FILE gloam.db` after ADR-0007
+      removed the database.
+- [ ] **Re-read ADR-0004 now `minSdk` is 33.** The below-13 locale backport — the disabled
+      `AppLocalesMetadataHolderService` manifest entry — exists only for devices the app no longer
+      ships to. Removing it is ADR-0004's decision to amend, not a tidy-up. AppCompat itself stays
+      regardless: ADR-0006 needs `setDefaultNightMode`.
 
 ## Standing checks that never close
 
