@@ -19,6 +19,14 @@ notification shade, quick settings and the volume dialog all read it back unchan
 keyguard releases it outright**, and it returns on its own after unlocking. So `MIN_BACKLIGHT` carries
 the whole escape-hatch argument, and the lock screen is a free one it does not pay for.
 
+**One thing C found that Phase 2b should read before it builds the tile.** The notification's *Stop*
+action works, but HyperOS hides it in the long-press overlay rather than the collapsed row — and a
+plain tap lands on the app's own Stop button, which at maximum dim sits *under the shade* at 0.33
+nits. Recorded rather than worked around, because it is vendor behaviour (stock Android expands the
+top notification and shows the action) and copy naming a gesture would be wrong on most devices. It
+is what turns **2b's Quick Settings tile from a nicety into the one-gesture escape hatch**;
+`phase-1.md`'s readings block carries the measurement.
+
 The two items below that the phase owns (`POST_NOTIFICATIONS`, and starting the tester
 recruitment) stay here, because they are what the door is waiting on.
 
