@@ -212,8 +212,28 @@ Once, by hand, and it is the only step CI cannot do for itself:
 3. On that account, **Keys → Add key → JSON**. The file downloads once — that is the
    `PLAY_SERVICE_ACCOUNT_JSON` value.
 4. Play Console → **Users and permissions → Invite new user**, the service account's email.
-   Grant it **Release to testing tracks** on this app (your `applicationId`)
-   and nothing wider. It does not need production rights to do this job.
+   **Account permissions: none — every box empty.** That is the field that would quietly make this a
+   credential for every app on the developer account rather than for this one.
+   **App permissions, on this app only** (your `applicationId`), exactly two boxes:
+   *View app information (read-only)* — the baseline the others build on — and
+   *Release apps to testing tracks*, which is the one that does the work.
+   Deliberately **not** *Release to production, exclude devices, and use Play App Signing*: production
+   stays a human decision behind the environment gate. Also not *Manage testing tracks and edit tester
+   lists* — that is editing who the testers are, and CI uploads builds rather than managing people.
+
+**One service account per app, and scope it with a permission group.** Play Console → *Users and
+permissions* → **Permission groups** → *Create permission group* lets you pick the two boxes once and
+attach the group to an email afterwards, instead of re-ticking them per identity. Name it for the app
+(`Gloam — CI release`), not for the role: a group carries its own app scoping, so one role-shaped group
+reused across apps would have to list every app in it — which merges exactly the credentials that a
+separate service account per app exists to keep apart. ⚠️ **Leave *Set access expiry date* unchecked.**
+It is offered on the create screen and it is wrong for a machine identity: on the expiry date publishing
+starts failing, wearing the same 401 that the propagation delay below tells you to shrug off.
+Invite the email before creating the group — a user must exist to be selectable in *Users in this group*.
+
+⚠️ **The production workflow uses this same secret.** With testing-track rights only, the first run of
+`publish-play-production.yml` **403s**, and that is the permission missing rather than the pipeline
+broken. Adding *Release to production...* is the deliberate act that opens that door.
 
 Propagation between Play and the API is not instant — a permission granted in the Console
 can take a few minutes to be visible to the API, so a first run that 401s is worth simply
