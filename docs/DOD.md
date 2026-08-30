@@ -101,24 +101,27 @@ one step with an external queue is behind you.
       rebase-only merge setting, Pages from `main/docs` and `RELEASE_PLEASE_TOKEN` all already in
       place. It is idempotent, so re-run it after any manual change in the GitHub UI rather than
       trusting this box.
-- [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`).
-      **Four of the five are done, 2026-08-30**, and verified rather than assumed: the
-      `upload.storePassword` in `local.properties` opens the keystore, `keytool -list` reports the
-      single alias `upload`, and the certificate SHA-256 is the one `RELEASING.md` records. So the
-      values in the secrets are known-good, not merely present — `repo-setup.py --dry-run` can only
-      tell you a secret is *set*, because GitHub never reads one back.
+- [x] **Set the five Play secrets and create the service account.** Complete 2026-08-30.
+      `repo-setup.py --dry-run` reports all five set, plus `RELEASE_PLEASE_TOKEN`.
+      The four upload secrets are **verified, not merely present**: the `upload.storePassword` in
+      `local.properties` opens the keystore, `keytool -list` reports the single alias `upload`, and
+      the certificate SHA-256 is the one `RELEASING.md` records. That check exists because GitHub
+      never reads a secret back, so "set" is all the dry run can ever tell you.
+      **`PLAY_SERVICE_ACCOUNT_JSON` is set but unproven, and that is the honest state.** Nothing on
+      this machine can tell you the JSON is valid or that Play granted the right scope; **the first
+      run of `publish-play.yml` is the proof**, and it is the first thing in this pipeline that has
+      never executed. Two failures to expect and not debug in a panic: a 401 is usually just
+      Play-to-API propagation and is worth re-running first, and a 403 is a permission missing rather
+      than a broken pipeline. The workflow carries `workflow_dispatch` precisely so a credential
+      failure can be retried **without cutting a version nobody wanted** — so a bad first run costs a
+      re-run, not a release.
       **`UPLOAD_KEYSTORE_BASE64` is not a backup.** A GitHub secret is write-only; you cannot get the
-      keystore out of it again. It is a second copy in the sense that CI can use it, not in the sense
-      that you could recover from losing the file. The backup item above is untouched by this.
-      **What is left is the fifth**, `PLAY_SERVICE_ACCOUNT_JSON`, and it is the one step CI cannot do
-      for itself — Google Cloud console, then a Play Console invite, per *Creating the service
-      account* in `RELEASING.md`. Play-to-API propagation is not instant, so create it before it is
-      wanted rather than at the moment of the first automated upload.
-      **Nothing else gates automated internal-track publishing.** `publish-play.yml` already triggers
-      on a published GitHub Release and uploads to `track: internal` with `status: completed`;
-      production is a separate manual promotion (`publish-play-production.yml`) that moves the same
-      bytes rather than building again. Once the service account exists, merging a release-please PR
-      is the whole publish.
+      keystore out of it again. It is a copy CI can use, not one you could recover from. The backup
+      item above is untouched by this and remains the sharpest thing in this file.
+      Permissions granted, and the per-app convention behind them, are in `RELEASING.md` under
+      *Creating the service account* — two boxes for the internal pipeline, and the two more that
+      only the production workflow wants.
+
 - [x] **Decide the `applicationId` deliberately.** Done: **`io.github.srednimax.gloam`**. Reverse-DNS
       on a namespace verifiably yours; Play has never checked domain ownership and package
       registration is keyed to the **signing key**, not a domain. Short generic names like
