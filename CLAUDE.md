@@ -8,6 +8,8 @@ either ships to everyone or it doesn't ship.
 
 - **Vocabulary:** [`CONTEXT.md`](CONTEXT.md) — use these terms in code and UI.
 - **Decisions and why:** [`docs/adr/`](docs/adr/) — read before changing anything they cover.
+- **The arc, in phases:** [`docs/PLAN.md`](docs/PLAN.md) — sequence only; a phase being built gets
+  its own `docs/phase-N.md`.
 - **What's still open:** [`docs/DOD.md`](docs/DOD.md) — the live checklist. **Read this one first.**
 - **Commits & releasing:** [`docs/RELEASING.md`](docs/RELEASING.md). Commit subjects **must** be
   [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `feat!:`, `docs:`, …)
