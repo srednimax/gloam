@@ -76,3 +76,24 @@ fun Context.ensureNotificationChannels() {
         )
     }
 }
+
+/**
+ * **Can this channel's notification still appear?** The other half of [notificationsAllowed].
+ *
+ * Android lets the user lower a channel to `IMPORTANCE_NONE`, which blocks it while leaving the
+ * app-wide permission on — so a screen that reads only the permission reports a working escape hatch
+ * that the user cannot see. The warning on the dim screen makes a safety claim, and a false negative
+ * there is somebody at maximum darkness with no Stop button and nothing saying so.
+ *
+ * **A channel that does not exist yet reads as `true`, and that is right rather than a gap**: nothing
+ * can have been muted before it was created, and [ensureNotificationChannels] creates it at
+ * [AppChannel.importance] on the service's first `onCreate`.
+ *
+ * Read live, never cached — the fix for a muted channel is a settings screen this app hands the user
+ * off to, so the answer changes while the app is in the background.
+ */
+fun Context.channelCanAppear(channel: AppChannel): Boolean {
+    val manager = getSystemService(NotificationManager::class.java) ?: return true
+    val importance = manager.getNotificationChannel(channel.id)?.importance ?: return true
+    return importance != NotificationManager.IMPORTANCE_NONE
+}
