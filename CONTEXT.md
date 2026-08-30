@@ -21,8 +21,10 @@ user-facing word genuinely differ, both are written here with the difference sta
 | Panel | The **touchable** overlay window carrying the controls, sized to its own content. A second window with the opposite safety rule. | Not "the overlay" - there are two |
 | Floor | The dimmest the Android backlight goes on this device. What Gloam exists to get past. | Not "minimum brightness" in code - too easily read as our own minimum |
 | Backlight | The system screen brightness. Android's value, which Gloam lowers to the floor as the first half of the dim level's ramp before the shade does the rest. | Never our own value |
-| Warmth | How far the shade is tinted amber, cutting blue. Independent of dim level. | Not "night mode" - that name is already the app's own dark theme |
+| Warmth | How far the shade is tinted amber, cutting blue. A separate control from the dim level, but not an unbounded one: the two together decide whether anything underneath stays legible, so both are capped. | Not "night mode" - that name is already the app's own dark theme |
 | Running | The shade is on screen and the service is in the foreground. A live state. | Not "enabled", which reads as a settings toggle |
+| Auto-off | The deadline that takes a shade the user started by hand back down on its own. One-shot, set when they start it. | Not "timer" on its own - the schedule sets deadlines too |
+| Schedule | The nightly window: on at one time, off at another. One pair, not two independent switches. | Not "alarm" - nothing rings, and Gloam claims no exact-alarm permission |
 
 ## Words we deliberately avoid
 
@@ -36,6 +38,8 @@ user-facing word genuinely differ, both are written here with the difference sta
   dimming to others, and Gloam does both as separate controls.
 - "Off" is reserved for the shade not being drawn at all. A dim level of zero is still running - the
   service is alive, the shade is transparent - and the two states behave differently on a reboot.
+  It follows that **auto-off cannot itself be switched "off"**: the choice that disables it is
+  **Never**, because "auto-off: off" is a sentence meaning the shade stays on.
 - "Overlay" on its own is avoided now that there are two of them. The shade passes every touch
   through; the panel catches them. A name that covers both hides the one property that keeps the
   user from being trapped, so say **shade** or **panel** and never "the overlay window".
