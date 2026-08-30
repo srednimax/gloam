@@ -190,16 +190,22 @@ device at all — it is user state, and on this one panel it moves by three orde
 
 | The user's brightness | nits | ratio to the floor | where the backlight runs out |
 | --- | --- | --- | --- |
-| float 1.0 | 2000 | 1000 | dim 70 |
-| float 0.5 | 500 | 250 | dim 65 |
-| float 0.075 (the device default) | 76 | 38 | dim 55 |
-| float 0.005 | 6.3 | 3.2 | dim 28 |
-| float 0.000684 (the floor) | 2.0 | 1.0 | dim 0 |
+| `raw` 255 - their maximum | 500 | 250 | dim 65 |
+| `raw` 128 | 251 | 125 | dim 62 |
+| `raw` 39 - the device default | 76 | 38 | dim 55 |
+| `raw` 20 | 39 | 19 | dim 50 |
+| `raw` 10 - **their minimum** | 19 | 9.5 | dim 43 |
 
-A fixed breakpoint at 65 would give the person reading at 6.3 nits a slider whose first 65 points
-travel from 6.3 nits to 2.0, and whose last 35 do everything else — and would give the person
-already at minimum brightness **65 points that do nothing at all**. That is precisely Gloam's user:
-someone who reads in the dark and finds the lowest system setting still too bright.
+A fixed breakpoint at 65 would give the person already at their system minimum a slider whose first
+65 points travel from 19 nits to 2.0 - and whose last 35 do everything else. That is precisely
+Gloam's user: someone who reads in the dark and finds the lowest system setting still too bright,
+and the one whose experience a fixed breakpoint degrades most.
+
+**The measured spread is 43 to 65 rather than the 0 to 70 an earlier draft assumed**, because this
+phone's slider stops at `raw` 10 and cannot reach the panel floor at all - so the *"65 points that do
+nothing"* case needs a device whose configured minimum is far lower than this one's, which is a
+per-device resource and so is a device somebody owns. The conclusion is unchanged and the reason is
+now narrower: a fixed breakpoint is wrong by 22 points across one phone's own settings range.
 
 So the ramp is stated once, over the quantity that matters, and the breakpoint falls out:
 
@@ -313,24 +319,52 @@ and when adaptive brightness is on the stored value may not be what is on screen
 **How badly, measured on this phone, with the screen on and the mode manual:**
 
 ```
-screen_brightness (int)   = 255
-mScreenBrightness (float) = 6.83661E-4    ← the panel's absolute floor, 2.0 nits
-screen_brightness_float   = null          ← no free float read; that path does not exist here
+screen_brightness (int)   = 255            <- the top of a 10 ... 255 scale
+mScreenBrightness (float) = 0.499951       <- 500 nits, this panel's non-HBM maximum
+screen_brightness_float   = null           <- no free float read; that path does not exist here
 ```
 
-The obvious reading — `raw / 255` — computes `backlightTop = 1.0f`, which is 2000 nits, **for a user
-sitting at 2.0 nits**. A thousandfold overestimate, in the brightening direction, on the development
-phone. Decoding the int through the AOSP HLG gamma curve and dividing by a plausible 4095 lands at
-2.6 nits against an actual 2.0 — still high, but by 30% rather than by 1000×.
+⚠ **An earlier draft of this section recorded `mScreenBrightness = 6.83661E-4` beside that same
+integer and built its whole argument on the thousandfold contradiction. That reading was an
+artifact.** A screen approaching its inactivity timeout enters the framework's DIM policy and is
+pinned to the panel's floor whatever the setting says - nothing in the number gives it away, and the
+only place it shows is `mBrightnessReason=manual [ dim ]`. The debug sweep holds
+`FLAG_KEEP_SCREEN_ON` while it runs for exactly this reason. **It generalises past brightness: a
+device reading taken while the screen is on its way out is a reading of the timeout.**
+
+**What the phone does, once it is actually awake** (R1 and R3, section 7):
+
+| | |
+| --- | --- |
+| The setting's integer scale | `[10, 255]` - `config_screenBrightnessSettingMinimum`/`Maximum` |
+| Integer to applied float | **linear from 1**: `(raw - 1) / 254 * max`. Not gamma-encoded |
+| The user's own reach | 19 nits at their minimum, 500 at their maximum |
+| The window override's reach | **the same** - override `1.0` and setting `255` are the same 500 nits |
+| Below the user's floor | the panel goes to **2.0 nits**, which their slider cannot ask for |
+
+The last two rows are the whole answer. The framework normalises the setting and the override onto
+one range before the panel sees either, so **`backlightTop` is a ratio, not a brightness** - what
+fraction of their own maximum the user is at. Nothing has to be known about nits, gamma, or where
+this panel's high-brightness knee sits, which is why the decode ended up three lines long.
+
+**And the product's thesis, measured rather than asserted:** the system's slider stops at 19 nits and
+the panel goes to 2.0. There is a factor of **9.5 in the dark** that Android will not hand the user
+and Gloam can, before a shade is drawn over anything at all.
 
 **So: read once, decode, verify, hold, and degrade safely.**
 
 - Read the scale from `config_screenBrightnessSettingMaximum` via
   `Resources.getSystem().getIdentifier(...)`. That is a **resource lookup by name**, not a non-SDK
-  Java member, so the hidden-API blocklist does not reach it — but the resource may be absent, in
+  Java member, so the hidden-API blocklist does not reach it - but the resource may be absent, in
   which case `getIdentifier` returns 0 and we know we failed.
-- Decode through the gamma curve, clamp into `MIN_BACKLIGHT … 1f`, and bias conservative. Every
-  failure mode is detectable: no resource, no setting, decoded value out of range.
+- **Map linearly, and from 1 rather than from that configured minimum.** The framework's own
+  conversion starts at `BRIGHTNESS_OFF + 1`, and the measurement agrees with it to a tenth of a
+  percent across the range. Decoding from 10 instead is 48% low at the bottom of the slider - the
+  safe direction, but it visibly halves the screen the instant the override engages.
+- **Then trim 5% off the result**, and clamp into `0f ... 1f`. Untrimmed the decode is within 0.1% in
+  the middle of the range and **3.7% high at the bottom** of it, which is the one direction that
+  matters; 5% covers that with margin, and is under both the ramp's own first step and the threshold
+  of what an eye can see.
 - **On any doubt, `backlightTop` is `null`** and the backlight half does nothing for that session.
   Never fall back to `1.0f`: a fallback that brightens the screen is the mirror image of the failure
   the constants exist to prevent, and *"Gloam blasted my screen"* is the same support mail as
@@ -342,21 +376,38 @@ phone. Decoding the int through the AOSP HLG gamma curve and dividing by a plaus
   also what makes the value re-readable in practice — a user who wants to change their brightness
   drags Gloam to 0, which releases the override and makes their own slider live again.
 
-**Checkpoint B's verdict.** The debug build prints its computed `backlightTop`; it is compared
-against `dumpsys display`'s `mScreenBrightness` at four user settings across the range (R3).
-**If the computed value ever exceeds the actual, the estimate is wrong in the only direction that
-matters and the backlight half does not ship** — C is skipped and the phase closes with the
-shade-only ramp.
+**Checkpoint B's verdict: passed on 2026-08-30, and C is cleared to spend the backlight.** The
+debug build's own computed `backlightTop` was held on the window and compared against
+`dumpsys display`'s `mScreenBrightness` at five user settings across the range, mode manual (R3):
 
-**Adaptive brightness is deliberately unresolved here.** Under adaptive the stored value is the
-framework's last auto-chosen one, and whether that is a usable starting point is not knowable from
-the documentation. It is not a footnote either: adaptive is on by default on most Android devices, so
-a blanket *adaptive → null* rule would ship this phase's headline mechanism to a minority. **R4 is
-the reading**, taken with `screen_brightness_mode` set to `1` deliberately — this phone reads `0`, so
-the adaptive path will not be exercised by accident — and both branches are named in advance:
-verified means treat it as an ordinary read, failed means `null` and the disabled switch of §4
-becomes the common case rather than the rare one.
+| `screen_brightness` | the user's own float | holding the computed top | |
+| --- | --- | --- | --- |
+| 10 - their minimum | 0.0177148 | 0.017502489 | 1.2% under |
+| 20 | 0.03739791 | 0.03614602 | 3.4% under |
+| 64 | 0.1240036 | 0.118308894 | 4.6% under |
+| 128 | 0.2499755 | 0.23781857 | 4.9% under |
+| 255 - their maximum | 0.499951 | 0.47497055 | 5.0% under |
 
+**Never above, at any setting.** The test was *"if the computed value ever exceeds the actual the
+backlight half does not ship"*, and it does not exceed it - by construction rather than by luck,
+which is what the 5% trim is for. The first attempt trimmed 3% and came out **0.5% over** at the
+bottom of the slider; that is the measurement that set the constant, and it is why the constant is
+5% rather than a rounder-sounding number.
+
+**Adaptive brightness is resolved, and it is the good branch (R4).** Set `screen_brightness_mode` to
+`1` and the framework writes its own automatic choice back into the same integer: at 6.3 lux it
+picked 27.2 nits and stored `screen_brightness = 14`, which the app read and decoded to 3.8% under
+what was on the panel. So adaptive needs no special case at all - the stored integer is a live
+reading of what the framework last chose rather than a stale manual one, and the override replaces
+the automatic strategy cleanly (`reason=override(...)`) and hands it back on release. **The blanket
+*adaptive to null* rule is not needed**, which matters because adaptive is on by default on most
+Android devices and that rule would have shipped this phase's headline mechanism to a minority.
+
+One thing it does confirm: the *capture once and hold* rule above is load-bearing under adaptive for
+a second reason. The framework keeps re-choosing as the light changes, so a re-read mid-override
+would pick up a value chosen for a room, not for the user.
+
+---
 ---
 
 ## 3. Warmth, and the invariant moving to the composite
@@ -758,30 +809,47 @@ rule 5, is the first two minutes. Track the count in `DOD.md`, which already car
 ## Readings block
 
 Rule 3: filled in as the phase runs, from the device, with the command that read it. Not "it looked
-right". Derivations are in §7 and are proven by `ShadeRampTest`, not recorded here.
+right". Derivations are in section 7 and are proven by `ShadeRampTest`, not recorded here.
+
+**Read with the screen held awake.** Four of these were first taken against a screen inside its
+inactivity timeout, which pins the panel to its floor under `mBrightnessReason=manual [ dim ]` and
+looks exactly like "the setting did nothing". The debug sweep holds `FLAG_KEEP_SCREEN_ON`; taking
+anything by hand wants `settings put system screen_off_timeout 600000` first, and putting it back
+after.
 
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
-| R1 | Nits per `screenBrightness` float, resolved near the bottom | debug sweep + `dumpsys display` | — |
-| R2 | **Stop reachable at maximum dim, dark room and lit room** → `MIN_BACKLIGHT` | by hand, on the phone | — |
-| R3 | **Computed `backlightTop` vs actual, four settings, manual mode** → B's verdict | debug row + `dumpsys display` | — |
-| R4 | The same with adaptive deliberately on | `settings put system screen_brightness_mode 1` | — |
-| R5 | Whose override applies — lock screen, notification shade, volume dialog | `dumpsys display \| grep -A2 OverrideBrightnessStrategy` | — |
-| R6 | Override released on a ROM kill | `am force-stop` with the shade live | — |
-| R7 | Permission dialog usable with the shade up | by hand, on the phone | — |
-| R8 | Notification and Stop appear and work, at maximum dim | by hand, on the phone | — |
-| R9 | Override vs an app setting its own `screenBrightness` | same, with a video player in swipe-to-dim | — |
-| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | — |
+| R1 | Nits per `screenBrightness` float, resolved near the bottom | debug sweep + `dumpsys display` | **`nits = 498.3 x override + 1.66`** across 16 steps, 1.0 down to 1E-4. Affine, not a power law; the override clamps to the panel floor at and below 6.83661E-4 (2.0 nits). See below for what it costs the ramp |
+| R2 | **Stop reachable at maximum dim, dark room and lit room** -> `MIN_BACKLIGHT` | by hand, on the phone | - (checkpoint C: wants the override on the shade's own window) |
+| R3 | **Computed `backlightTop` vs actual, four settings, manual mode** -> B's verdict | debug row + `dumpsys display` | **Passed.** 1.2% to 5.0% *under* the user's own float at `raw` 10/20/64/128/255; never over. Table in section 2 |
+| R4 | The same with adaptive deliberately on | `settings put system screen_brightness_mode 1` | **Adaptive is an ordinary read.** The framework stores its own choice back into the same integer (`raw=14` at 6.3 lux, 27.2 nits); decoded 3.8% under. No `null` path needed |
+| R5 | Whose override applies - lock screen, notification shade, volume dialog | `dumpsys display \| grep -A2 OverrideBrightnessStrategy` | - (checkpoint C) |
+| R6 | Override released on a ROM kill | `am force-stop` with the shade live | **Released.** Holding 2.0 nits, `am force-stop` returned the panel to the user's own 250.7 nits and `reason=manual` within a second. Taken on the activity's window at B; re-confirm on the shade's at C |
+| R7 | Permission dialog usable with the shade up | by hand, on the phone | - |
+| R8 | Notification and Stop appear and work, at maximum dim | by hand, on the phone | - (checkpoint C) |
+| R9 | Override vs an app setting its own `screenBrightness` | same, with a video player in swipe-to-dim | - |
+| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | - |
 
-**Already read, 2026-08-30, on the phone** — the readings that reshaped this document, kept here
-because §2 and §6 both argue from them:
+**What R1 costs the ramp, which is a correction and not a reassurance.** The offset is the whole
+story: `nits = 498.3 x u + 1.66` means the float range's bottom decade buys almost nothing. Halving
+the override from 0.002 to 0.001 is a 50% cut in float and a **19% cut in light** (2.66 nits to
+2.16). So a ramp that is geometric in the float is *not* geometric in what the eye receives, and it
+flattens exactly where this product lives. The honest ratio the backlight can spend at full
+brightness is **250:1 in nits**, not the 1462:1 the floats suggest. Checkpoint C owns what to do
+about it; the two constants that would fix it exactly (`498.3` and `1.66`) are this panel's and are
+not readable from an app.
+
+**Already read, 2026-08-30, on the phone** - the readings that reshaped this document, kept here
+because sections 2 and 6 both argue from them:
 
 | Reading | Value | Command |
 | --- | --- | --- |
-| The panel's float → nits curve | `[6.83661E-4, 0.499951, 0.99975586, 1.0]` → `[2.0, 500.0, 1200.0, 2000.0]` | `dumpsys display \| grep mBacklight` |
-| The system's minimum float | `6.83661E-4` — exactly 2.0 nits | `dumpsys display \| grep RangeMinimum` |
-| `SCREEN_BRIGHTNESS` at that floor | **255**, with the panel at 2.0 nits | `settings get system screen_brightness` |
-| `screen_brightness_float` | `null` — no free float read on this ROM | `settings get system screen_brightness_float` |
+| The panel's float -> nits curve | `[6.83661E-4, 0.499951, 0.99975586, 1.0]` -> `[2.0, 500.0, 1200.0, 2000.0]` | `dumpsys display \| grep mBacklight` |
+| The system's minimum float | `6.83661E-4` - exactly 2.0 nits | `dumpsys display \| grep RangeMinimum` |
+| ~~`SCREEN_BRIGHTNESS` at that floor: **255**, with the panel at 2.0 nits~~ | **Withdrawn 2026-08-30.** The panel was in its inactivity DIM policy, not at the user's setting. `raw` 255 is 500 nits; the two never coincide on this phone | `settings get system screen_brightness` |
+| The user's own floor | `raw` 10 -> **19 nits**, and their slider goes no lower | `settings put system screen_brightness 10` |
+| The panel's non-HBM maximum | `0.499951` - 500 nits, which is where both `raw` 255 and override `1.0` land | `dumpsys display \| grep hbmMax` |
+| `screen_brightness_float` | `null` - no free float read on this ROM | `settings get system screen_brightness_float` |
 
 ---
 

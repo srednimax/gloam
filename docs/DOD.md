@@ -7,8 +7,10 @@ work by reading this file alone.
 Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 
 **Phase 1 is the open phase, and its worklist is [`phase-1.md`](phase-1.md)** — the entry gate,
-the ramp, warmth and the readings, as five checkpoints in the order they should be built. **B is a
-gate that can veto the backlight half**, so read it before writing any of C. The two items below
+the ramp, warmth and the readings, as five checkpoints in the order they should be built. **B was that
+gate and it passed on 2026-08-30** - the computed `backlightTop` lands 1.2% to 5.0% *under* the
+user's own brightness at every setting tested, so C ships. Its readings corrected the phase document
+rather than confirming it; read section 2 before writing any of C. The two items below
 that the phase owns (`POST_NOTIFICATIONS`, and starting the tester recruitment) stay here, because
 they are what the door is waiting on.
 
