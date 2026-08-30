@@ -48,11 +48,9 @@ Two things push the door early, and they are not equally certain:
   working harder, and it depends on other people replying. **Recruiting starts in Phase 1.**
   The rule applies to personal developer accounts registered after Nov 2023; **this account was
   created in 2026**, so no exemption is available on age, and an organisation account is not in play.
-  What is *not* yet confirmed is whether the requirement is per-app or a one-time account unlock the
-  existing live app already satisfied. **Phase P answers this**, because the Console shows the app's
-  access status the moment the entry exists. Until it answers, assume the requirement applies —
-  being wrong that way costs twelve recruiting conversations, and being wrong the other way costs
-  fourteen days discovered at the worst possible moment.
+  **Confirmed 2026-08-30, in the Console, with the app entry created: the requirement applies to
+  Gloam.** It is not a one-time account unlock that the existing live app satisfied, so the
+  assumption this plan was built on was the right one and nothing about the sequence changes.
 - **Phases 3 and 4 both carry open questions that only users can answer.** Building them before
   anyone has used the app means answering those in a room with one person in it. This reason is
   independent of the calendar and survives whatever Phase P reports back.
