@@ -55,7 +55,9 @@ one step with an external queue is behind you.
       assumed: `bundleRelease` ran `signReleaseBundle`, and `keytool -printcert -jarfile` on the AAB
       returns the keystore's own SHA-256. Its path, alias, algorithm and fingerprint are recorded
       under *The upload key* in [`RELEASING.md`](RELEASING.md).
-- [ ] ⚠️ **Back the keystore up somewhere that is not this machine.** One copy exists. Losing it
+- [ ] ⚠️ **Back the keystore up somewhere that is not this machine.** **Now the sharpest open
+      item in this file:** as of 2026-08-30 a published package is bound to this key, so losing it
+      stopped being theoretical. One copy exists. Losing it
       means never being able to update the app on Play again — recoverable only by resetting the
       upload key with Google, and only while the app still exists. The keystore *and* its password,
       which is in `local.properties` and nowhere else.
@@ -63,12 +65,17 @@ one step with an external queue is behind you.
       government/financial/health features, all functionality available without sign-in, content
       rating questionnaire all-No, target audience **18+**, category **Tools**. Internal testing
       track exists with the owner as its only tester.
-- [ ] **Bind the package name by uploading a build.** Creating the entry did not do it: the
-      `applicationId` is fixed by the first upload, and until one lands `io.github.srednimax.gloam`
-      is not yet yours. Today's signed bundle carries it — `python3 scripts/aab-version.py` reads it
-      back out of the artifact. **Check the string on the upload screen before confirming**; the
-      previous app got a name the Console suggested from its title and had to bend the build to Play
-      afterwards, permanently.
+- [x] **Bind the package name by uploading a build.** Done 2026-08-30. `io.github.srednimax.gloam`
+      is now yours, and it was verified by round-trip rather than by reading the Console: the bundle
+      went up to internal testing, came back down through Play onto the phone, and `dumpsys package`
+      reads `versionCode=29 versionName=0.2.0 installerPackageName=com.android.vending` — the same
+      artifact `aab-version.py` signed off, delivered by Play rather than sideloaded. The opt-in page
+      named the package before the invite was accepted, which is where the string was checked.
+      **Two things this also proved, neither of them a separate item any more:** the upload keystore
+      is the one Play will expect for every future update, and the release build survives R8 and
+      launches — it came up on its overlay-permission gate, not a crash.
+      **And one it created:** the `applicationId` is frozen *and* married to that keystore. The
+      backup item above stopped being hygiene the moment this box was ticked.
 - [x] **Read back the app's access status.** Answered 2026-08-30, and the answer is the expensive
       one: **the 12-tester / 14-day closed test applies to this app.** It is not a one-time account
       unlock that the existing live app satisfied. So the plan's assumption held, the schedule stands
