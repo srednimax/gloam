@@ -13,4 +13,4 @@
 # be published must not be in docs/ at all.
 theme: jekyll-theme-minimal
 title: Gloam
-description: <One line about the app>
+description: A screen dimmer that goes below your phone's minimum brightness.
