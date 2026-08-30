@@ -143,8 +143,13 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 ## Before the polish half — Phase 5
 
 - [ ] **Write the listing.** `docs/store-listing.md` — every heading in it is parsed by a script.
-- [ ] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Play requires a
-      *hosted* URL, and an offline app has no server of its own.
+- [x] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Done 2026-08-30:
+      `docs/privacy-policy.md` is written, and since PR #6 merged
+      <https://srednimax.github.io/gloam/privacy-policy.html> answers 200 — the URL the Console's
+      *Set privacy policy* field wants. Play requires a *hosted* URL, and an offline app has no
+      server of its own, so this one waits on a merge to `main` rather than on a commit.
+      `docs/index.md` is **still the template's `<App name>` placeholder** and Pages is serving it
+      publicly, which is why the listing's Website field is blank.
 
 ## Standing checks that never close
 
