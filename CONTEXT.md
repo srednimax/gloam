@@ -17,9 +17,10 @@ user-facing word genuinely differ, both are written here with the difference sta
 | Term | Means | Not |
 | --- | --- | --- |
 | Dim level | The single number the user moves, 0-100. The one value the product is about. | Not "brightness" - it runs the opposite way, and brightness is the system's word |
-| Shade | The overlay window Gloam draws above every other app. The mechanism that reaches below the floor. | Not "filter", "mask" or "layer" |
+| Shade | The **untouchable** overlay window Gloam draws above every other app. The mechanism that reaches below the floor. | Not "filter", "mask" or "layer" - and not the panel |
+| Panel | The **touchable** overlay window carrying the controls, sized to its own content. A second window with the opposite safety rule. | Not "the overlay" - there are two |
 | Floor | The dimmest the Android backlight goes on this device. What Gloam exists to get past. | Not "minimum brightness" in code - too easily read as our own minimum |
-| Backlight | The system screen brightness. Android's value, which Gloam reads and lowers to the floor before the shade does the rest. | Never our own value |
+| Backlight | The system screen brightness. Android's value, which Gloam lowers to the floor as the first half of the dim level's ramp before the shade does the rest. | Never our own value |
 | Warmth | How far the shade is tinted amber, cutting blue. Independent of dim level. | Not "night mode" - that name is already the app's own dark theme |
 | Running | The shade is on screen and the service is in the foreground. A live state. | Not "enabled", which reads as a settings toggle |
 
@@ -35,6 +36,9 @@ user-facing word genuinely differ, both are written here with the difference sta
   dimming to others, and Gloam does both as separate controls.
 - "Off" is reserved for the shade not being drawn at all. A dim level of zero is still running - the
   service is alive, the shade is transparent - and the two states behave differently on a reboot.
+- "Overlay" on its own is avoided now that there are two of them. The shade passes every touch
+  through; the panel catches them. A name that covers both hides the one property that keeps the
+  user from being trapped, so say **shade** or **panel** and never "the overlay window".
 - "Screen dimmer" is fine in the listing and the README, where it is what people search for. It is
   not a code word; nothing is named `Dimmer`.
 
