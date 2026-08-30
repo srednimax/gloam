@@ -826,9 +826,27 @@ after.
 | R5 | Whose override applies - lock screen, notification shade, volume dialog | `cmd statusbar expand-notifications` / `expand-settings` / `input keyevent VOLUME_UP`, each followed by `dumpsys display` | **Ours wins everywhere except the keyguard.** The notification shade, quick settings and the volume dialog all read back `mWindowManagerBrightnessOverride=0.01` unchanged - so `MIN_BACKLIGHT` carries the whole escape-hatch argument, the hostile branch. **The lock screen releases it outright** (`NaN`, `reason=manual`, back to the user's own 250.7 nits) and it returns by itself on unlock |
 | R6 | Override released on a ROM kill | `am force-stop` with the shade live | **Released, on the shade's own window** (re-confirmed at C; B had only the activity's). Holding 6.64 nits at dim 100, `am force-stop` returned the panel to the user's own 250.7 nits and `reason=manual` within a second |
 | R7 | Permission dialog usable with the shade up | by hand, on the phone | - |
-| R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Posted and legible at 6.64 nits.** `Notification(channel=shade ... flags=ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE|SILENT actions=1)`, title *Screen dimmed* - the Stop action is present and the notification is undismissable, at maximum dim |
+| R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Both, and Stop genuinely stops it** - tapping it released the override and the panel returned to the user's own 250.7 nits, service gone. `Notification(channel=shade ... flags=ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE|SILENT actions=1)`, title *Screen dimmed*, undismissable. **But reaching Stop on HyperOS takes a long-press** - see below |
 | R9 | Override vs an app setting its own `screenBrightness` | same, with a video player in swipe-to-dim | - |
 | R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | - |
+
+**What R8 found about the escape hatch, which is the phase's own safety claim.** `CLAUDE.md` says
+the foreground notification *is* the escape hatch. It is - but the **Stop action is not visible in
+the collapsed notification on this ROM.** HyperOS renders the row as title and text only, a downward
+swipe does not expand it, and the button appears in the **long-press** overlay. A plain tap follows
+the content intent to `MainActivity`, which at maximum dim is *under the shade* at
+`6.64 nits x (1 - MAX_SHADE_ALPHA)` = **0.33 nits** - so the app's own *Stop dimming* button is the
+one escape hatch that the backlight half made hard to see, while the notification's action is drawn
+by SystemUI above `TYPE_APPLICATION_OVERLAY` and stays at the full 6.64.
+
+**Recorded rather than worked around, deliberately.** It reads as vendor behaviour rather than a
+Gloam defect: stock Android auto-expands the top notification in the shade, which shows the action,
+and there a long-press opens the channel's settings instead. Copy naming a gesture would therefore be
+*wrong* on the majority of devices, and a custom collapsed `RemoteViews` is the notification API's
+most ROM-fragile corner - a worse trade than the thing it fixes. **Phase 2b's Quick Settings tile is
+the one-gesture escape hatch** and this is the measurement that says why it is not a nicety. Phase 3a
+should note the other half: a control surface that lives under the shade it controls is only as
+legible as the shade allows.
 
 **What R1 costs the ramp, which is a correction and not a reassurance.** The offset is the whole
 story: `nits = 498.3 x u + 1.66` means the float range's bottom decade buys almost nothing. Halving
