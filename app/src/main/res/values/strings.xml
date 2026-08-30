@@ -45,6 +45,13 @@
     <string name="dim_notification_warning_ask">Allow notifications</string>
     <string name="dim_notification_warning_settings">Open notification settings</string>
 
+    <!-- The backlight toggle. The hint says the inert brightness slider out loud, because the
+         symptom recurs and a user who meets it with no explanation reports that Gloam broke their
+         phone. The unavailable line replaces the promise on a device that cannot keep it. -->
+    <string name="dim_backlight_label">Also lower the screen brightness</string>
+    <string name="dim_backlight_hint">Takes your screen\'s own brightness down to its lowest before the shade starts, so Gloam has less light to cover. While it is on, your phone\'s brightness slider will not do anything until you stop dimming.</string>
+    <string name="dim_backlight_unavailable">This phone does not report its brightness in a way Gloam can use, so Gloam dims by drawing over the screen only.</string>
+
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme_system">System</string>

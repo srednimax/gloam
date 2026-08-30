@@ -19,18 +19,26 @@ import kotlinx.coroutines.launch
  * @param running whether the user has asked for the shade. **The stored intent, not the live state
  *   of the service** — the service can be killed by the ROM without the user having changed their
  *   mind, and this is the value that survives that.
+ * @param lowerBacklight whether Gloam may take the backlight down before it draws the shade. Whether
+ *   it *can* on this device is a different question, and not one a `ViewModel` can answer — it needs
+ *   a `Context`, so the screen reads it.
  */
 data class DimUiState(
     val dimLevel: Int = 0,
     val running: Boolean = false,
+    val lowerBacklight: Boolean = true,
 )
 
 class DimViewModel(
     private val preferences: AppPreferences,
 ) : ViewModel() {
     val state: StateFlow<DimUiState> =
-        combine(preferences.dimLevel, preferences.shadeRunning) { level, running ->
-            DimUiState(level, running)
+        combine(
+            preferences.dimLevel,
+            preferences.shadeRunning,
+            preferences.lowerBacklight,
+        ) { level, running, lowerBacklight ->
+            DimUiState(level, running, lowerBacklight)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DimUiState())
 
     /**
@@ -51,6 +59,15 @@ class DimViewModel(
      */
     fun setRunning(running: Boolean) {
         viewModelScope.launch { preferences.setShadeRunning(running) }
+    }
+
+    /**
+     * Takes effect on a live shade without restarting it: the service collects the same `Flow`, so
+     * switching this off releases the override and hands the user their own brightness slider back
+     * while they are looking at it.
+     */
+    fun setLowerBacklight(enabled: Boolean) {
+        viewModelScope.launch { preferences.setLowerBacklight(enabled) }
     }
 
     companion object {
