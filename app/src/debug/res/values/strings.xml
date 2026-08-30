@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The debug build's launcher label, so the two copies on the phone are told apart at a glance.
+
+  `applicationIdSuffix = ".debug"` already lets the debug build sit *beside* a Play copy, but both
+  then carry the same name and the same icon — and picking the wrong one is how a local change gets
+  tested against the store build, or worse, a store bug gets chased in a build that never had it.
+
+  **A resource override rather than a `resValue` in `build.gradle.kts`.** `resValue` generates a
+  resource into the debug variant, and `main/` already declares `app_name`, so the two collide as a
+  duplicate. A debug source set's `res/` *overrides* main's for the same name, which is the
+  mechanism AGP provides for exactly this and needs no build-script logic at all.
+
+  Nothing here reaches a release build, and nothing here reaches the translation gate or
+  `TranslationTest`: both read `src/main/res` only. `app_name` is `translatable="false"` in any case
+  — the app's own name is one of the three kinds of string `docs/translator-brief.md` §4 keeps out
+  of a translator's hands.
+-->
+<resources>
+    <string name="app_name" translatable="false">Gloam debug</string>
+</resources>
