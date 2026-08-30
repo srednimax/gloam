@@ -1169,6 +1169,11 @@ class Scene:
 # ---------------------------------------------------------------------------------------------
 
 # The order matters only in that each scene starts from a relaunch, so they are independent.
+# **These scenes are the template's, not Gloam's.** `items`, the tabs and `schema-mismatch` describe
+# the app this repo was forked from - one with a database and a list. Gloam has `ui/dim/`, Settings
+# and Support, no database and nothing to seed, so nothing below resolves against it and a run walks
+# to screens that do not exist. **Phase 5 rewrites this table**, which is the one edit that makes
+# this script and `screenshots.py` usable here; the driver around it transfers unchanged.
 SCENES = [
     # --- the screen with no Scaffold at all, reachable only by lying to the schema guard --------
     #

@@ -1,55 +1,67 @@
 #!/usr/bin/env python3
 """Capture every screen in light and dark, as the before/after evidence for a redesign.
 
-A redesign changes how the app looks and says nothing about what it does, which makes "is this better?"
-the only question that matters and the hardest one to answer honestly. The answer is a *before* set:
-every screen, shot before a line changes, so the comparison at the end is against a record rather
-than against a memory of what the old one looked like.
+INHERITED FROM ANOTHER APP - IT DOES NOT DESCRIBE GLOAM YET.
 
-This is not `edge-to-edge.py` with different flags — it is the same walk with a different axis and a
-different output. That script's matrix is **rotation x navigation mode** and its deliverable is the
-inset arithmetic; this one's matrix is **theme x locale** and its deliverable is the PNG. So the tap
-sequences are imported from it rather than copied: [SCENES] is the expensive asset in this repo and
-two drifting copies of it would both keep producing screenshots, just of the wrong screens.
+    This script and the [SCENES] table it drives came over with the template, written for a
+    different app: one with tabs, an `items` list, a database, seeded sample data and a
+    schema-mismatch screen. Gloam has one screen (`ui/dim/`), no database and nothing to seed, so
+    the scenes, the suites and the reseeding below are that app's. A run here would walk to
+    screens that do not exist.
+
+    It is kept rather than deleted because **Phase 5 needs it** - the Play listing wants
+    screenshots - and the driver is the expensive half. Rebuilding it from nothing then would cost
+    more than replacing a scene table.
+
+    Phase 5 owes two edits: rewrite [SCENES] in `edge-to-edge.py` against the screens Gloam
+    actually has, and delete whatever here turns out to have described the other app's data model.
+    Until then, read every mention of a suite, a seed or a named scene as a description of the
+    previous app, not of this one.
+
+The rest is design reasoning that survives that rewrite.
+
+This is not `edge-to-edge.py` with different flags - it is the same walk with a different axis and
+a different output. That script's matrix is **rotation x navigation mode** and its deliverable is
+the inset arithmetic; this one's matrix is **theme x locale** and its deliverable is the PNG. So
+the tap sequences are imported from it rather than copied: [SCENES] is the expensive asset in this
+repo and two drifting copies of it would both keep producing screenshots, just of the wrong
+screens.
 
 Run it before the redesign starts and again at the gate, same scenes, same cells:
 
     scripts/screenshots.py --out docs/screenshots/before
     scripts/screenshots.py --out docs/screenshots/after
-    scripts/screenshots.py --out DIR --theme light          # one cell
-    scripts/screenshots.py --out DIR --scene home,weight    # one screen, while iterating
-    scripts/screenshots.py --out DIR --scene home,weight --numbered   # 1_home-en.png, 2_weight-en.png
-    scripts/screenshots.py --restore                        # hand the phone back
+    scripts/screenshots.py --out DIR --theme light             # one cell
+    scripts/screenshots.py --out DIR --scene <name>,<name>     # one screen, while iterating
+    scripts/screenshots.py --out DIR --scene <name> --numbered # 1_<name>-en.png
+    scripts/screenshots.py --restore                           # hand the phone back
 
-**The Play listing takes the LIGHT set** (changed 2026-08-24; it was dark for the whole of Phase 9, and
-1.8.0 went up under the old rule). Both cells are still captured, because the app ships both themes and
-the before/after comparison needs the pair — this is a decision about what goes in the Console. Use
-`--theme light` when the run is only for the listing.
+**The Play listing takes the LIGHT set.** Both cells are still captured, because the app ships
+both themes and the before/after comparison needs the pair - this is a decision about what goes in
+the Console. Use `--theme light` when the run is only for the listing.
 
-Filenames carry the locale they were taken in — `home-pl.png`, not `home.png` — because a PNG loses the
-directory that used to carry its language the moment anyone moves it. See [locale_tag].
+Filenames carry the locale they were taken in - `dim-pl.png`, not `dim.png` - because a PNG loses
+the directory that used to carry its language the moment anyone moves it. See [locale_tag].
 
-`--numbered` additionally prefixes each file with its position in the `--scene` list — `1_home-pl.png`.
-Play orders a listing's screenshots by the order they are uploaded, and a file manager sorts
-alphabetically, so without the prefix "backup" leads and "weight" trails whatever order was intended.
-The number comes from the order **asked for**, not from [SCENES], which is why `--scene` preserves its
-argument order rather than the table's. Opt-in, because every other consumer of these filenames — the
-before/after comparisons, the manifest — refers to them without one.
+`--numbered` additionally prefixes each file with its position in the `--scene` list. Play orders a
+listing's screenshots by the order they are uploaded, and a file manager sorts alphabetically, so
+without the prefix the intended order is whatever the alphabet says. The number comes from the
+order **asked for**, not from [SCENES], which is why `--scene` preserves its argument order rather
+than the table's. Opt-in, because every other consumer of these filenames - the before/after
+comparisons, the manifest - refers to them without one.
 
-Each cell runs all three suites in the one order that works: `full` against the seeded sample data,
-then `mismatch`, then `empty` — which wipes the install and is therefore last. Each cell then reseeds,
-so the next one starts from the same place and the phone is left usable rather than blank.
+Each cell runs every suite in [SUITES] order and reseeds at the start, so the next cell begins from
+the same place. That shape is the previous app's; Gloam has nothing to seed, and Phase 5 decides
+what replaces it.
 
-**It wipes the debug install** (`<applicationId>.debug`, from `project.py`). That is not a Play build —
-different `applicationId`, separate install, untouched by this. (The Play install holds dummy data too;
-what is irreplaceable about it is the *install*, not the contents — ADR-0023's Phase 9 amendment.)
+**It wipes the debug install** (`<applicationId>.debug`, from `project.py`). That is not a Play
+build - different `applicationId`, separate install, untouched by this.
 
-**It destroys anything armed on the debug install, and it does so silently.** Every cell reseeds, and a
-cell's first scene answers the watch-expiry prompt with `Close it`, which *deletes the watch row*. A
-2026-08-21 run of nine locales left `watches` empty and took an expiry that had been armed since 08-15
-with it — the reading Phase 9 §1 had been waiting on for two weeks. Nothing warned, because from the
-script's side reseeding is the correct behaviour. **Check for armed state before running this** — a watch,
-a dose slot, a scheduled sweep — or accept that it is gone.
+**It destroys anything armed on the debug install, and it does so silently**, because every cell
+reseeds. That was a real loss in the app this came from: a nine-locale run cleared state that had
+been armed for two weeks, and nothing warned, because from the script's side reseeding is the
+correct behaviour. Gloam has no such state today - re-read this line in Phase 5 rather than
+assuming it stayed true.
 """
 
 from __future__ import annotations
@@ -88,10 +100,11 @@ CONFIG = e2e.Config("portrait-gesture", 0, "gesture")
 # later — which is the redesign done twice.
 THEMES = {"light": "no", "dark": "yes"}
 
-# The order is the whole point. `empty` wipes, so it goes last or it takes the sample data the `full`
-# suite needs out from under it. `mismatch` corrupts the schema version and puts it back, which is
-# survivable in the middle; it is second because it is cheap and because running it after a wipe
-# would corrupt a database with nothing in it.
+# **The previous app's suites** (see the module docstring) - Gloam has no database, so `mismatch`
+# has no schema to corrupt and `full` has no sample data to show. Kept for the ordering argument,
+# which is the part that transfers: `empty` wipes, so it goes last or it takes the data the `full`
+# suite needs out from under it; `mismatch` is survivable in the middle, and running it after a wipe
+# would corrupt a database with nothing in it. Phase 5 replaces the tuple, not the reasoning.
 SUITES = ("full", "mismatch", "empty")
 
 
@@ -182,11 +195,12 @@ def run_cell(theme: str, locale: str | None, scenes: list, out: Path, reseed: bo
     """One theme, every suite, in [SUITES] order.
 
     The reseed is at the *start* rather than the end, and that is the load-bearing detail of the
-    whole script. A cell answers the watch-expiry prompt on its very first scene — the `Close it`
-    tap in `reach_scene` — and answering it is permanent, so a second cell inheriting the first
-    one's install finds the prompt already gone and shoots an ordinary Home screen under the name
-    `watch-expiry`. Starting each cell from a fresh seed is what makes light and dark comparable at
-    all, rather than a pair that quietly diverges after scene one.
+    whole script. **The example is the previous app's** (see the module docstring): a cell there
+    answered a one-shot expiry prompt on its very first scene, and answering it is permanent, so a
+    second cell inheriting the first one's install found the prompt already gone and shot an
+    ordinary screen under the prompt's name. Any one-shot state has that shape. Starting each cell
+    from a fresh seed is what makes light and dark comparable at all, rather than a pair that
+    quietly diverges after scene one.
     """
     out_dir = out / theme
     out_dir.mkdir(parents=True, exist_ok=True)
