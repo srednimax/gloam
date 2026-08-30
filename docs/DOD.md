@@ -101,17 +101,24 @@ one step with an external queue is behind you.
       rebase-only merge setting, Pages from `main/docs` and `RELEASE_PLEASE_TOKEN` all already in
       place. It is idempotent, so re-run it after any manual change in the GitHub UI rather than
       trusting this box.
-- [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`). The
-      service account is the one step CI cannot do for itself; four of the five secrets are now just
-      a copy out of `local.properties`, and `repo-setup.py --dry-run` lists which are still missing:
-      ```bash
-      base64 -w0 ~/.keystores/gloam-upload.jks | gh secret set UPLOAD_KEYSTORE_BASE64
-      gh secret set UPLOAD_STORE_PASSWORD   # the upload.storePassword value
-      gh secret set UPLOAD_KEY_ALIAS        # upload
-      gh secret set UPLOAD_KEY_PASSWORD     # the same string (PKCS12 keeps one password)
-      ```
-      Wanted at the first upload, not before. The fifth, `PLAY_SERVICE_ACCOUNT_JSON`, has the
-      Play-to-API propagation delay in front of it, so create the service account before you need it.
+- [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`).
+      **Four of the five are done, 2026-08-30**, and verified rather than assumed: the
+      `upload.storePassword` in `local.properties` opens the keystore, `keytool -list` reports the
+      single alias `upload`, and the certificate SHA-256 is the one `RELEASING.md` records. So the
+      values in the secrets are known-good, not merely present — `repo-setup.py --dry-run` can only
+      tell you a secret is *set*, because GitHub never reads one back.
+      **`UPLOAD_KEYSTORE_BASE64` is not a backup.** A GitHub secret is write-only; you cannot get the
+      keystore out of it again. It is a second copy in the sense that CI can use it, not in the sense
+      that you could recover from losing the file. The backup item above is untouched by this.
+      **What is left is the fifth**, `PLAY_SERVICE_ACCOUNT_JSON`, and it is the one step CI cannot do
+      for itself — Google Cloud console, then a Play Console invite, per *Creating the service
+      account* in `RELEASING.md`. Play-to-API propagation is not instant, so create it before it is
+      wanted rather than at the moment of the first automated upload.
+      **Nothing else gates automated internal-track publishing.** `publish-play.yml` already triggers
+      on a published GitHub Release and uploads to `track: internal` with `status: completed`;
+      production is a separate manual promotion (`publish-play-production.yml`) that moves the same
+      bytes rather than building again. Once the service account exists, merging a release-please PR
+      is the whole publish.
 - [x] **Decide the `applicationId` deliberately.** Done: **`io.github.srednimax.gloam`**. Reverse-DNS
       on a namespace verifiably yours; Play has never checked domain ownership and package
       registration is keyed to the **signing key**, not a domain. Short generic names like
