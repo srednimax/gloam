@@ -200,8 +200,20 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
       <https://srednimax.github.io/gloam/privacy-policy.html> answers 200 — the URL the Console's
       *Set privacy policy* field wants. Play requires a *hosted* URL, and an offline app has no
       server of its own, so this one waits on a merge to `main` rather than on a commit.
-      `docs/index.md` is **still the template's `<App name>` placeholder** and Pages is serving it
-      publicly, which is why the listing's Website field is blank.
+      `docs/index.md` was the template's `<App name>` placeholder while Pages served it publicly;
+      it was written in PR #7, so the site root is Gloam's own and the listing's Website field has
+      somewhere real to point.
+
+- [ ] **Add yourself as the sole required reviewer on the `production` environment.** As of
+      2026-08-30 the environment **does not exist on the repo at all** — only `github-pages` does —
+      and `publish-play-production.yml` declares `environment: production`. GitHub creates a missing
+      environment implicitly on first run, *with no protection rules*, so the workflow's own comment
+      ("the `production` environment holds it until you approve") would be false the one time it
+      mattered: the promotion would run straight through. `RELEASING.md` already warns that an
+      environment without a reviewer "is just a label and gates nothing"; this records that the label
+      is not there either. Free to do now, and it is the human gate in front of every owner — not
+      something to discover while promoting. Repo *Settings → Environments → New environment*, named
+      `production`, then tick **Required reviewers** and add yourself.
 
 ## Standing checks that never close
 
