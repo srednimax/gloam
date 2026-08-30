@@ -37,6 +37,14 @@
     <string name="dim_permission_body">The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath.</string>
     <string name="dim_permission_grant">Open settings</string>
 
+    <!-- The escape-hatch warning. It makes a safety claim — that there is a Stop button outside the
+         app — so it names the consequence rather than the permission. -->
+    <string name="dim_notification_warning_title">No Stop button outside Gloam</string>
+    <string name="dim_notification_warning_body">Gloam is allowed to dim your screen but not to show a notification, so the only way to stop it is this screen.</string>
+    <string name="dim_notification_warning_channel_body">Gloam\'s notification is switched off, so the only way to stop dimming is this screen.</string>
+    <string name="dim_notification_warning_ask">Allow notifications</string>
+    <string name="dim_notification_warning_settings">Open notification settings</string>
+
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme_system">System</string>

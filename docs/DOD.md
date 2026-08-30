@@ -146,18 +146,28 @@ one step with an external queue is behind you.
 
 Cheap now, expensive or impossible once a build sits on twelve strangers' phones.
 
-- [ ] **Resolve four pieces of scaffolding that describe features the app does not have.** A future
+- [ ] **Resolve three pieces of scaffolding that describe features the app does not have.** A future
       reader cannot tell an unused defence from a live one:
-      `work/NotificationPermission.kt` (uncalled — wired up by Phase 1's entry gate),
       `work/BatteryExemption.kt` (uncalled — Phase 4),
       **`onboardingDone` in `AppPreferences`** (read by nothing — use it in Phase 2's first-run flow
       or delete the key; it is a *stored* key, so this is the last phase in which the choice is
       free), and `scripts/project.py` still reporting `DATABASE_FILE gloam.db` after ADR-0007
       removed the database.
-- [ ] **Ask for `POST_NOTIFICATIONS`.** `work/NotificationPermission.kt` exists and nothing calls it.
-      The shade's ongoing notification is the documented way out of a very dark screen, and on
-      Android 13+ it is invisible until this is granted — so the safety property the house rules
-      claim is only half true today. Phase 1's entry gate.
+- [x] **Ask for `POST_NOTIFICATIONS`.** Done — Phase 1 checkpoint A. `DimScreen` fires the ask from
+      the start button, **before the first `startShade()` and never after**, so it is only ever raised
+      with no shade on screen: the system refuses touches on non-system overlay windows while a
+      permission dialog is up, and nobody should assume `FLAG_NOT_TOUCHABLE` exempts ours.
+      `setRunning(true)` and `startShade()` moved into the outcome callback together, in all three
+      outcomes — the shade starts even on a refusal, and the app says what was given up instead of
+      withholding the feature.
+      **No DataStore key was added**, which was the point: "never asked" and "asked twice and
+      refused" are indistinguishable from `shouldShowRequestPermissionRationale` and want identical
+      behaviour anyway, so the launcher answers it. The second denial is spent only by a deliberate
+      tap on a control that says *Allow notifications*.
+      The warning is a **live read** — `notificationsAllowed() && channelCanAppear(Shade)`, both
+      halves, re-read on every resume beside `canDrawShade()` — rather than a remembered outcome,
+      because the fix for it is a settings screen the app hands the user off to. It self-clears when
+      they fix it and appears if they revoke mid-session.
 - [ ] **Recruit 12 closed testers — start in Phase 1, not when the build is ready.** Production
       access needs them opted in *continuously for 14 days*, and **this is now confirmed to apply to
       Gloam** (Phase P, 2026-08-30) rather than being an assumption. It is the longest lead item in

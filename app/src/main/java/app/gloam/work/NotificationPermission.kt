@@ -1,6 +1,7 @@
 package app.gloam.work
 
 import android.Manifest
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -88,6 +89,40 @@ fun rememberNotificationPermissionAsk(onOutcome: (NotificationPermissionOutcome)
         }
     }
 }
+
+/**
+ * **Is the app allowed to post notifications at all?** A live read, never a remembered outcome.
+ *
+ * The same property that makes `canDrawShade()` re-read on every resume applies here and is worse:
+ * this switch lives on a settings screen the app *deliberately sends the user to* when the system
+ * dialog is spent, so an answer cached before that trip is stale exactly at the moment it decides
+ * whether to tell the user they have no way out.
+ *
+ * It is only half the question — the channel's own importance is the other half, and either one on
+ * its own hides the notification. See [app.gloam.work.channelCanAppear].
+ */
+fun Context.notificationsAllowed(): Boolean = NotificationManagerCompat.from(this).areNotificationsEnabled()
+
+/**
+ * **Is the system dialog still worth firing?**
+ *
+ * `shouldShowRequestPermissionRationale` is exact *after* a denial and ambiguous before one: it is
+ * false both for "never asked" and for "asked twice and refused". Those two want identical
+ * behaviour — fire the launcher, which either shows the dialog or comes straight back with
+ * [NotificationPermissionOutcome.PermanentlyDenied] — so the ambiguity costs nothing and no stored
+ * key is needed to resolve it. True here means one denial has been spent and the second is still
+ * there to spend.
+ *
+ * Kotlin note: the receiver is nullable, so the call site does not branch. `LocalActivity` is
+ * `Activity?` because a composable can in principle be hosted outside one, and an extension on a
+ * nullable type turns that into an answer (`false`) instead of a null check at every call.
+ *
+ * `minSdk` is 33 (ADR-0008), so `POST_NOTIFICATIONS` is a runtime permission on every device this
+ * app reaches and there is no version branch to write.
+ */
+fun Activity?.notificationRationaleAvailable(): Boolean =
+    this != null &&
+        ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)
 
 /**
  * This app's page in Android's settings — where a permanently refused permission can still be turned

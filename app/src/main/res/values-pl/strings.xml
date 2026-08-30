@@ -22,6 +22,12 @@
     <string name="dim_permission_body">Zasłona to warstwa nad tym, co jest na ekranie, więc Android prosi o wyraźną zgodę. Gloam nie odczytuje niczego o aplikacjach pod spodem.</string>
     <string name="dim_permission_grant">Otwórz ustawienia</string>
 
+    <string name="dim_notification_warning_title">Poza Gloam nie ma przycisku Zatrzymaj</string>
+    <string name="dim_notification_warning_body">Gloam może przyciemniać ekran, ale nie może wyświetlać powiadomień, więc jedynym sposobem na zatrzymanie przyciemniania jest ten ekran.</string>
+    <string name="dim_notification_warning_channel_body">Powiadomienie Gloam jest wyłączone, więc jedynym sposobem na zatrzymanie przyciemniania jest ten ekran.</string>
+    <string name="dim_notification_warning_ask">Zezwól na powiadomienia</string>
+    <string name="dim_notification_warning_settings">Otwórz ustawienia powiadomień</string>
+
     <string name="settings_appearance">Wygląd</string>
     <string name="settings_theme_system">Systemowy</string>
     <string name="settings_theme_light">Jasny</string>
