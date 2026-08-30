@@ -35,7 +35,12 @@ Play counts characters, not words, and rejects at the limit rather than truncati
 in the heading and update it when you edit: it is the only warning you get before the Console
 refuses a paste.
 
-### App name — 0/30
+### App name — 5/30
+
+**The app name is not translated, in any locale.** It is a coined word rather than a description, so
+there is nothing to translate; `app_name` in `values/strings.xml` carries `translatable="false"` for
+the same reason and `values-pl` does not override it. Both listings below therefore read `Gloam`, and
+that is deliberate — not a Polish field somebody forgot.
 
 ```
 Gloam
@@ -116,7 +121,9 @@ information. v1's Support screen carries no tip link, `docs/index.md` carries no
 copy names none. The promise in `CLAUDE.md` still stands — it just is not collected until the app is
 live and there is something to appeal from.
 
-### App name — 0/30
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
 
 ```
 Gloam
