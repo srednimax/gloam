@@ -291,6 +291,56 @@ class ShadeRampTest {
         assertTrue("MAX_SHADE_ALPHA must leave the user something to read", MAX_SHADE_ALPHA < 1f)
     }
 
+    /**
+     * **The veil invariant, which the signal bound cannot see.**
+     *
+     * Source-over is `w x amber + (1 - w) x content`: the amber does not only attenuate what is
+     * underneath, it lays light *on top of* it, and how much depends on the amber's own luminance. A
+     * bright amber passes every other assertion in this file and produces a screen nothing can be
+     * read through — `#FFB000` at half alpha is four times more veil than content — so the second
+     * bound says the amber may never add more light than the black child was allowed to leave.
+     *
+     * One assertion, no sweep: it is a property of the constants rather than of any input.
+     */
+    @Test
+    fun `the amber never adds more light than the black layer was allowed to leave`() {
+        val luminance = relativeLuminance(SHADE_AMBER)
+        val veil = MAX_WARMTH_ALPHA * luminance
+        assertTrue(
+            "SHADE_AMBER has luminance $luminance, so it veils $veil against a bound of ${1f - MAX_SHADE_ALPHA}",
+            veil <= 1f - MAX_SHADE_ALPHA,
+        )
+    }
+
+    /**
+     * The luminance the bound above is measured with, checked against its two fixed points.
+     *
+     * Without this, a [relativeLuminance] that returned zero would pass the veil invariant for every
+     * colour there is — including the ones it exists to reject.
+     */
+    @Test
+    fun `relative luminance is anchored at black and white`() {
+        assertEquals("black", 0.0, relativeLuminance(0xFF000000.toInt()).toDouble(), EPSILON.toDouble())
+        assertEquals("white", 1.0, relativeLuminance(0xFFFFFFFF.toInt()).toDouble(), EPSILON.toDouble())
+    }
+
+    /**
+     * **Why the shade's amber cannot come from `MaterialTheme`**, as a number rather than as three
+     * sentences of reasoning.
+     *
+     * The palette's own seed is the colour somebody would reach for if they were tidying away the
+     * house-rule exception in `ShadeRamp.kt`. It fails the bound above by more than twice, and this
+     * is what says so before a user finds out by looking at an unreadable screen.
+     */
+    @Test
+    fun `the brand seed could not be used as the shade amber`() {
+        val duskAmber = 0xFFB0763C.toInt()
+        assertTrue(
+            "B0763C now passes the veil bound; the exception in ShadeRamp.kt needs re-reading",
+            MAX_WARMTH_ALPHA * relativeLuminance(duskAmber) > 1f - MAX_SHADE_ALPHA,
+        )
+    }
+
     /** The worst composite over the grid is *equality*, so this pins the epsilon's necessity. */
     @Test
     fun `the tightest composite on the grid is exactly the bound`() {

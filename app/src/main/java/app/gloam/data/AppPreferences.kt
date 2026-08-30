@@ -46,6 +46,7 @@ class AppPreferences(
         val DIM_LEVEL = intPreferencesKey("dim_level")
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
         val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
+        val WARMTH = intPreferencesKey("warmth")
     }
 
     /**
@@ -108,6 +109,22 @@ class AppPreferences(
     val lowerBacklight: Flow<Boolean> = store.data.map { it[Keys.LOWER_BACKLIGHT] ?: true }
 
     /**
+     * How far the shade is tinted amber, 0–100 (CONTEXT.md: **warmth**).
+     *
+     * **Defaults to 0**, for the same reason [DEFAULT_DIM_LEVEL] is modest: a colour cast nobody
+     * asked for is indistinguishable from a broken screen, and warmth is only worth having because
+     * someone chose it.
+     *
+     * Coerced on read as well as on write, like [dimLevel] — a value outside the range can only come
+     * from a build with a different one, and it feeds a slider that would throw on it.
+     *
+     * A separate control from the dim level, but not an independent one: the applied tint is scaled
+     * by the headroom the dim level leaves, because the two together decide whether anything
+     * underneath stays legible. That arithmetic is `shadeValuesFor`'s, not this key's.
+     */
+    val warmth: Flow<Int> = store.data.map { (it[Keys.WARMTH] ?: 0).coerceIn(0, 100) }
+
+    /**
      * The theme mode, read once, before any Activity exists.
      *
      * The one place a `suspend` read is worth its cost: `MainApplication.onCreate` needs the answer
@@ -139,6 +156,10 @@ class AppPreferences(
 
     suspend fun setLowerBacklight(enabled: Boolean) {
         store.edit { it[Keys.LOWER_BACKLIGHT] = enabled }
+    }
+
+    suspend fun setWarmth(warmth: Int) {
+        store.edit { it[Keys.WARMTH] = warmth.coerceIn(0, 100) }
     }
 }
 

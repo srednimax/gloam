@@ -79,7 +79,7 @@ private enum class ShadeWarning {
 }
 
 /**
- * The one screen the app is about: a slider and a switch for the shade.
+ * The one screen the app is about: two sliders and a switch for the shade.
  *
  * The screen owns starting and stopping the service rather than the `ViewModel` doing it — a
  * `ViewModel` has no `Context`, and handing it one is how it starts outliving its own scope.
@@ -258,6 +258,18 @@ fun DimScreen(
             Slider(
                 value = state.dimLevel.toFloat(),
                 onValueChange = { viewModel.setDimLevel(it.toInt()) },
+                valueRange = 0f..100f,
+                modifier = Modifier.padding(horizontal = Spacing.base),
+            )
+
+            // Warmth is the second control, not a second ramp: the amber is a child of the same
+            // window and the applied tint is scaled by the headroom the dim level leaves, so this
+            // slider says what was asked for rather than what the composite ended up with. It starts
+            // at 0 — a colour cast nobody asked for is indistinguishable from a broken screen.
+            SectionHeader(stringResource(R.string.dim_warmth_label))
+            Slider(
+                value = state.warmth.toFloat(),
+                onValueChange = { viewModel.setWarmth(it.toInt()) },
                 valueRange = 0f..100f,
                 modifier = Modifier.padding(horizontal = Spacing.base),
             )
