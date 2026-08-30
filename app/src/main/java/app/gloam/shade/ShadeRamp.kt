@@ -10,8 +10,9 @@ import kotlin.math.pow
  * whole triple, so a caller cannot pass the dim level where the warmth was meant.
  *
  * @param dimLevel 0–100, the one value the product is about (CONTEXT.md: **dim level**).
- * @param warmth 0–100. Nothing writes this until the warmth layer lands; the ramp already answers
- *   for it so that the layer is a second child and a slider rather than a second ramp.
+ * @param warmth 0–100, how far the shade is tinted amber (CONTEXT.md: **warmth**). A separate
+ *   control from the dim level, but not an independent one: [shadeValuesFor] scales it by the
+ *   headroom the dim level leaves.
  * @param lowerBacklight whether Gloam may take the **backlight** down before it draws the shade.
  */
 data class DimSettings(
@@ -100,6 +101,47 @@ const val MAX_WARMTH_ALPHA = 0.5f
  * the bound separately for each toggle state and each user's starting brightness.
  */
 const val WARMTH_EASE_FROM = 0.88f
+
+/**
+ * The amber the warmth child is painted with, ARGB — and **deliberately not a `MaterialTheme`
+ * colour**, the one exception to the house rule that every colour comes from the palette.
+ *
+ * Three things separate it from every other colour in the app: the shade is not a surface but a
+ * physical quantity chosen for its effect on light; it must not change when the user switches the
+ * app's own light or dark theme; and it is bounded by [relativeLuminance] rather than by the
+ * palette's contrast checks.
+ *
+ * **The bound is what picked it, and taste only chose between the survivors.** Source-over lays
+ * veiling light *on top of* the content — `w x amber + (1 - w) x content` — so a bright amber passes
+ * the composite's signal bound and still produces a screen nothing can be read through. `#FFB000`
+ * has relative luminance `0.523`: at half alpha that is four times more veil than content. This one
+ * is `0.073`, so `MAX_WARMTH_ALPHA x 0.073 = 0.036` against a bound of `1 - MAX_SHADE_ALPHA = 0.05`.
+ *
+ * The brand seed the palette is generated from — `B0763C`, dusk amber — is `0.224` and fails that by
+ * more than twice. That is the number behind the exception rather than an assertion of it, and
+ * `ShadeRampTest` holds both ends of it.
+ */
+const val SHADE_AMBER = 0xFF7A3B00.toInt()
+
+/**
+ * WCAG relative luminance of an ARGB colour, alpha ignored: how much light the colour itself
+ * carries, which is exactly the term the composite's signal bound cannot see.
+ *
+ * Arithmetic over three floats rather than `ColorUtils.calculateLuminance`, and that is the point —
+ * a method call on `android.jar` throws *"not mocked"* in a JVM unit test, so reaching for the
+ * platform here would move [SHADE_AMBER]'s bound onto a device. See this file's note on Android
+ * imports below.
+ */
+fun relativeLuminance(color: Int): Float {
+    val red = linearise((color shr 16 and 0xFF) / 255f)
+    val green = linearise((color shr 8 and 0xFF) / 255f)
+    val blue = linearise((color and 0xFF) / 255f)
+    return 0.2126f * red + 0.7152f * green + 0.0722f * blue
+}
+
+/** sRGB's transfer function, undone: the stored byte is gamma-encoded and light is not. */
+private fun linearise(channel: Float): Float =
+    if (channel <= 0.03928f) channel / 12.92f else ((channel + 0.055f) / 1.055f).pow(2.4f)
 
 /**
  * One dim level, one ramp, in a fixed order (ADR-0010): spend the **backlight** first, then draw the

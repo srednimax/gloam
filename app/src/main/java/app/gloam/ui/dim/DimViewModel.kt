@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * @param dimLevel 0–100, the user's single control.
+ * @param dimLevel 0–100, the one value the product is about.
+ * @param warmth 0–100, how far the shade is tinted amber. Its *applied* strength is not this number
+ *   — the ramp scales it by the headroom the dim level leaves — which is why the slider shows what
+ *   was asked for rather than what the composite ended up with.
  * @param running whether the user has asked for the shade. **The stored intent, not the live state
  *   of the service** — the service can be killed by the ROM without the user having changed their
  *   mind, and this is the value that survives that.
@@ -25,6 +28,7 @@ import kotlinx.coroutines.launch
  */
 data class DimUiState(
     val dimLevel: Int = 0,
+    val warmth: Int = 0,
     val running: Boolean = false,
     val lowerBacklight: Boolean = true,
 )
@@ -35,10 +39,11 @@ class DimViewModel(
     val state: StateFlow<DimUiState> =
         combine(
             preferences.dimLevel,
+            preferences.warmth,
             preferences.shadeRunning,
             preferences.lowerBacklight,
-        ) { level, running, lowerBacklight ->
-            DimUiState(level, running, lowerBacklight)
+        ) { level, warmth, running, lowerBacklight ->
+            DimUiState(level, warmth, running, lowerBacklight)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DimUiState())
 
     /**
@@ -50,6 +55,14 @@ class DimViewModel(
      */
     fun setDimLevel(level: Int) {
         viewModelScope.launch { preferences.setDimLevel(level) }
+    }
+
+    /**
+     * Written on every drag like [setDimLevel], and for the same reason: the running service
+     * collects this same `Flow`, so the tint follows the slider live.
+     */
+    fun setWarmth(warmth: Int) {
+        viewModelScope.launch { preferences.setWarmth(warmth) }
     }
 
     /**

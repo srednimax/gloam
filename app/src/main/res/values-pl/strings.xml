@@ -32,6 +32,8 @@
     <string name="dim_backlight_hint">Zmniejsza własną jasność ekranu do minimum, zanim pojawi się zasłona, więc Gloam ma mniej światła do zakrycia. Gdy ta opcja jest włączona, suwak jasności telefonu nic nie zmienia, dopóki przyciemnianie nie zostanie wyłączone.</string>
     <string name="dim_backlight_unavailable">Ten telefon nie podaje swojej jasności w sposób, którego Gloam może użyć, więc Gloam przyciemnia tylko zasłoną nad ekranem.</string>
 
+    <string name="dim_warmth_label">Ciepło barwy</string>
+
     <string name="settings_appearance">Wygląd</string>
     <string name="settings_theme_system">Systemowy</string>
     <string name="settings_theme_light">Jasny</string>

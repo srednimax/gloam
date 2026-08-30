@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
 import app.gloam.MainActivity
 import app.gloam.MainApplication
@@ -45,12 +46,20 @@ private const val NOTIFICATION_ID = 1
  *
  * ## What the window actually is
  *
- * A plain black `View` at a chosen alpha, in a window of type `TYPE_APPLICATION_OVERLAY`, with the
- * flags that make it **incapable of being interacted with**: `FLAG_NOT_TOUCHABLE` means every touch
- * passes through to whatever is underneath, and `FLAG_NOT_FOCUSABLE` means it never takes keyboard
- * focus. Without both, the shade would swallow the user's taps and the phone would appear frozen —
- * the single worst failure this app could ship, because the way out of it is also underneath the
- * shade.
+ * A `FrameLayout` with two children — black at the dim level, amber at the warmth — in a window of
+ * type `TYPE_APPLICATION_OVERLAY`, with the flags that make it **incapable of being interacted
+ * with**: `FLAG_NOT_TOUCHABLE` means every touch passes through to whatever is underneath, and
+ * `FLAG_NOT_FOCUSABLE` means it never takes keyboard focus. Without both, the shade would swallow
+ * the user's taps and the phone would appear frozen — the single worst failure this app could ship,
+ * because the way out of it is also underneath the shade.
+ *
+ * **Two children, still one window.** Every safety flag above, the window type, the cutout mode and
+ * the foreground notification are attributes of the *window*, so a second layer costs nothing and
+ * changes none of them — which is why the warmth layer lands here rather than in a second window
+ * later. What it does change is where the safety cap lives: black at `MAX_SHADE_ALPHA` under amber
+ * at `MAX_WARMTH_ALPHA` leaves half of what the black child alone was ever allowed to leave, with
+ * neither child past its own limit, so the bound belongs to the composite. [shadeValuesFor] is
+ * where that is enforced, and it is proven on the JVM rather than by looking at a screen.
  *
  * `FLAG_LAYOUT_IN_SCREEN` and `FLAG_LAYOUT_NO_LIMITS` together with `MATCH_PARENT` are what carry it
  * over the status and navigation bars. Without them the shade stops at the app area and the two
@@ -82,7 +91,15 @@ class ShadeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var windowManager: WindowManager? = null
+
+    /** The window's root: the `FrameLayout` that `WindowManager` holds, not either layer. */
     private var shadeView: View? = null
+
+    /** The black child, carrying the **dim level**. */
+    private var dimLayer: View? = null
+
+    /** The amber child, drawn above the black one, carrying the **warmth**. */
+    private var warmthLayer: View? = null
 
     /**
      * The very `LayoutParams` the window was added with, kept rather than rebuilt.
@@ -121,15 +138,18 @@ class ShadeService : Service() {
         // The one source of truth for how dark it is. Collected rather than passed in the Intent so
         // that dragging the slider updates the live window without restarting anything.
         //
-        // Kotlin note: `combine` over two `Flow`s is `Promise.all` over streams that never finish —
-        // it emits a fresh tuple whenever *either* input changes, so this gets one settled
-        // `DimSettings` rather than two callbacks it would have to reconcile. `distinctUntilChanged`
-        // after it is what stops an unrelated preference write re-applying the window layout.
+        // Kotlin note: `combine` over three `Flow`s is `Promise.all` over streams that never finish
+        // — it emits a fresh tuple whenever *any* input changes, so this gets one settled
+        // `DimSettings` rather than three callbacks it would have to reconcile, racing each other
+        // into `updateViewLayout`. `distinctUntilChanged` after it is what stops an unrelated
+        // preference write re-applying the window layout.
         val preferences = (application as MainApplication).preferences
-        combine(preferences.dimLevel, preferences.lowerBacklight) { level, lower ->
-            // Warmth is 0 until the amber child and its key land; the ramp already answers for it so
-            // that the layer is a second child and a slider rather than a second ramp.
-            DimSettings(dimLevel = level, warmth = 0, lowerBacklight = lower)
+        combine(
+            preferences.dimLevel,
+            preferences.warmth,
+            preferences.lowerBacklight,
+        ) { level, warmth, lower ->
+            DimSettings(dimLevel = level, warmth = warmth, lowerBacklight = lower)
         }.distinctUntilChanged()
             .onEach { settings -> applyShadeValues(settings) }
             .launchIn(scope)
@@ -167,7 +187,29 @@ class ShadeService : Service() {
         // over it is a worse one.
         if (!canDrawShade()) return
 
-        val view = View(this).apply { setBackgroundColor(android.graphics.Color.BLACK) }
+        // **Amber above black**, and the order is not arbitrary. It makes no difference to how much
+        // of the content survives — `(1 - a) x (1 - w)` either way — but it decides the amber's own
+        // strength: underneath, the tint would be attenuated by exactly the black layer that makes
+        // it worth having, so warmth would fade out where a dark-adapted eye most notices it.
+        //
+        // Both start transparent. The window is added here, before the first preference emission
+        // arrives, and a child at Android's default alpha of 1 would paint one opaque black frame
+        // over whatever the user was looking at.
+        val dim =
+            View(this).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
+                alpha = 0f
+            }
+        val warmth =
+            View(this).apply {
+                setBackgroundColor(SHADE_AMBER)
+                alpha = 0f
+            }
+        val view =
+            FrameLayout(this).apply {
+                addView(dim, fillParams())
+                addView(warmth, fillParams())
+            }
         val params =
             WindowManager
                 .LayoutParams(
@@ -196,14 +238,31 @@ class ShadeService : Service() {
         runCatching { windowManager?.addView(view, params) }
             .onSuccess {
                 shadeView = view
+                dimLayer = dim
+                warmthLayer = warmth
                 shadeParams = params
             }
     }
+
+    /**
+     * Both children fill the window.
+     *
+     * Stated rather than left to `FrameLayout`'s default, and a fresh instance per child rather than
+     * one shared: a `ViewGroup` keeps the reference it is handed, so two children sharing one
+     * `LayoutParams` are two children one edit away from moving together.
+     */
+    private fun fillParams() =
+        FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT,
+        )
 
     private fun removeShadeWindow() {
         val view = shadeView ?: return
         runCatching { windowManager?.removeView(view) }
         shadeView = null
+        dimLayer = null
+        warmthLayer = null
         shadeParams = null
         backlightTop = null
     }
@@ -226,7 +285,10 @@ class ShadeService : Service() {
         }
 
         val values = shadeValuesFor(settings, backlightTop)
-        shadeView?.alpha = values.shadeAlpha
+        // A view property, unlike the backlight below: `alpha` takes effect on its own, where
+        // `params.screenBrightness` does nothing until the window layout is handed back.
+        dimLayer?.alpha = values.shadeAlpha
+        warmthLayer?.alpha = values.warmthAlpha
         applyBacklight(values.backlight)
     }
 
