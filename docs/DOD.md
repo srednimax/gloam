@@ -133,6 +133,19 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       is now a dependency of the door rather than a Phase 5 nicety. `docs/store-listing.md` — every
       heading in it is parsed by a script. Keep health claims out of the copy *and* the tags — "eye
       strain", "sleep", "blue light" — because App content was answered health-No.
+      **Part-done 2026-08-30, and the remainder is named rather than implied:**
+      - [x] English short (74/80) and full (2571/4000) descriptions.
+      - [x] App name, both locales — `Gloam`, untranslated on purpose, and the file says why.
+      - [x] Two phone screenshots, 1452×2582. **Placeholders taken by hand**, because
+            `scripts/screenshots.py` still walks the template app's `[SCENES]`. They unblock an
+            upload; they do not sell anything.
+      - [x] Icon (512²) and feature graphic (1024×500) exist at the right sizes — but both derive
+            from the **placeholder mark**, so the item above still owns them.
+      - [ ] **Polish short and full descriptions.** Deliberately deferred, English first. Note the
+            trap recorded in `store-listing.md`: `play-metadata.py` emits *zero-byte* pl-PL files
+            rather than skipping the locale, which is harmless by hand and not harmless once the
+            publish workflow runs.
+      - [ ] Real screenshots off a real mark, and the `[SCENES]` rewrite behind them.
 - [ ] **The three emulator CI legs are vacuously green.** `app/src/androidTest` contains **zero
       tests**, so *Instrumented tests (API 26 / 34 / 36)* pass by having nothing to run, and the API
       26 leg could not install this app even if it did — `minSdk` is 33. That is ~15 minutes of CI
