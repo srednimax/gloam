@@ -3,30 +3,32 @@
 
     python3 scripts/aab-permissions.py [path/to/app-release.aab]
 
-Why this exists: at 4h the note in `docs/play-app-content.md` said 1.1 declared
-two permissions. The artifact declared six. WorkManager's manifest had merged in
-WAKE_LOCK, ACCESS_NETWORK_STATE and FOREGROUND_SERVICE, none of which appear
-anywhere in this app's source — the same "a dependency wrote a permission into
-the merged manifest" hazard that file already warns about for the advertising
-ID, arriving somewhere nobody was watching. At 5g it happened again and bigger:
-ML Kit's scanner brought INTERNET, through a transitive nobody would think to
-read (com.google.android.datatransport:transport-backend-cct).
+**The EXPECTED list below is Gloam's; the incidents that justify it are the
+previous app's**, where this script was written. There, a release note said the
+app declared two permissions and the artifact declared six: WorkManager's
+manifest had merged in WAKE_LOCK, ACCESS_NETWORK_STATE and FOREGROUND_SERVICE,
+none of which appeared anywhere in that app's source. Later it happened again
+and bigger — an ML Kit dependency brought INTERNET through a transitive nobody
+would think to read. Gloam inherits the hazard along with WorkManager: three of
+the eight permissions in its own artifact today are merged, not written.
 
-So the permission set is asserted against a list kept here, and adding a
+So the permission set is asserted against the list kept here, and adding a
 dependency that merges a new one **fails** rather than passing quietly. When it
 does fail, the fix is to decide what the new permission means for the Play
-Console, write that into docs/play-app-content.md, and only then add it below.
+Console and write that down before adding it below. Gloam has no
+`docs/play-app-content.md` yet — Phase 5 writes it; until then the decision goes
+in `docs/DOD.md`.
 
 **<uses-feature> is checked too, and it is not a lesser half.** A merged
 `android.hardware.camera` at required="true" — the default when the attribute is
 omitted — filters the app off every device without a camera on Play. That is a
 distribution change no permission list would show, so the tool of record has to
-be able to see it. 5g's finding was that the ML Kit scanner merges no
-<uses-feature> at all; the check stays because the *next* dependency might.
+be able to see it. Gloam's artifact carries no <uses-feature> at all today;
+the check stays because the *next* dependency might bring one.
 
-**Orientation is checked too, and that is 10b's fix made permanent.** ML Kit's
-scanner ships `android:screenOrientation="portrait"` on its invisible delegate
-activity; `tools:remove` takes it back out, and nothing in this app's source
+**Orientation is checked too**, and that is the previous app's fix made
+permanent there. An ML Kit dependency shipped
+`android:screenOrientation="portrait"` on an invisible delegate activity; `tools:remove` takes it back out, and nothing in this app's source
 would show if a dependency bump quietly put one back. The merged *text* manifest
 is no help either — it keeps XML comments, so a grep there hits our own
 explanation of the removal. So every `screenOrientation` reaching the compiled
@@ -68,24 +70,32 @@ PRIM_BOOLEAN = 8
 PRIM_INT_DEC = 6
 PRIM_INT_HEX = 7
 
-# Every <uses-permission> the release artifact is allowed to carry. Each is
-# accounted for in docs/play-app-content.md — keep the two in step.
+# Every <uses-permission> the release artifact is allowed to carry. Four are
+# declared in app/src/main/AndroidManifest.xml; the rest arrive merged from
+# WorkManager and AndroidX, which is the whole reason this reads the artifact.
 EXPECTED = {
-    "android.permission.POST_NOTIFICATIONS": "ours — care reminders, ADR-0006",
-    "android.permission.RECEIVE_BOOT_COMPLETED": "ours — re-arms the sweep, ADR-0024",
+    # The mechanism. Not a runtime permission and not grantable by a dialog: it is
+    # a Settings hand-off, and shade/OverlayPermission.kt asks canDrawOverlays()
+    # rather than trusting appops, which lies about it on HyperOS.
+    "android.permission.SYSTEM_ALERT_WINDOW": "ours — the shade window",
+    # The escape hatch. Invisible until granted on Android 13+, which is why the
+    # ask is a gate in front of the first startShade() rather than a courtesy.
+    "android.permission.POST_NOTIFICATIONS": "ours — the ongoing notification, PLAN.md rule 4",
+    "android.permission.FOREGROUND_SERVICE": "ours — ShadeService (WorkManager declares it too)",
+    # Paired with android:foregroundServiceType="specialUse" and the <property>
+    # beside it. Required from Android 14; the AndroidManifest comment carries why
+    # specialUse rather than one of the named types.
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE": "ours — ShadeService's type",
     "android.permission.WAKE_LOCK": "WorkManager",
     "android.permission.ACCESS_NETWORK_STATE": "WorkManager — reads state, not network access",
-    "android.permission.FOREGROUND_SERVICE": "WorkManager — never started, see play-app-content.md",
+    # NOT ours today — WorkManager declares it to re-enqueue its own jobs at boot.
+    # Phase 2's reboot restore makes it ours as well, at which point this note
+    # changes and nothing else does: the permission is already in the artifact.
+    "android.permission.RECEIVE_BOOT_COMPLETED": "WorkManager; becomes ours at Phase 2's reboot restore",
     # AndroidX defines and uses this itself, signature-level. The prefix is the
     # applicationId, which differs between the debug and release builds, so it is
     # matched by suffix rather than spelled out.
     "*.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION": "AndroidX, signature-level",
-    "android.permission.SCHEDULE_EXACT_ALARM": "ours — dose reminders, ADR-0003 (not USE_EXACT_ALARM, ADR-0009)",
-    # Arrived at 5g with the ML Kit scanner, via transport-backend-cct — Google's
-    # own telemetry transport, not the scanner API. It is NOT ours: no code in
-    # this app opens a socket (ADR-0011). docs/play-app-content.md §7 states it
-    # that way, and the privacy policy says the same in the owner's words.
-    "android.permission.INTERNET": "ML Kit → transport-backend-cct; see play-app-content.md §7",
 }
 
 # Permissions that must never appear. Absence is what the Data safety answers
@@ -93,22 +103,26 @@ EXPECTED = {
 FORBIDDEN = {
     "com.google.android.gms.permission.AD_ID": "Data safety says no advertising ID",
     "android.permission.QUERY_ALL_PACKAGES": "the <queries> element names one package instead",
-    "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": "Play restricts it; ADR-0003 deep-links instead",
-    # Deliberately never declared, and 5g is where that had to be re-checked: the
-    # scanner's fallback fires the system camera intent, which needs no permission,
-    # while declaring one would make a camera *required at install* and change the
-    # store listing. The ML Kit scanner merges none — asserted here, not assumed.
-    "android.permission.CAMERA": "the camera intent needs none; declaring it changes the listing",
+    # Phase 4 needs the exemption and asks for it by deep-linking to Settings.
+    # Declaring the permission is the other route and Play restricts it to a short
+    # list of app types a dimmer is not on — an artifact carrying it is a rejection.
+    "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": "Play restricts it; work/BatteryExemption.kt deep-links instead",
+    # "No backend, no account" is a claim the Data safety form and the privacy
+    # policy both make. This is the only thing that checks it against the artifact:
+    # a dependency that merges INTERNET makes the claim false without touching a
+    # line of our source.
+    "android.permission.INTERNET": "Gloam has no network. A merged one makes the privacy policy wrong",
+    "android.permission.CAMERA": "nothing here is near a camera; a merged one would change the listing",
 }
 
 # Every <uses-feature> the artifact is allowed to carry, with the required= value
-# each is allowed to carry it at. Empty on purpose: this app declares none, and
-# 5g confirmed the ML Kit scanner merges none either.
+# each is allowed to carry it at. Empty on purpose: Gloam declares none, and
+# nothing it depends on merges one — asserted here rather than assumed.
 #
 # A feature at required="true" is a *distribution* rule — Play hides the app from
 # every device without it — which is why an unlisted one fails here rather than
 # being printed as a curiosity. If one ever arrives, the fix is to decide whether
-# the feature is worth the devices it costs, write that into play-app-content.md,
+# the feature is worth the devices it costs, write that down (see the docstring),
 # and set it to False here (`android:required="false"`) unless it genuinely is
 # required.
 EXPECTED_FEATURES: dict[str, bool] = {}
@@ -291,8 +305,8 @@ def main():
         print(f"  ·   {permission}  — guard on {component.rsplit('.', 1)[-1]}, not a request")
 
     # Context, like the guards: an activity that handles a configuration change itself
-    # is not recreated by it. That is 10b's other half — the scanner's delegate keeps
-    # the page it has captured across a rotation instead of starting the scan over.
+    # is not recreated by it. Printed for the same reason as the guards: it is a
+    # component's own declaration showing up in a list of ours.
     for component, changes in handled:
         print(f"  ·   configChanges {changes}  — {component.rsplit('.', 1)[-1]} handles these itself")
 
@@ -313,7 +327,7 @@ def main():
     problems = []
     if unexpected:
         problems.append(
-            "NEW permissions not accounted for in docs/play-app-content.md:\n"
+            "NEW permissions not accounted for:\n"
             + "\n".join(f"  {p}" for p in sorted(unexpected))
             + "\nDecide what each means for the Play Console, write it down, then add it to EXPECTED."
         )
@@ -335,15 +349,15 @@ def main():
                 for f, r in sorted(unexpected_features)
             )
             + "\nA required feature is a distribution rule: Play hides the app from every device\n"
-            "without it. Decide whether it is worth those devices, write that into\n"
-            "docs/play-app-content.md, then add it to EXPECTED_FEATURES."
+            "without it. Decide whether it is worth those devices, write that down,\n"
+            "then add it to EXPECTED_FEATURES."
         )
 
     if oriented:
         problems.append(
             "android:screenOrientation survives into the artifact:\n"
             + "\n".join(f"  {c} — {v}" for c, v in sorted(oriented))
-            + "\nThis app locks no screen (10b). A dependency's own manifest is the usual\n"
+            + "\nThis app locks no screen. A dependency's own manifest is the usual\n"
             "source; take it back out with tools:remove rather than tools:replace with a\n"
             "value, which lint's DiscouragedApi flags without reading it."
         )
