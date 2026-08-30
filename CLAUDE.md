@@ -57,10 +57,16 @@ let us do otherwise".
   for that. Adding a table is a deliberate act with a migration story attached, not a convenience.
 - **The shade must never trap the user.** It is a window over every other app, so two things are
   load-bearing and neither is obvious: the window carries `FLAG_NOT_TOUCHABLE` and
-  `FLAG_NOT_FOCUSABLE` so every touch passes through, and its alpha is capped below fully opaque
-  (`ShadeService.MAX_SHADE_ALPHA`). Without the flags the phone appears frozen; without the cap the
-  way out is behind the thing you need to get out of. The foreground notification is `ongoing` for
-  the same reason — it is the escape hatch, not a courtesy.
+  `FLAG_NOT_FOCUSABLE` so every touch passes through, and what reaches the eye through it is capped
+  below fully opaque. Without the flags the phone appears frozen; without the cap the way out is
+  behind the thing you need to get out of. The foreground notification is `ongoing` for the same
+  reason — it is the escape hatch, not a courtesy.
+  **The cap belongs to the composite, not to a `View`.** From Phase 1 the shade is a `FrameLayout`
+  with two children, black at the dim level and amber at the warmth, and bounding each child alone
+  does not bound the result: black at `MAX_SHADE_ALPHA` still leaves content visible, and a heavy
+  amber wash over it is a screen nothing can be read through, with neither child past its own limit.
+  `MAX_SHADE_ALPHA`, `MIN_BACKLIGHT` and the warmth bound are constants rather than preferences, and
+  the ramp is tested against all three together (ADR-0010).
 - **A branch merges with every shipped language complete.** Adding an English string does *not*
   redden your build — completeness is a merge gate (`scripts/translation-gate.py`), not a test, so
   copy is translated **once** rather than against draft wording and again after review. Everything

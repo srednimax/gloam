@@ -63,3 +63,31 @@ alive to restore it. The window override has no such failure mode and needs no p
 - The shade window's `screenBrightness` is now load-bearing state, which raises a question Phase 3
   must answer before the panel ships: when a second window appears above the shade, **whose override
   applies?** Measured in Phase 1, not discovered in Phase 3.
+
+Amendment, 2026-08-30: three things this decision left unassigned now have owners, settled in a
+grilling pass over `docs/PLAN.md`.
+
+**The safety invariant moves from a `View` to the composite.** `MAX_SHADE_ALPHA` and `MIN_BACKLIGHT`
+were reasoned about above as bounds on a single value each, which was true while the shade was one
+black `View`. Phase 1 makes it a `FrameLayout` with two children, and a bound on each child does not
+bound the result: black at `MAX_SHADE_ALPHA` still leaves content faintly visible, and a heavy amber
+wash over that remainder is a screen nothing underneath can be read through, reached with neither
+child past its own cap. The escape hatches survive either way, since all three sit above
+`TYPE_APPLICATION_OVERLAY`; what is lost is the user's ability to see their own screen well enough to
+reach any of them, which is the whole thing the cap buys. So the warmth layer gets its own constant
+beside the other two, and the invariant is stated over the composite. `CLAUDE.md`'s house rule and
+`CONTEXT.md`'s claim that warmth is *independent* of dim level are amended with it — warmth is a
+separate control, but not an unbounded one.
+
+**"The UI has to say out loud" belongs to Phase 1**, the phase that causes it. A user whose
+brightness slider stops applying will report that Gloam broke their phone, not that a window override
+is live, and nothing today connects that symptom to the *also lower the screen brightness* toggle
+that ends it. Whether Gloam should go further and watch `SCREEN_BRIGHTNESS` with a `ContentObserver`
+stays open, in Phase 3a, answered by the closed testers rather than by one person in a room.
+
+**The ramp is unit-tested.** It is a pure function with no Android in it, and its failure mode is the
+one this ADR exists to prevent: `0.0f` is `BRIGHTNESS_OVERRIDE_OFF` at one end and a fully opaque
+screen at the other. Across all 101 inputs the ramp must never emit a backlight below `MIN_BACKLIGHT`,
+never a shade alpha above `MAX_SHADE_ALPHA`, and never a composite past the warmth bound. The plan's
+old blanket claim that no risk in it was reachable by a unit test was wrong here, and wrong in the
+two places that matter most.

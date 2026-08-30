@@ -65,3 +65,15 @@ Amendment, 2026-08-29: superseded in practice by ADR-0007. Gloam has no database
 no schema to gate and no destructive fallback to guard against. The reasoning above is kept intact
 rather than rewritten, because it is still correct for the app it was written about, and it is what
 comes back if a Gloam feature ever calls for it.
+
+Amendment, 2026-08-30: **this ADR's trigger no longer exists, so it is restated.** Everything above
+is written against a "before 1.0 / from 1.0" boundary. `docs/PLAN.md` has since decided that the
+version number is cosmetic: `bump-minor-pre-major` is on, the app ships as 0.x, and **nothing in the
+roadmap ever declares 1.0** — it would not happen on its own. A checklist waiting for 1.0 would wait
+forever.
+
+Read every "from 1.0" here as **"from the first build that reaches a user's phone"**, which is the
+door at Phase 2, where closed testing opens. That boundary is the one that actually arrives, and it
+is the same boundary the plan uses to freeze `applicationId`, `minSdk`, every written DataStore key
+and the escape-hatch inventory. Still parked either way, per the 2026-08-29 amendment: Gloam has no
+database.
