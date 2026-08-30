@@ -51,10 +51,14 @@ Runs alongside whatever is being built. **All of it must land before the door** 
 Developer identity verification is **already done** — the account exists and has a live app — so the
 one step with an external queue is behind you.
 
-- [ ] **Create the upload keystore, outside the repo**, and put its four values in
-      `local.properties`. Back it up somewhere that is not this machine: losing it means never being
-      able to update the app on Play again. **First**, because package registration is keyed to the
-      **signing key**.
+- [x] **Create the upload keystore, outside the repo.** Done 2026-08-30, and proven rather than
+      assumed: `bundleRelease` ran `signReleaseBundle`, and `keytool -printcert -jarfile` on the AAB
+      returns the keystore's own SHA-256. Its path, alias, algorithm and fingerprint are recorded
+      under *The upload key* in [`RELEASING.md`](RELEASING.md).
+- [ ] ⚠️ **Back the keystore up somewhere that is not this machine.** One copy exists. Losing it
+      means never being able to update the app on Play again — recoverable only by resetting the
+      upload key with Google, and only while the app still exists. The keystore *and* its password,
+      which is in `local.properties` and nowhere else.
 - [ ] **Create the Play Console entry and register the package name.** All Play packages must be
       registered by **30 September 2026**, and under-50-install names are first-come, first-served —
       so this is also how `io.github.srednimax.gloam` is secured.
@@ -62,13 +66,28 @@ one step with an external queue is behind you.
       It settles the plan's biggest scheduling unknown: is the 12-tester / 14-day closed test
       **per app**, or a one-time account unlock the existing live app already satisfied?
       Until it is answered, assume it applies.
-- [ ] **Set up the GitHub repository** — `python3 scripts/repo-setup.py` does the ruleset, the
-      merge setting and Pages; the release-please PAT is the one step it cannot do, and without it
-      no release PR is ever opened. *Setting up a new repository* in [`RELEASING.md`](RELEASING.md).
-      **None of this is inherited from the template** — GitHub copies files, never settings — and
-      the build stays green while it is all still undone.
-- [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`) — the
-      service account is the one step CI cannot do for itself.
+- [ ] **Answer the Console's *App content* questionnaire** — data safety, ads, target audience,
+      content rating. It gates a *closed* release, not only production, so it sits in front of the
+      door with everything else here. Gloam's answers are unusually short (no network, no account,
+      no analytics) and `scripts/aab-permissions.py` is what keeps the artifact honest about them:
+      `INTERNET` and `AD_ID` are asserted absent rather than assumed. `docs/play-app-content.md`,
+      where the previous app wrote those answers down, does not exist here yet; Phase 5 writes it.
+- [x] **Set up the GitHub repository.** Done, verified 2026-08-30 by
+      `python3 scripts/repo-setup.py --dry-run`, which reports the `main: require CI` ruleset, the
+      rebase-only merge setting, Pages from `main/docs` and `RELEASE_PLEASE_TOKEN` all already in
+      place. It is idempotent, so re-run it after any manual change in the GitHub UI rather than
+      trusting this box.
+- [ ] **Set the five Play secrets and create the service account** (`docs/RELEASING.md`). The
+      service account is the one step CI cannot do for itself; four of the five secrets are now just
+      a copy out of `local.properties`, and `repo-setup.py --dry-run` lists which are still missing:
+      ```bash
+      base64 -w0 ~/.keystores/gloam-upload.jks | gh secret set UPLOAD_KEYSTORE_BASE64
+      gh secret set UPLOAD_STORE_PASSWORD   # the upload.storePassword value
+      gh secret set UPLOAD_KEY_ALIAS        # upload
+      gh secret set UPLOAD_KEY_PASSWORD     # the same string (PKCS12 keeps one password)
+      ```
+      Wanted at the first upload, not before. The fifth, `PLAY_SERVICE_ACCOUNT_JSON`, has the
+      Play-to-API propagation delay in front of it, so create the service account before you need it.
 - [x] **Decide the `applicationId` deliberately.** Done: **`io.github.srednimax.gloam`**. Reverse-DNS
       on a namespace verifiably yours; Play has never checked domain ownership and package
       registration is keyed to the **signing key**, not a domain. Short generic names like
@@ -124,6 +143,9 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 - [ ] **Every release: run the artifact checks on the built AAB**, not on the source.
       `aab-permissions.py` is the one that finds what a *dependency* merged into your manifest —
       a permission you never declared, or a `uses-feature` that quietly filters the app off devices.
+      All four pass on the 2026-08-30 bundle. **Three of Gloam's eight permissions are merged rather
+      than written** — `WAKE_LOCK`, `ACCESS_NETWORK_STATE` and `RECEIVE_BOOT_COMPLETED`, all
+      WorkManager's — which is exactly the reading the source cannot give you.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
 - [ ] **Every dependency bump: re-run `licensee`.** The build fails on an unallowed licence, which is
       the point — but the fix is two things, the allowlist *and* the bundled text.

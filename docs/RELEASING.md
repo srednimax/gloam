@@ -163,6 +163,25 @@ R8 mapping**, keep both as a build artifact for 90 days, delete the key.
 The mapping matters from 1.9.0: R8 is on, so without it every Play crash report is
 obfuscated frames.
 
+### The upload key
+
+Created 2026-08-30 and the only one there will ever be, short of a reset with Google:
+
+| | |
+| --- | --- |
+| File | `~/.keystores/gloam-upload.jks` — **outside the repo**, and `*.jks` is gitignored as a second line of defence |
+| Type / alias | PKCS12, alias `upload`. PKCS12 keeps **one** password, so `upload.storePassword` and `upload.keyPassword` are the same string |
+| Key | RSA 4096, SHA384withRSA, valid until 2054-01-15 |
+| SHA-256 | `EE:39:4F:B1:F1:AD:62:67:E9:88:AA:63:90:E2:8F:28:9B:19:22:CF:46:EC:72:86:1D:D8:01:A5:F7:78:22:1B` |
+
+**That fingerprint is the one to compare** against what Play shows as the expected *upload*
+certificate. It is not the app-signing certificate: Play re-signs with a key Google holds, which is
+why losing this one is recoverable at all — and why a build signed with the wrong key is rejected at
+upload rather than breaking installs.
+
+Read it back off any artifact with `keytool -printcert -jarfile <aab>`. The four values live in
+`local.properties`, which is gitignored and is the only place the password exists on this machine.
+
 ### The five secrets this workflow needs
 
 Four for the upload key, one for Play. `RELEASE_PLEASE_TOKEN` is a sixth, needed
