@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Capture every screen in light and dark, as the before/after evidence for Phase 7's redesign.
+"""Capture every screen in light and dark, as the before/after evidence for a redesign.
 
-Phase 7 changes how the app looks and says nothing about what it does, which makes "is this better?"
+A redesign changes how the app looks and says nothing about what it does, which makes "is this better?"
 the only question that matters and the hardest one to answer honestly. The answer is a *before* set:
 every screen, shot before a line changes, so the comparison at the end is against a record rather
 than against a memory of what the old one looked like.
@@ -63,7 +63,7 @@ from pathlib import Path
 
 # `edge-to-edge.py` is not an importable module name — the hyphen makes it un-`import`-able by the
 # ordinary statement, so it is loaded by path instead. Renaming it was the alternative and it is
-# referenced by name in DOD.md, PLAN.md and every 4f note; a loader stanza is the cheaper edge.
+# referenced by name across the docs and in the commands people type; a loader stanza is cheaper.
 _SPEC = importlib.util.spec_from_file_location("edge_to_edge", Path(__file__).parent / "edge-to-edge.py")
 e2e = importlib.util.module_from_spec(_SPEC)
 # Registered before it executes, not after: `@dataclass` resolves `cls.__module__` through
@@ -78,7 +78,7 @@ _SPEC.loader.exec_module(e2e)
 # --------------------------------------------------------------------------------------------
 
 # Portrait + gesture only, and that is a deliberate narrowing rather than an oversight. Orientation
-# and navigation mode are what `edge-to-edge.py` exists to cover, and Phase 7's gate re-runs that
+# and navigation mode are what `edge-to-edge.py` exists to cover, and a redesign gate re-runs that
 # matrix in full; repeating those four cells here would shoot the same design four times to learn
 # nothing about the design.
 CONFIG = e2e.Config("portrait-gesture", 0, "gesture")

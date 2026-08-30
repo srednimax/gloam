@@ -29,7 +29,7 @@ RATIO_W, RATIO_H = 9, 16
 
 # The portrait `statusBars` inset on the test Xiaomi, measured by the edge-to-edge matrix rather
 # than derived from a density: 130px at 480dpi, and it coincides with the punch-hole cutout, so one
-# number takes both. See the table in `docs/edge-to-edge.md`. A different phone would need its own
+# number takes both. `scripts/edge-to-edge.py` is what measures it. A different phone would need its own
 # reading — this is a device constant, not a Play one.
 STATUS_BAR_PX = 130
 
