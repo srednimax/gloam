@@ -1,0 +1,312 @@
+package app.gloam.shade
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import kotlin.math.ln
+import kotlin.math.pow
+
+/**
+ * The ramp's safety values, proven by sweeping every input rather than by looking at a screen.
+ *
+ * **This is the test the constants exist for.** `MAX_SHADE_ALPHA`, `MIN_BACKLIGHT` and the two
+ * warmth constants are each argued for in `ShadeRamp.kt`, but an argument in a comment does not
+ * notice when somebody changes a number — and every one of these values fails *silently*: too dark
+ * is a phone the user believes is broken, too bright is a screen they were deliberately keeping
+ * dark. So the properties are asserted over the whole grid.
+ *
+ * A table sweep rather than a handful of examples because the inputs are 101 × 101 × 2 × a few tops
+ * and the JVM does not care. `ShadeRamp.kt` has no Android imports, which is what makes that
+ * possible: compile-time constants are safe in a JVM unit test, but a method call on `android.jar`
+ * throws *"not mocked"*.
+ */
+class ShadeRampTest {
+    /**
+     * The tops worth sweeping: the user at their own maximum, exactly at our floor, **below** our
+     * floor — a user already darker than Gloam would set them — and no usable reading at all.
+     */
+    private val tops = listOf(1.0f, MIN_BACKLIGHT, MIN_BACKLIGHT / 2f, null)
+
+    private val levels = 0..100
+    private val warmths = listOf(0, 1, 25, 50, 75, 99, 100)
+
+    /**
+     * What the ramp will actually spend, which is not always what it was handed.
+     *
+     * The toggle being off, or a top below [MIN_BACKLIGHT], both collapse to *there is no backlight
+     * to spend* — and the tests below have to agree with the ramp about which case they are in
+     * without simply calling the ramp to find out.
+     */
+    private fun effectiveTop(
+        top: Float?,
+        lowerBacklight: Boolean,
+    ): Float? = top?.takeIf { lowerBacklight && it >= MIN_BACKLIGHT && it <= 1f }
+
+    /** The whole ramp's fall, end to end: `ratio × span`. */
+    private fun fall(
+        top: Float?,
+        lowerBacklight: Boolean,
+    ): Float {
+        val effective = effectiveTop(top, lowerBacklight)
+        val ratio = if (effective == null) 1f else effective / MIN_BACKLIGHT
+        return ratio * (1f / (1f - MAX_SHADE_ALPHA))
+    }
+
+    /**
+     * Total light reaching the eye at this dim level, as a fraction of what reaches it at dim 0.
+     *
+     * Released and *held at the top* are the same amount of light — that is the whole point of the
+     * 5% trim in `readBacklight` — so a released override reads as the top here.
+     */
+    private fun light(
+        values: ShadeValues,
+        effectiveTop: Float?,
+    ): Float {
+        val top = effectiveTop ?: 1f
+        return (values.backlight ?: top) / top * (1f - values.shadeAlpha)
+    }
+
+    private fun sweep(body: (DimSettings, Float?, ShadeValues) -> Unit) {
+        for (top in tops) {
+            for (lower in listOf(true, false)) {
+                for (level in levels) {
+                    for (warmth in warmths) {
+                        val settings = DimSettings(level, warmth, lower)
+                        body(settings, top, shadeValuesFor(settings, top))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the backlight is released or inside the range we are allowed to ask for`() {
+        sweep { settings, top, values ->
+            val backlight = values.backlight ?: return@sweep
+            // `0.0f` is BRIGHTNESS_OVERRIDE_OFF — the backlight *off*, over a live touchscreen.
+            assertNotEquals("$settings top=$top asked for BRIGHTNESS_OVERRIDE_OFF", 0f, backlight)
+            assertTrue(
+                "$settings top=$top emitted $backlight, below MIN_BACKLIGHT",
+                backlight >= MIN_BACKLIGHT,
+            )
+        }
+    }
+
+    @Test
+    fun `the ramp never brightens the screen`() {
+        sweep { settings, top, values ->
+            val backlight = values.backlight ?: return@sweep
+            val ceiling = effectiveTop(top, settings.lowerBacklight)
+            assertTrue("$settings top=$top emitted $backlight with no top to spend", ceiling != null)
+            assertTrue(
+                "$settings top=$top emitted $backlight, above the captured top $ceiling",
+                backlight <= ceiling!! + EPSILON,
+            )
+        }
+    }
+
+    @Test
+    fun `the shade alpha stays inside its cap`() {
+        sweep { settings, top, values ->
+            assertTrue(
+                "$settings top=$top emitted shadeAlpha ${values.shadeAlpha}",
+                values.shadeAlpha in 0f..MAX_SHADE_ALPHA,
+            )
+        }
+    }
+
+    @Test
+    fun `the warmth alpha stays inside its cap`() {
+        sweep { settings, top, values ->
+            assertTrue(
+                "$settings top=$top emitted warmthAlpha ${values.warmthAlpha}",
+                values.warmthAlpha in 0f..MAX_WARMTH_ALPHA,
+            )
+        }
+    }
+
+    /**
+     * **The signal invariant, stated over the composite rather than over either child.**
+     *
+     * Two layers each inside its own cap still multiply: black at `0.95` under amber at `0.5` leaves
+     * 2.5% of the content with neither child past its limit. The worst case over this grid is
+     * *exactly* `1 - MAX_SHADE_ALPHA`, at dim 100, which is why the epsilon is load-bearing rather
+     * than defensive.
+     */
+    @Test
+    fun `the composite never takes more signal than the black layer alone was allowed to`() {
+        sweep { settings, top, values ->
+            val signal = (1f - values.shadeAlpha) * (1f - values.warmthAlpha)
+            assertTrue(
+                "$settings top=$top left $signal of the content, under ${1f - MAX_SHADE_ALPHA}",
+                signal >= 1f - MAX_SHADE_ALPHA - EPSILON,
+            )
+        }
+    }
+
+    /**
+     * True by construction in this formulation, which is exactly why it is worth asserting: a
+     * fencepost in `t` would break it silently and look like nothing at all on a screen.
+     */
+    @Test
+    fun `a higher dim level never emits more light`() {
+        for (top in tops) {
+            for (lower in listOf(true, false)) {
+                var previousBacklight: Float? = null
+                var previousAlpha = -1f
+                for (level in levels) {
+                    val values = shadeValuesFor(DimSettings(level, 0, lower), top)
+                    val backlight = values.backlight
+                    if (backlight != null && previousBacklight != null) {
+                        assertTrue(
+                            "top=$top lower=$lower: backlight rose at $level",
+                            backlight <= previousBacklight + EPSILON,
+                        )
+                    }
+                    assertTrue(
+                        "top=$top lower=$lower: shadeAlpha fell at $level",
+                        values.shadeAlpha >= previousAlpha - EPSILON,
+                    )
+                    previousBacklight = backlight
+                    previousAlpha = values.shadeAlpha
+                }
+            }
+        }
+    }
+
+    /**
+     * No jump where the backlight runs out and the shade takes over.
+     *
+     * The bound is derived rather than guessed: the steepest the shade alpha can fall is
+     * `ln(ratio × span)` per unit of `t`, reached exactly at the handover, so one point of the
+     * slider can move it by at most a hundredth of that. A fencepost at the seam would move it by
+     * an order of magnitude more, which is what this catches — it does not catch a *wrong*
+     * breakpoint, and is not meant to.
+     */
+    @Test
+    fun `nothing jumps where the backlight runs out`() {
+        for (top in listOf(1.0f, 0.5f, 0.1f, 0.02f, MIN_BACKLIGHT)) {
+            for (lower in listOf(true, false)) {
+                val fall = fall(top, lower)
+                val alphaStep = ln(fall) / 100f * 1.05f
+                val backlightStep = fall.pow(1f / 100f) * 1.001f
+                for (level in 1..100) {
+                    val before = shadeValuesFor(DimSettings(level - 1, 0, lower), top)
+                    val after = shadeValuesFor(DimSettings(level, 0, lower), top)
+                    assertTrue(
+                        "top=$top lower=$lower: shadeAlpha jumped ${after.shadeAlpha - before.shadeAlpha} at $level",
+                        after.shadeAlpha - before.shadeAlpha <= alphaStep,
+                    )
+                    val a = before.backlight
+                    val b = after.backlight
+                    if (a != null && b != null) {
+                        assertTrue(
+                            "top=$top lower=$lower: backlight jumped from $a to $b at $level",
+                            a / b <= backlightStep,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * **The assertion that pins the ramp's shape**, and the one the fixed-breakpoint design could
+     * not make: total light falls by the same ratio per point on both sides of the handover.
+     */
+    @Test
+    fun `the rate is constant end to end`() {
+        for (top in tops) {
+            for (lower in listOf(true, false)) {
+                val effective = effectiveTop(top, lower)
+                val fall = fall(top, lower)
+                for (level in levels) {
+                    val values = shadeValuesFor(DimSettings(level, 0, lower), top)
+                    val expected = fall.pow(-level / 100f)
+                    val actual = light(values, effective)
+                    assertEquals(
+                        "top=$top lower=$lower level=$level: light was $actual, not $expected",
+                        expected.toDouble(),
+                        actual.toDouble(),
+                        RATE_EPSILON.toDouble(),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * A dim level of zero is still *running* (CONTEXT.md). This is what that means physically: the
+     * shade is transparent, the override is released, and the user's own brightness slider works.
+     */
+    @Test
+    fun `dim level zero releases the override and draws nothing`() {
+        for (top in tops) {
+            for (lower in listOf(true, false)) {
+                val values = shadeValuesFor(DimSettings(0, 0, lower), top)
+                assertNull("top=$top lower=$lower held an override at dim 0", values.backlight)
+                assertEquals("top=$top lower=$lower drew a shade at dim 0", 0f, values.shadeAlpha, EPSILON)
+            }
+        }
+    }
+
+    /**
+     * One branch, proven. The toggle-off case and the no-reading case are the same expression with
+     * `ratio = 1` rather than an `if`, and this is what says so.
+     */
+    @Test
+    fun `no reading and the toggle off produce identical output`() {
+        for (level in levels) {
+            for (warmth in warmths) {
+                val off = shadeValuesFor(DimSettings(level, warmth, lowerBacklight = false), 1.0f)
+                val unread = shadeValuesFor(DimSettings(level, warmth, lowerBacklight = true), null)
+                assertEquals("level=$level warmth=$warmth", off, unread)
+            }
+        }
+    }
+
+    /** A top the user is already below is not a top: there is nothing to spend and no override. */
+    @Test
+    fun `a top below our own floor is spent as if there were none`() {
+        for (level in levels) {
+            val below = shadeValuesFor(DimSettings(level, 0, lowerBacklight = true), MIN_BACKLIGHT / 2f)
+            val unread = shadeValuesFor(DimSettings(level, 0, lowerBacklight = true), null)
+            assertEquals("level=$level", unread, below)
+        }
+    }
+
+    /**
+     * The constants' own arithmetic, asserted once rather than swept — these are the inequalities
+     * that let a later edit to one number be caught by the build instead of by a user.
+     */
+    @Test
+    fun `the constants leave the room the invariants need`() {
+        assertTrue(
+            "WARMTH_EASE_FROM=$WARMTH_EASE_FROM is too high for MAX_WARMTH_ALPHA=$MAX_WARMTH_ALPHA",
+            (1f - WARMTH_EASE_FROM) * (1f - MAX_WARMTH_ALPHA) >= 1f - MAX_SHADE_ALPHA - EPSILON,
+        )
+        assertTrue("MIN_BACKLIGHT must never be BRIGHTNESS_OVERRIDE_OFF", MIN_BACKLIGHT > 0f)
+        assertTrue("MAX_SHADE_ALPHA must leave the user something to read", MAX_SHADE_ALPHA < 1f)
+    }
+
+    /** The worst composite over the grid is *equality*, so this pins the epsilon's necessity. */
+    @Test
+    fun `the tightest composite on the grid is exactly the bound`() {
+        var worst = 1f
+        sweep { _, _, values ->
+            worst = minOf(worst, (1f - values.shadeAlpha) * (1f - values.warmthAlpha))
+        }
+        assertEquals(1f - MAX_SHADE_ALPHA, worst, EPSILON)
+    }
+}
+
+/** Float arithmetic over a 101-point ramp; anything larger would hide a real fencepost. */
+private const val EPSILON = 1e-5f
+
+/**
+ * Looser than [EPSILON] because it compares an accumulated `pow` against a reconstructed one — the
+ * two reach the same number by different routes, and single-precision does not promise the last bit.
+ */
+private const val RATE_EPSILON = 1e-4f
