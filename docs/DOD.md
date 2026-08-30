@@ -207,16 +207,18 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
       it was written in PR #7, so the site root is Gloam's own and the listing's Website field has
       somewhere real to point.
 
-- [ ] **Add yourself as the sole required reviewer on the `production` environment.** As of
-      2026-08-30 the environment **does not exist on the repo at all** — only `github-pages` does —
-      and `publish-play-production.yml` declares `environment: production`. GitHub creates a missing
-      environment implicitly on first run, *with no protection rules*, so the workflow's own comment
-      ("the `production` environment holds it until you approve") would be false the one time it
-      mattered: the promotion would run straight through. `RELEASING.md` already warns that an
-      environment without a reviewer "is just a label and gates nothing"; this records that the label
-      is not there either. Free to do now, and it is the human gate in front of every owner — not
-      something to discover while promoting. Repo *Settings → Environments → New environment*, named
-      `production`, then tick **Required reviewers** and add yourself.
+- [x] **Add yourself as the sole required reviewer on the `production` environment.** Done
+      2026-08-30, and read back from the API rather than from the settings page: the environment
+      exists, its only protection rule is `required_reviewers`, and the reviewer is `srednimax`.
+      It had to be created — the repo carried only `github-pages`, and
+      `publish-play-production.yml` declares `environment: production`, which GitHub would have
+      created implicitly on first run **with no protection rules at all**. The workflow's promise
+      that "the environment holds it until you approve" would have been false the one time it
+      mattered.
+      **`prevent_self_review` is `false`, and must stay that way.** You are both the only account
+      that can dispatch that workflow and its only reviewer, so turning it on would deadlock the
+      production path outright — nobody left who is allowed to approve. It reads as a security
+      tightening and is, here, a lockout.
 
 ## Standing checks that never close
 
