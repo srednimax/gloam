@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -55,9 +56,19 @@ private const val NOTIFICATION_ID = 1
  * over the status and navigation bars. Without them the shade stops at the app area and the two
  * system bars stay at full brightness, which reads as a bug rather than as a design.
  *
- * **It does not touch the backlight.** Lowering the system brightness to its floor first is a real
- * improvement and a separate decision (CONTEXT.md keeps `backlight` and `dim level` apart on
- * purpose); this service subtracts light only by drawing over it.
+ * ## The backlight the window carries
+ *
+ * The same window also carries a **brightness override** — `LayoutParams.screenBrightness` — which
+ * is why the backlight half needs no permission at all: it is an attribute of a window this app
+ * already owns, not a write to `Settings.System` (ADR-0010 rejected `WRITE_SETTINGS` for exactly
+ * that reason). Android applies it while the window is on screen and hands the panel back the
+ * instant it is removed, **including when the ROM kills the process**, which is the property that
+ * makes it safe to reach for: there is no state left behind to strand a user with.
+ *
+ * The price is stated in the UI rather than hidden: while the override is live the user's own
+ * brightness slider moves and does nothing, and whatever they set lands the moment the shade comes
+ * off. `dim_backlight_hint` says so, always visible, because the symptom recurs and a dismissed
+ * dialog is not there when it does.
  *
  * ## Kotlin/Android notes
  *
@@ -73,6 +84,31 @@ class ShadeService : Service() {
     private var windowManager: WindowManager? = null
     private var shadeView: View? = null
 
+    /**
+     * The very `LayoutParams` the window was added with, kept rather than rebuilt.
+     *
+     * A window attribute is not a view property: `view.alpha = x` takes effect on its own, but
+     * `params.screenBrightness = x` does nothing until [WindowManager.updateViewLayout] is handed
+     * these params back. Building a fresh instance each time would mean re-stating every safety flag
+     * correctly on every slider drag — one omission and the shade starts swallowing touches.
+     */
+    private var shadeParams: WindowManager.LayoutParams? = null
+
+    /**
+     * The backlight Gloam took over from, **captured once and held**.
+     *
+     * Not re-read while the override is live, and that is correctness rather than thrift: the stored
+     * setting still *moves* underneath us, because the user's own slider writes to it blind, so a
+     * re-read mid-override would pick up a value they set without being able to see it. Under
+     * adaptive brightness it is worse — the framework keeps re-choosing as the room changes, so a
+     * re-read would pick up a value chosen for a room rather than for the user.
+     *
+     * Null means either *no override is applied* or *this device did not give us a number we trust*.
+     * Those two want the same behaviour — the shade-only ramp — so they are the same value here, and
+     * re-reading on the next emission is right in both: nothing is live to be disturbed.
+     */
+    private var backlightTop: Float? = null
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -84,10 +120,18 @@ class ShadeService : Service() {
 
         // The one source of truth for how dark it is. Collected rather than passed in the Intent so
         // that dragging the slider updates the live window without restarting anything.
+        //
+        // Kotlin note: `combine` over two `Flow`s is `Promise.all` over streams that never finish —
+        // it emits a fresh tuple whenever *either* input changes, so this gets one settled
+        // `DimSettings` rather than two callbacks it would have to reconcile. `distinctUntilChanged`
+        // after it is what stops an unrelated preference write re-applying the window layout.
         val preferences = (application as MainApplication).preferences
-        preferences.dimLevel
-            .distinctUntilChanged()
-            .onEach { level -> applyDimLevel(level) }
+        combine(preferences.dimLevel, preferences.lowerBacklight) { level, lower ->
+            // Warmth is 0 until the amber child and its key land; the ramp already answers for it so
+            // that the layer is a second child and a slider rather than a second ramp.
+            DimSettings(dimLevel = level, warmth = 0, lowerBacklight = lower)
+        }.distinctUntilChanged()
+            .onEach { settings -> applyShadeValues(settings) }
             .launchIn(scope)
     }
 
@@ -150,24 +194,57 @@ class ShadeService : Service() {
                 }
 
         runCatching { windowManager?.addView(view, params) }
-            .onSuccess { shadeView = view }
+            .onSuccess {
+                shadeView = view
+                shadeParams = params
+            }
     }
 
     private fun removeShadeWindow() {
         val view = shadeView ?: return
         runCatching { windowManager?.removeView(view) }
         shadeView = null
+        shadeParams = null
+        backlightTop = null
     }
 
     /**
-     * 0 is invisible, 100 is as dark as this app is willing to go.
-     *
-     * **Capped below fully opaque, deliberately.** At alpha 1.0 the screen is a black rectangle and
-     * every way out of it — the notification shade, the app, the Stop action — is behind it. The cap
-     * is the difference between a very dark screen and a phone the user believes is broken.
+     * One dim level in, a backlight and an alpha out — the arithmetic itself is [shadeValuesFor],
+     * which has no Android under it and is proven by `ShadeRampTest` rather than by looking at a
+     * screen. What is left here is the part that genuinely needs a device: deciding *when* the
+     * override is captured and when it is let go.
      */
-    private fun applyDimLevel(level: Int) {
-        shadeView?.alpha = level.coerceIn(0, 100) / 100f * MAX_SHADE_ALPHA
+    private fun applyShadeValues(settings: DimSettings) {
+        // The override goes from released to applied exactly when the level crosses 0 or the toggle
+        // comes on, and that is the moment to read: any later and we would be reading a brightness
+        // the user could no longer see to change. A user who wants their own slider back drags Gloam
+        // to 0, which releases the override — and makes the next capture a fresh one.
+        if (settings.lowerBacklight && settings.dimLevel > 0) {
+            if (backlightTop == null) backlightTop = readBacklightTop(this)
+        } else {
+            backlightTop = null
+        }
+
+        val values = shadeValuesFor(settings, backlightTop)
+        shadeView?.alpha = values.shadeAlpha
+        applyBacklight(values.backlight)
+    }
+
+    /**
+     * Push the window's brightness override, or release it.
+     *
+     * `null` becomes `BRIGHTNESS_OVERRIDE_NONE` here and nowhere else — the one place a nullable
+     * Kotlin value collapses to Java's sentinel, the way a discriminated union collapses to a wire
+     * format at the boundary.
+     */
+    private fun applyBacklight(value: Float?) {
+        val view = shadeView ?: return
+        val params = shadeParams ?: return
+        val requested = value ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        if (params.screenBrightness == requested) return
+        params.screenBrightness = requested
+        // Guarded for the same reason `addView` is: the window can be gone underneath us.
+        runCatching { windowManager?.updateViewLayout(view, params) }
     }
 
     private fun buildNotification(): Notification {
@@ -195,16 +272,6 @@ class ShadeService : Service() {
             .setOngoing(true)
             .setSilent(true)
             .build()
-    }
-
-    companion object {
-        /**
-         * The darkest the shade is allowed to be.
-         *
-         * 0.95 rather than 1.0 — see [applyDimLevel]. It is a constant rather than a preference on
-         * purpose: it is a safety floor, not a taste.
-         */
-        const val MAX_SHADE_ALPHA = 0.95f
     }
 }
 

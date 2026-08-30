@@ -4,6 +4,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -12,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -21,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -31,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
 import app.gloam.shade.canDrawShade
+import app.gloam.shade.readBacklightTop
 import app.gloam.shade.shadePermissionIntent
 import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
@@ -117,6 +121,12 @@ fun DimScreen(
     var channelOn by remember { mutableStateOf(context.channelCanAppear(AppChannel.Shade)) }
     var rationaleLeft by remember { mutableStateOf(activity.notificationRationaleAvailable()) }
 
+    // Whether this device hands Gloam a brightness it can trust. Answerable with no service and no
+    // override applied — the resource resolves or it does not, the setting reads or it does not, the
+    // decoded float is in range or it is not — and re-read on resume with the rest, because the user
+    // can change their brightness mode on a settings screen and come back.
+    var backlightAvailable by remember { mutableStateOf(readBacklightTop(context) != null) }
+
     // **Session state, deliberately not a DataStore key.** The only thing a stored flag would buy is
     // telling "never asked" apart from "asked twice and refused", and those two want the same
     // behaviour anyway — fire the launcher and let it answer. It flips the moment the launcher comes
@@ -128,6 +138,7 @@ fun DimScreen(
         notificationsOn = context.notificationsAllowed()
         channelOn = context.channelCanAppear(AppChannel.Shade)
         rationaleLeft = activity.notificationRationaleAvailable()
+        backlightAvailable = readBacklightTop(context) != null
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -233,6 +244,11 @@ fun DimScreen(
                 )
             }
 
+            // **Kept free of anything but state and callbacks**, deliberately and without being
+            // extracted yet. Phase 3a renders these same controls in a second host that is not an
+            // Activity, so nothing here may reach for a `Context`, start the service, or assume it
+            // sits inside a `Scaffold`'s insets — but pulling out a composable with one caller is
+            // guesswork about the second caller's shape, so the extraction waits for it.
             SectionHeader(stringResource(R.string.dim_level_label))
             Text(
                 text = stringResource(R.string.dim_level_value, state.dimLevel),
@@ -243,6 +259,46 @@ fun DimScreen(
                 value = state.dimLevel.toFloat(),
                 onValueChange = { viewModel.setDimLevel(it.toInt()) },
                 valueRange = 0f..100f,
+                modifier = Modifier.padding(horizontal = Spacing.base),
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.base, vertical = Spacing.tight),
+            ) {
+                Text(
+                    text = stringResource(R.string.dim_backlight_label),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                // Visible and *disabled* rather than hidden when the device cannot honour it: a
+                // control that is simply absent leaves the user unable to tell Gloam from a Gloam
+                // that behaves differently on their phone than on someone else's.
+                Switch(
+                    checked = state.lowerBacklight,
+                    onCheckedChange = viewModel::setLowerBacklight,
+                    enabled = backlightAvailable,
+                )
+            }
+            // Supporting text, always present rather than a one-off dialog. The symptom it explains
+            // — a brightness slider that moves and does nothing — recurs every time the shade goes
+            // up, and a dismissed dialog is not there when it does. On a device that cannot do it at
+            // all the promise is replaced rather than left standing, which would be an explanation
+            // for a symptom that is not happening.
+            Text(
+                text =
+                    stringResource(
+                        if (backlightAvailable) {
+                            R.string.dim_backlight_hint
+                        } else {
+                            R.string.dim_backlight_unavailable
+                        },
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.base),
             )
 

@@ -45,6 +45,7 @@ class AppPreferences(
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val DIM_LEVEL = intPreferencesKey("dim_level")
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
+        val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
     }
 
     /**
@@ -93,6 +94,20 @@ class AppPreferences(
     val shadeRunning: Flow<Boolean> = store.data.map { it[Keys.SHADE_RUNNING] ?: false }
 
     /**
+     * Whether Gloam may take the **backlight** down before it draws the shade (ADR-0010).
+     *
+     * **Defaults on**, because it is the larger of the two mechanisms — on the development phone the
+     * backlight alone is a factor of 250 in nits before a single pixel is drawn over anything, and
+     * the whole product thesis is the light below the system slider's own floor. A user who wants
+     * the shade alone switches it off; a user who wants the app to work does nothing.
+     *
+     * Kept as a preference rather than a constant because it has a visible cost the user may not
+     * want: while it is on, their own brightness slider moves and does not apply. That is a taste,
+     * not a safety floor, which is the line CLAUDE.md draws between the two.
+     */
+    val lowerBacklight: Flow<Boolean> = store.data.map { it[Keys.LOWER_BACKLIGHT] ?: true }
+
+    /**
      * The theme mode, read once, before any Activity exists.
      *
      * The one place a `suspend` read is worth its cost: `MainApplication.onCreate` needs the answer
@@ -120,6 +135,10 @@ class AppPreferences(
 
     suspend fun setShadeRunning(running: Boolean) {
         store.edit { it[Keys.SHADE_RUNNING] = running }
+    }
+
+    suspend fun setLowerBacklight(enabled: Boolean) {
+        store.edit { it[Keys.LOWER_BACKLIGHT] = enabled }
     }
 }
 
