@@ -189,75 +189,32 @@ things Phase 2 freezes.
 
 ## Phase 1 — The mechanism is complete
 
+**Detail: [`phase-1.md`](phase-1.md).**
+
 Gloam currently subtracts light one way, by drawing black over the screen. It should do it three
 ways, and the other two are the difference between "another dimmer" and the thing the README
-promises.
+promises: the **backlight** walked down to its floor first, and **warmth** tinting the shade amber.
+Both words have been in `CONTEXT.md` since the beginning and nothing reads either. With the backlight
+at its floor *and* the shade at its cap, the app finally reaches the place it exists to reach.
 
-**Entry gate, before anything else in this phase: ask for `POST_NOTIFICATIONS`, and confirm on the
-phone that the notification and its Stop action actually appear.** Phase 1 produces the darkest state
-the app will ever reach short of ultra dark — backlight at its floor *and* the shade at its cap — and
-the ongoing notification is the documented way out of it. On Android 13+ that notification does not
-exist until this is granted, and today nothing calls `work/NotificationPermission.kt`. There is also
-a platform reason to do it first: the system suppresses or blocks touches on non-system overlay
-windows while a permission dialog is up, so the ask may simply not work from a screen sitting under
-the shade. Measure that rather than assume it.
+Settled in ADR-0010 **and both of its 2026-08-30 amendments**: one dim level, one ramp, in a fixed
+order, with the backlight half a toggle rather than a second slider. The first amendment is the half
+that matters to the schedule, because it hands this phase three things it is easy to read as somebody
+else's job — the safety invariant moving from a `View` to the composite once there are two layers,
+saying out loud that the override leaves the user's own brightness slider inert, and the ramp's
+bounds test. The second records what the phone said when this phase was planned, and it is why the
+phase carries **a checkpoint that can veto the backlight half**: `Settings.System.SCREEN_BRIGHTNESS`
+is not a usable reading of the user's brightness on the test device, so the estimate the backlight
+ramp starts from has to be verified against the phone before it ships.
 
-- **Backlight.** `CONTEXT.md` has had the word since the beginning and nothing reads it. Measured on
-  the phone 2026-08-30: `WindowManager.LayoutParams.screenBrightness` on the shade window takes the
-  panel from **500 nits to 6.64 nits**, the display floor is **2.0 nits**, and it costs **no
-  permission** — the system reverts it when the window goes away, so a ROM kill cannot strand
-  anyone. `WRITE_SETTINGS` is rejected on that comparison alone.
-- **Warmth.** Also already in the vocabulary, also unbuilt. The shade stops being one `View` and
-  becomes a `FrameLayout` with two — black at the dim level, amber at the warmth — still one window,
-  so every safety *flag* is untouched. Deliberately done now rather than retrofitted.
-- **The range.** With the backlight at its floor *and* the shade at its cap, the app finally reaches
-  the place it exists to reach.
+It opens with an **entry gate**: ask for `POST_NOTIFICATIONS` before anything else, because this
+phase produces the darkest state the app will ever reach short of ultra dark and the ongoing
+notification is the documented way out of it.
 
-**Settled (ADR-0010): one dim level, one ramp, in a fixed order.** The first stretch of the slider
-walks the backlight down to `MIN_BACKLIGHT`; the remainder raises the shade to `MAX_SHADE_ALPHA`. The
-backlight half is a **toggle, not a second slider**, default on. `MIN_BACKLIGHT` is a safety
-constant beside `MAX_SHADE_ALPHA` and for the mirror-image reason: `screenBrightness = 0.0f` is
-documented as `BRIGHTNESS_OVERRIDE_OFF`, and a ramp reaching it hands the user a black screen with a
-live touchscreen. **100 means "as dark as currently allowed"**, so Phase 2b's ultra dark extends the
-same slider rather than adding another.
-
-Three things this phase owns that are easy to read as somebody else's job:
-
-- **The safety invariant moves from a view to the composite.** `MAX_SHADE_ALPHA` is a bound on one
-  `View`'s alpha, and after warmth there are two. The cap can hold on both children while the
-  composite defeats it: black at 0.95 leaves 5% of the content visible, and a heavy amber wash over
-  that 5% is a screen where nothing underneath can be read — reached without either view exceeding
-  its own cap. The escape hatches survive regardless, since they sit above
-  `TYPE_APPLICATION_OVERLAY`; what is lost is the user's ability to see their own screen well enough
-  to navigate to any of them, which is what the cap buys. **The phase that adds the second layer
-  amends the invariant**, which means editing `CLAUDE.md`'s house rule and `CONTEXT.md`'s claim that
-  warmth is *independent* of dim level, plus a third safety constant bounding the warmth layer.
-  Recorded as a dated amendment on ADR-0010.
-- **Saying the inert brightness slider out loud** (rule 4). ADR-0010 measured that the user's own
-  brightness control moves but does not apply while the override is live, and assigned "the UI has to
-  say this out loud" to nobody. It is this phase's, because this phase causes it. A user whose
-  brightness slider stops working will report that Gloam broke their phone, and nothing currently
-  connects that symptom to the *also lower the screen brightness* toggle that turns it off.
-  Whether Gloam should go further and watch `SCREEN_BRIGHTNESS` with a `ContentObserver` stays open,
-  in Phase 3.
-- **The ramp's bounds test** (rule 3). Across all 101 inputs the ramp never emits a backlight below
-  `MIN_BACKLIGHT`, never a shade alpha above `MAX_SHADE_ALPHA`, and never a composite past the new
-  warmth bound.
-
-**Two measurements to take here for later phases' benefit**, both off the same command —
-`dumpsys display | grep -A2 OverrideBrightnessStrategy`, which prints
-`mWindowManagerBrightnessOverride` and an `…OverrideTag` naming the package that owns it:
-
-1. **When a second window appears above the shade, whose override applies?** This is Phase 3b's
-   go/no-go: if a touchable window above the shade seizes the override and cannot be made to match
-   it, the panel's live preview is broken by construction and the panel should be cut rather than
-   built. Finding this out here costs ten minutes; finding it out in Phase 3 costs a design.
-2. **Does the override hold against an app that sets its own `screenBrightness`?** Video players do
-   exactly this — swipe-to-dim *is* that API — and watching video in the dark is a stated use case
-   alongside reading. The measurement recorded on 2026-08-30 was taken against the shade alone.
-
-**Recruiting the twelve testers starts here**, as insurance against Phase P reporting that the 14-day
-requirement applies.
+It runs as **five checkpoints, each its own merge**, so the entry gate lands ahead of the device work
+it does not depend on. Two of its readings are taken for later phases' benefit — **Phase 3b's
+go/no-go falls out of one this phase needs anyway** — and **recruiting the twelve testers starts
+here** as insurance against the 14-day requirement.
 
 ## Phase 2 — Safe to hand over
 
