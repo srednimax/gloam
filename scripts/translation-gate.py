@@ -120,7 +120,7 @@ def shipped_locales() -> list[str]:
 
 
 def staged_locales() -> list[str]:
-    """Drafts waiting outside `res/`, one directory per BCP-47 tag (Phase 8)."""
+    """Drafts waiting outside `res/`, one directory per BCP-47 tag."""
     if not STAGED.is_dir():
         return []
     return sorted(child.name for child in STAGED.iterdir() if (child / "strings.xml").is_file())
