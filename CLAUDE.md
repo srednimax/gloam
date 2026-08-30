@@ -15,6 +15,10 @@ either ships to everyone or it doesn't ship.
   [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `feat!:`, `docs:`, …)
   — a `commit-msg` hook rejects anything else, and release-please derives the version and
   `CHANGELOG.md` from them. `versionName` and `versionCode` are automated; never hand-edit either.
+- **How to work here:** invoke the `lean-loop` skill at the start of every session and keep it
+  active for the whole session. This repo is written before it is built — plans, ADRs and phase
+  documents are long on purpose — so the waste is re-reading what is already in the transcript and
+  testing code whose shape has not settled. Lean loop is the sequencing rule that stops both.
 
 Don't restate ADR reasoning here; link to it. This file is loaded every session and must stay short.
 
