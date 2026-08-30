@@ -820,13 +820,13 @@ after.
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
 | R1 | Nits per `screenBrightness` float, resolved near the bottom | debug sweep + `dumpsys display` | **`nits = 498.3 x override + 1.66`** across 16 steps, 1.0 down to 1E-4. Affine, not a power law; the override clamps to the panel floor at and below 6.83661E-4 (2.0 nits). See below for what it costs the ramp |
-| R2 | **Stop reachable at maximum dim, dark room and lit room** -> `MIN_BACKLIGHT` | by hand, on the phone | - (checkpoint C: wants the override on the shade's own window) |
+| R2 | **Stop reachable at maximum dim, dark room and lit room** -> `MIN_BACKLIGHT` | by hand, on the phone, with the shade live at dim 100 | **`MIN_BACKLIGHT = 0.01f`, which is 6.64 nits on this panel.** Read in a lit room and in a dark one; legible in both. Taken against the shade's own window override (`mWindowManagerBrightnessOverrideTag=io.github.srednimax.gloam.debug`, no Activity suffix), not the activity's |
 | R3 | **Computed `backlightTop` vs actual, four settings, manual mode** -> B's verdict | debug row + `dumpsys display` | **Passed.** 1.2% to 5.0% *under* the user's own float at `raw` 10/20/64/128/255; never over. Table in section 2 |
 | R4 | The same with adaptive deliberately on | `settings put system screen_brightness_mode 1` | **Adaptive is an ordinary read.** The framework stores its own choice back into the same integer (`raw=14` at 6.3 lux, 27.2 nits); decoded 3.8% under. No `null` path needed |
-| R5 | Whose override applies - lock screen, notification shade, volume dialog | `dumpsys display \| grep -A2 OverrideBrightnessStrategy` | - (checkpoint C) |
-| R6 | Override released on a ROM kill | `am force-stop` with the shade live | **Released.** Holding 2.0 nits, `am force-stop` returned the panel to the user's own 250.7 nits and `reason=manual` within a second. Taken on the activity's window at B; re-confirm on the shade's at C |
+| R5 | Whose override applies - lock screen, notification shade, volume dialog | `cmd statusbar expand-notifications` / `expand-settings` / `input keyevent VOLUME_UP`, each followed by `dumpsys display` | **Ours wins everywhere except the keyguard.** The notification shade, quick settings and the volume dialog all read back `mWindowManagerBrightnessOverride=0.01` unchanged - so `MIN_BACKLIGHT` carries the whole escape-hatch argument, the hostile branch. **The lock screen releases it outright** (`NaN`, `reason=manual`, back to the user's own 250.7 nits) and it returns by itself on unlock |
+| R6 | Override released on a ROM kill | `am force-stop` with the shade live | **Released, on the shade's own window** (re-confirmed at C; B had only the activity's). Holding 6.64 nits at dim 100, `am force-stop` returned the panel to the user's own 250.7 nits and `reason=manual` within a second |
 | R7 | Permission dialog usable with the shade up | by hand, on the phone | - |
-| R8 | Notification and Stop appear and work, at maximum dim | by hand, on the phone | - (checkpoint C) |
+| R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Posted and legible at 6.64 nits.** `Notification(channel=shade ... flags=ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE|SILENT actions=1)`, title *Screen dimmed* - the Stop action is present and the notification is undismissable, at maximum dim |
 | R9 | Override vs an app setting its own `screenBrightness` | same, with a video player in swipe-to-dim | - |
 | R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | - |
 
@@ -838,6 +838,16 @@ flattens exactly where this product lives. The honest ratio the backlight can sp
 brightness is **250:1 in nits**, not the 1462:1 the floats suggest. Checkpoint C owns what to do
 about it; the two constants that would fix it exactly (`498.3` and `1.66`) are this panel's and are
 not readable from an app.
+
+**Checkpoint C's answer: measured, and left alone.** The correction would be a fifth constant — the
+offset as a fraction of the span, `1.66 / 498.3` — carried on every device to fix a distortion that
+the readings say is small. Over the whole slider the shortfall in *perceptual* travel is **under 4%**
+at either end of the user's own brightness range: the backlight stretch delivers 94% of the ratio it
+promises for a user at maximum and 80% for one already at their system minimum, and the shade half is
+exactly geometric because alpha genuinely multiplies. What makes it cheap to decline is
+`MIN_BACKLIGHT`: the affine offset only bites in the float's bottom decade, and R2 put the floor at
+`0.01` — 6.64 nits — which stops the ramp well above it. Recorded in `ShadeRamp.kt` beside the ramp
+rather than only here, because that is where somebody would go to re-open it.
 
 **Already read, 2026-08-30, on the phone** - the readings that reshaped this document, kept here
 because sections 2 and 6 both argue from them:

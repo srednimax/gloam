@@ -8,11 +8,19 @@ Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 
 **Phase 1 is the open phase, and its worklist is [`phase-1.md`](phase-1.md)** — the entry gate,
 the ramp, warmth and the readings, as five checkpoints in the order they should be built. **B was that
-gate and it passed on 2026-08-30** - the computed `backlightTop` lands 1.2% to 5.0% *under* the
-user's own brightness at every setting tested, so C ships. Its readings corrected the phase document
-rather than confirming it; read section 2 before writing any of C. The two items below
-that the phase owns (`POST_NOTIFICATIONS`, and starting the tester recruitment) stay here, because
-they are what the door is waiting on.
+gate and it passed on 2026-08-30**, and C shipped the same day: the dim level now drives the
+backlight and then the shade, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the ramp is
+a pure function proven by a table sweep rather than by a screen. **D is next**: warmth, the second
+child and the composite bound.
+
+The reading C took that nothing asked for is the one to carry forward, because it is load-bearing for
+D and for 3b: the system's own surfaces do **not** lift Gloam's brightness override — the
+notification shade, quick settings and the volume dialog all read it back unchanged — but **the
+keyguard releases it outright**, and it returns on its own after unlocking. So `MIN_BACKLIGHT` carries
+the whole escape-hatch argument, and the lock screen is a free one it does not pay for.
+
+The two items below that the phase owns (`POST_NOTIFICATIONS`, and starting the tester
+recruitment) stay here, because they are what the door is waiting on.
 
 ## The standing schema gate — parked, because there is no database
 
