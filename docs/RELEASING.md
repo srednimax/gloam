@@ -231,9 +231,18 @@ It is offered on the create screen and it is wrong for a machine identity: on th
 starts failing, wearing the same 401 that the propagation delay below tells you to shrug off.
 Invite the email before creating the group — a user must exist to be selectable in *Users in this group*.
 
-⚠️ **The production workflow uses this same secret.** With testing-track rights only, the first run of
-`publish-play-production.yml` **403s**, and that is the permission missing rather than the pipeline
-broken. Adding *Release to production...* is the deliberate act that opens that door.
+⚠️ **The production workflow uses this same secret, and wants two more boxes.** With testing-track
+rights only, the first run of `publish-play-production.yml` **403s** — that is a permission missing
+rather than the pipeline broken. It needs *Release to production, exclude devices, and use Play App
+Signing*, and — **only when run with `update_listing: true`** — *Manage store presence*, because that
+is the run that pushes descriptions, images and screenshots. **Release notes need neither.** They are
+part of the track release rather than the listing, so they ride up on the release permission; that is
+why the workflow renders metadata unconditionally and still skips the listing fields by default.
+Granting these is the deliberate act that opens the production door, and leaving them ungranted is a
+fourth brake on top of the three that workflow already carries.
+
+**Nothing above is needed for the automatic internal pipeline.** `publish-play.yml` sends the AAB and
+its mapping and nothing else — no metadata, no images, no notes — which is why two boxes cover it.
 
 Propagation between Play and the API is not instant — a permission granted in the Console
 can take a few minutes to be visible to the API, so a first run that 401s is worth simply
