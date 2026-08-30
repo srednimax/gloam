@@ -55,12 +55,20 @@ one step with an external queue is behind you.
       assumed: `bundleRelease` ran `signReleaseBundle`, and `keytool -printcert -jarfile` on the AAB
       returns the keystore's own SHA-256. Its path, alias, algorithm and fingerprint are recorded
       under *The upload key* in [`RELEASING.md`](RELEASING.md).
-- [ ] ⚠️ **Back the keystore up somewhere that is not this machine.** **Now the sharpest open
-      item in this file:** as of 2026-08-30 a published package is bound to this key, so losing it
-      stopped being theoretical. One copy exists. Losing it
-      means never being able to update the app on Play again — recoverable only by resetting the
-      upload key with Google, and only while the app still exists. The keystore *and* its password,
-      which is in `local.properties` and nowhere else.
+- [x] **Back the keystore up somewhere that is not this machine.** Done 2026-08-30, confirmed by
+      the owner. The keystore *and* its password, which is in `local.properties` and nowhere else,
+      are in a password manager. **Provenance, honestly:** this box rests on the owner's word rather
+      than on a check this repo can run — nothing in the toolchain can see inside a password vault,
+      which is why it is the one Phase P item that closed without machine evidence behind it.
+      The shape that was used, and the reason for it: the key is 4312 bytes, so its base64 is 5752
+      characters of **text** and goes in a secure note rather than a file attachment — no uploader to
+      hang, and it survives a vault export, which attachments sometimes do not. Restore is
+      `base64 -d`. The certificate SHA-256 is stored in the same note so a future restore proves
+      itself: decode, `keytool -list`, and the fingerprint must be the one in `RELEASING.md`.
+      ⚠️ **Re-verify this one occasionally**, because its failure mode is silent — some password
+      managers clip long fields without warning, and a note holding 5,700 of 5,752 characters looks
+      untouched right up until the day it is needed, which is also the day the app can never be
+      updated again.
 - [x] **Create the Play Console entry.** Done 2026-08-30. App content answered: no ads, no
       government/financial/health features, all functionality available without sign-in, content
       rating questionnaire all-No, target audience **18+**, category **Tools**. Internal testing
