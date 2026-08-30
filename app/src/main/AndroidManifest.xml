@@ -55,10 +55,11 @@
     </queries>
 
     <!--
-        `android:localeConfig` is read by Android 13+ only, which is what tools:targetApi records —
-        it silences lint's "unused below minSdk" note without weakening anything at runtime. Older
-        devices ignore the attribute and AppCompat's backport reads the same file, so the list of
-        shipped languages stays in one place across the whole supported range (ADR-0004).
+        `android:localeConfig` is read by Android 13+ only, which is every device this app ships to
+        now that `minSdk` is 33 (ADR-0008) — so it no longer needs a tools:targetApi to silence
+        lint's "unused below minSdk" note. AppCompat's backport reads the same file, which is why the
+        list of shipped languages stays in one place (ADR-0004). That backport is now dead weight and
+        its removal is ADR-0004's call, not a tidy-up — see DOD.md.
 
         Auto Backup is the platform's default here, with no agent and no rules XML.
 
@@ -78,8 +79,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
-        android:theme="@style/Theme.App"
-        tools:targetApi="33">
+        android:theme="@style/Theme.App">
         <activity
             android:name=".MainActivity"
             android:exported="true">

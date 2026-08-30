@@ -81,7 +81,7 @@ android {
         // package name is fixed the moment the app entry is created. Deliberately allowed to differ
         // from `namespace` for that reason — see docs/adr/0002.
         applicationId = "io.github.srednimax.gloam"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 36
         versionCode = gitVersionCode
         versionName = "0.1.0" // x-release-please-version
