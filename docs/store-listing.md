@@ -102,6 +102,13 @@ rather than against a draft. Translate from the English above, per
 [`translator-brief.md`](translator-brief.md). **The listing cannot go live in Polish until these are
 filled** — Play publishes a locale it has copy for and silently shows English everywhere else.
 
+> **`play-metadata.py` writes the empty Polish fields out rather than skipping the locale.** A run
+> today produces `pl-PL/short_description.txt` and `pl-PL/full_description.txt` as **zero-byte
+> files**, not absent ones, and reports `listings: 2` either way. That is harmless while the upload
+> is done by hand in the Console, and it is a landmine the moment the publish workflow runs: an
+> empty short description is not a no-op to Play, it is a value. Either fill the Polish in or teach
+> the script to drop a locale whose copy is blank — **before** anything automated pushes metadata.
+
 **No tip is mentioned anywhere in this listing, and that is deliberate.** ADR-0009's 2026-08-30
 amendment: enforcement has rejected apps for an in-app donation route even where the policy text
 permits it, and that rejection reached a link to a *project page* because the page carried donation
