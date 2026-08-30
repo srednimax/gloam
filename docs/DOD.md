@@ -126,6 +126,19 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 - [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
       `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
       the thing most likely to block a first upload, and it is discovered late.
+- [ ] **Write the listing, and shoot the feature graphic and screenshots.** *Moved here from Phase 5
+      on 2026-08-30.* Play will not let a **closed** test open without a complete store listing, and
+      the closed test is what the 12-tester window runs on — so these three cannot be polish. The
+      graphic comes off the item above (`make-feature-graphic.py` derives from `art/mark.py`), which
+      is now a dependency of the door rather than a Phase 5 nicety. `docs/store-listing.md` — every
+      heading in it is parsed by a script. Keep health claims out of the copy *and* the tags — "eye
+      strain", "sleep", "blue light" — because App content was answered health-No.
+- [ ] **The three emulator CI legs are vacuously green.** `app/src/androidTest` contains **zero
+      tests**, so *Instrumented tests (API 26 / 34 / 36)* pass by having nothing to run, and the API
+      26 leg could not install this app even if it did — `minSdk` is 33. That is ~15 minutes of CI
+      per PR buying a checkmark with nothing behind it, and worse, a green tick that would keep
+      showing green if a real instrumented test were added and then broke the install. Phase 2 either
+      gives the matrix real tests or cuts it; recorded now so the next reader does not trust it.
 - [ ] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). `sdkmanager`,
       `avdmanager` and `emulator` are all CLI — no Android Studio needed. The phone stays the only
       place nits are measured; the emulator is the only place the non-36 range runs at all.
@@ -142,7 +155,9 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 
 ## Before the polish half — Phase 5
 
-- [ ] **Write the listing.** `docs/store-listing.md` — every heading in it is parsed by a script.
+The listing, the feature graphic and the screenshots **used to be here** and moved to *Before the
+door* on 2026-08-30: a closed test will not open without them, so they are schedule, not polish.
+
 - [x] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Done 2026-08-30:
       `docs/privacy-policy.md` is written, and since PR #6 merged
       <https://srednimax.github.io/gloam/privacy-policy.html> answers 200 — the URL the Console's

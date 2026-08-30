@@ -38,8 +38,13 @@ different costs, they are two phases**, however neatly one sentence describes th
 
 **The first upload is gated on the app being safe to hand to a stranger, not on it being finished.**
 Phase 5 is therefore split rather than deferred: the *pipeline* half is Phase P and happens now, and
-the *polish* half — listing copy, feature graphic, privacy prose — stays last, which is what "build
-first, polish later" has always meant here.
+the *polish* half stays last, which is what "build first, polish later" has always meant here.
+
+The split moved once, on 2026-08-30. **Listing copy, the feature graphic and the screenshots are not
+polish** — Play will not open a *closed* test without a complete listing, and the closed test is what
+the 12-tester window below runs on. They sit before the door with everything else rule 2 freezes.
+What genuinely stays last is the privacy prose's final pass, the Support screen's remainder, and the
+mark's refinement.
 
 Two things push the door early, and they are not equally certain:
 
@@ -393,9 +398,10 @@ test that decides when that stops being true.
 
 ## Phase 5 — Ship shape
 
-The pipeline half is Phase P. What is left is the polish half, and it is genuinely last: the mark,
-the listing copy, the privacy policy, the screenshots. Plus the rest of the Support screen — the
-rate-on-Play link, and:
+The pipeline half is Phase P, and the listing, feature graphic and screenshots moved *before the
+door* on 2026-08-30 (rule 1) because a closed test cannot open without them. What is left here is
+genuinely last: the mark's refinement, the privacy prose's final pass, and the rest of the Support
+screen — the rate-on-Play link, and:
 
 - **The tip, which ships — but not inside the app.** See ADR-0009 **and its 2026-08-30 amendment**,
   which is the part that decides what Phase 5 builds. Play's §3.2 treats a tip where 100% reaches the
