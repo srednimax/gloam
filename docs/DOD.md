@@ -80,12 +80,22 @@ one step with an external queue is behind you.
       one: **the 12-tester / 14-day closed test applies to this app.** It is not a one-time account
       unlock that the existing live app satisfied. So the plan's assumption held, the schedule stands
       as written, and **recruiting is the long pole** — see the item below.
-- [ ] **Answer the Console's *App content* questionnaire** — data safety, ads, target audience,
-      content rating. It gates a *closed* release, not only production, so it sits in front of the
-      door with everything else here. Gloam's answers are unusually short (no network, no account,
-      no analytics) and `scripts/aab-permissions.py` is what keeps the artifact honest about them:
-      `INTERNET` and `AD_ID` are asserted absent rather than assumed. `docs/play-app-content.md`,
-      where the previous app wrote those answers down, does not exist here yet; Phase 5 writes it.
+- [x] **Answer the Console's *App content* questionnaire.** Complete 2026-08-30. Ads, government/
+      financial/health, app access, content rating and target audience were answered when the entry
+      was created (see above); **data safety was answered last: no data collected, no data stored,
+      nothing shared.** It gates a *closed* release, not only production, which is why it sat in
+      front of the door rather than in Phase 5.
+      **That declaration is provable rather than promised**, and this is the reason to keep it that
+      way: Gloam requests no `INTERNET` permission at all, so it has no route off the device, and
+      `scripts/aab-permissions.py` asserts `INTERNET` and `AD_ID` *absent from the built artifact*
+      rather than trusting the source. Any dependency that merges either one in turns a true data
+      safety answer into a false one silently — the check is what catches that, so a red
+      `aab-permissions.py` is a Play declaration problem before it is a build problem.
+      **One nuance worth not re-litigating later:** Gloam uses platform Auto Backup, so a dim level
+      can reach the user's own Google Drive. That is not developer collection — the platform moves
+      it, the user controls it, and the developer never sees it — which is why the answer is still
+      "no data collected". `docs/play-app-content.md`, where the previous app wrote these answers
+      down as a set, still does not exist here; Phase 5 owes it.
 - [x] **Set up the GitHub repository.** Done, verified 2026-08-30 by
       `python3 scripts/repo-setup.py --dry-run`, which reports the `main: require CI` ruleset, the
       rebase-only merge setting, Pages from `main/docs` and `RELEASE_PLEASE_TOKEN` all already in
