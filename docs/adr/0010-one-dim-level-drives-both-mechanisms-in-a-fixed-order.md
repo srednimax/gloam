@@ -91,3 +91,31 @@ screen at the other. Across all 101 inputs the ramp must never emit a backlight 
 never a shade alpha above `MAX_SHADE_ALPHA`, and never a composite past the warmth bound. The plan's
 old blanket claim that no risk in it was reachable by a unit test was wrong here, and wrong in the
 two places that matter most.
+
+Amendment, 2026-08-30 (second). **Three of this ADR's own numbers did not survive being re-read
+against the phone** during the Phase 1 planning pass. The decision stands; its arithmetic does not.
+
+**The backlight's range is not a property of the device.** This ADR called the asymmetry *"a factor
+of ~75"*. `dumpsys display` publishes the panel's calibration — `mBacklight = [6.83661E-4, 0.499951,
+0.99975586, 1.0]` against `mNits = [2.0, 500.0, 1200.0, 2000.0]` — so the ratio between the user's
+brightness and the floor is **user state**, running from 1 (already at minimum) to 1000 (at full) on
+this one panel. The *"500 nits"* above was the user's setting at the time of the reading, not the
+panel's maximum, and *"6.64 nits"* was a test float rather than a floor: `mScreenBrightnessRangeMinimum`
+is `6.83661E-4`, which the spline maps to exactly the 2.0-nit floor. The override can reach it.
+
+The consequence is in [`phase-1.md`](../phase-1.md) §2 rather than here: the split between the two
+stretches cannot be a constant. It is derived from the backlight top, so that a user already at
+minimum brightness does not get a slider whose first two-thirds do nothing.
+
+**`Settings.System.SCREEN_BRIGHTNESS` is not a usable reading of the user's brightness.** With the
+screen on and the mode manual, this phone reports `screen_brightness = 255` while `mScreenBrightness`
+is `6.83661E-4` — the panel at its 2.0-nit floor. The obvious `raw / 255` computes a top of `1.0f`,
+which is 2000 nits, for a user sitting at 2.0. A thousandfold overestimate, in the direction that
+brightens the screen. `screen_brightness_float` reads `null` here, so there is no free float read
+either. The integer's scale is device-defined and the encoding is gamma; neither has a public API.
+
+**This does not reverse the decision.** `WRITE_SETTINGS` would inherit the same scale problem *and*
+keep the stranding failure it was rejected for, so the window override remains the right mechanism.
+What it changes is the confidence: the backlight half now depends on an estimate that has to be
+verified against the device before it ships, which is why Phase 1 carries an explicit checkpoint that
+can veto it and close the phase with the shade-only ramp instead.

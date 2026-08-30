@@ -6,6 +6,12 @@ work by reading this file alone.
 
 Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 
+**Phase 1 is the open phase, and its worklist is [`phase-1.md`](phase-1.md)** — the entry gate,
+the ramp, warmth and the readings, as five checkpoints in the order they should be built. **B is a
+gate that can veto the backlight half**, so read it before writing any of C. The two items below
+that the phase owns (`POST_NOTIFICATIONS`, and starting the tester recruitment) stay here, because
+they are what the door is waiting on.
+
 ## The standing schema gate — parked, because there is no database
 
 **Gloam has no database** (ADR-0007). It keeps a dim level and a shade-running flag in DataStore,
