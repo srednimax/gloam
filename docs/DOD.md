@@ -59,13 +59,20 @@ one step with an external queue is behind you.
       means never being able to update the app on Play again — recoverable only by resetting the
       upload key with Google, and only while the app still exists. The keystore *and* its password,
       which is in `local.properties` and nowhere else.
-- [ ] **Create the Play Console entry and register the package name.** All Play packages must be
-      registered by **30 September 2026**, and under-50-install names are first-come, first-served —
-      so this is also how `io.github.srednimax.gloam` is secured.
-- [ ] **Read back the app's access status while you are in there**, and record the answer here.
-      It settles the plan's biggest scheduling unknown: is the 12-tester / 14-day closed test
-      **per app**, or a one-time account unlock the existing live app already satisfied?
-      Until it is answered, assume it applies.
+- [x] **Create the Play Console entry.** Done 2026-08-30. App content answered: no ads, no
+      government/financial/health features, all functionality available without sign-in, content
+      rating questionnaire all-No, target audience **18+**, category **Tools**. Internal testing
+      track exists with the owner as its only tester.
+- [ ] **Bind the package name by uploading a build.** Creating the entry did not do it: the
+      `applicationId` is fixed by the first upload, and until one lands `io.github.srednimax.gloam`
+      is not yet yours. Today's signed bundle carries it — `python3 scripts/aab-version.py` reads it
+      back out of the artifact. **Check the string on the upload screen before confirming**; the
+      previous app got a name the Console suggested from its title and had to bend the build to Play
+      afterwards, permanently.
+- [x] **Read back the app's access status.** Answered 2026-08-30, and the answer is the expensive
+      one: **the 12-tester / 14-day closed test applies to this app.** It is not a one-time account
+      unlock that the existing live app satisfied. So the plan's assumption held, the schedule stands
+      as written, and **recruiting is the long pole** — see the item below.
 - [ ] **Answer the Console's *App content* questionnaire** — data safety, ads, target audience,
       content rating. It gates a *closed* release, not only production, so it sits in front of the
       door with everything else here. Gloam's answers are unusually short (no network, no account,
@@ -111,10 +118,11 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       Android 13+ it is invisible until this is granted — so the safety property the house rules
       claim is only half true today. Phase 1's entry gate.
 - [ ] **Recruit 12 closed testers — start in Phase 1, not when the build is ready.** Production
-      access needs them opted in *continuously for 14 days*. Potentially the longest lead item in the
-      plan and no amount of effort shortens it. **This account was created in 2026**, so it is inside
-      the post-Nov-2023 regime and no age or organisation exemption is available; what is unconfirmed
-      is only whether the requirement is per-app — see the Phase P item above.
+      access needs them opted in *continuously for 14 days*, and **this is now confirmed to apply to
+      Gloam** (Phase P, 2026-08-30) rather than being an assumption. It is the longest lead item in
+      the plan, it is calendar time rather than effort, and it depends on other people replying.
+      **Recruit more than twelve.** The window wants twelve opted in *continuously*; one person
+      uninstalling partway through is the failure this rule is shaped to produce.
 - [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
       `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
       the thing most likely to block a first upload, and it is discovered late.
