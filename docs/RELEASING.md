@@ -93,6 +93,28 @@ The gate is invisible on ordinary branches — `versionName` is still the last r
 notes already match. It fails on **release-please's PR**, which is the one moment the two are allowed
 to disagree and the last moment it is free to fix.
 
+**Where the notes get written, and where they must not be.** The obvious place is release-please's
+own PR branch, because that is where `versionName` already carries the new number. It is the wrong
+place: the action **force-pushes that branch** every time anything lands on `main`, so a note
+committed there survives only until the next merge and its loss is silent. Write them on an ordinary
+branch instead, before the release PR merges. **The gate allows notes to run ahead of `versionName`
+and fails only when they fall behind**, which is what makes that possible — and behind is the
+direction that actually shipped 1.9.0 describing 1.8.0, so that half stays fatal.
+
+Nothing can ship the wrong text in the window between the two. `publish-play.yml` uploads the bundle
+with **no release notes at all**, and `publish-play-production.yml` — the only workflow that runs
+`play-metadata.py` — is manual, held by the `production` environment's reviewer, and points at a
+released tag where `versionName` and the newest heading agree again. The residual case worth naming
+rather than pretending away is a `workflow_dispatch` of a publish against `main` mid-window; that is
+already off-pattern, because `versionCode` is the commit count and a publish wants a tag.
+
+**Worked example — 0.3.0.** Release PR #12 opened on 2026-08-30 and its CI went red at this gate and
+at nothing else: *"versionName is 0.3.0, but the newest release notes are for 0.2.0"*. That was the
+whole of what stopped 0.3.0 reaching Play — not the build, not the credentials, not Play. The notes
+were written on an ordinary branch rather than on the release branch, which is the change that taught
+the gate to accept notes running ahead; the release PR then has nothing left to fail on once it
+regenerates over the new `main`.
+
 **When nothing owner-visible changed, satisfying it is a rename, not a rewrite.** Move the heading to
 the new version and say why the bodies stand unchanged; 1.8.0 is the worked example. The gate reads
 the heading, so "these notes still hold" stays a decision someone made rather than the default.

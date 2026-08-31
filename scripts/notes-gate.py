@@ -20,6 +20,15 @@ Deliberately a gate rather than a test, for the same reason the translation gate
 fail on release-please's PR, which is the one moment the two versions are allowed to disagree and the
 last moment the disagreement can still be fixed for free.
 
+**Notes may run ahead of `versionName`; only behind it is a failure.** Writing `### 0.3.0` while the
+tree still says 0.2.0 is an ordinary branch doing the work before release-please's bump lands, and it
+is the only way to satisfy this gate without committing to release-please's own PR branch - which the
+action force-pushes over on the next push to main, taking a hand-written note with it. Nothing can
+ship the wrong text in that window: the internal-track publish uploads no notes at all, and the
+production workflow is manual, approved, and runs against a released tag where the two agree again.
+What stays fatal is the direction that actually shipped 1.9.0 describing 1.8.0 - notes *behind* the
+build.
+
 Satisfying it when nothing owner-visible changed is one edit, not a rewrite. 1.8.0 is the precedent
 already in the document: rename the heading and say why the nine bodies stand unchanged. The gate
 reads the heading, so that decision stays deliberate instead of being made by default.
@@ -69,6 +78,15 @@ def version_name() -> str:
     return match.group("version")
 
 
+def order(version: str) -> tuple[int, ...]:
+    """`x.y.z` as a comparable tuple, so "ahead" and "behind" are decidable rather than "different".
+
+    Only the three numbers: release-please is configured `release-type: simple` with no pre-release
+    tags, and both regexes above already refuse anything else.
+    """
+    return tuple(int(part) for part in version.split("."))
+
+
 def notes_versions(text: str) -> list[str]:
     """Every `### x.y.z` under `## Release notes`, in document order (newest last)."""
     lines = text.splitlines()
@@ -91,7 +109,11 @@ def main() -> int:
         sys.exit(f"no '### <version>' subsection under Release notes in {LISTING.relative_to(ROOT)}")
     newest = versions[-1]
 
-    if newest != shipping:
+    # Ahead is the pre-bump window and is allowed; behind is the failure this gate exists for. See
+    # this module's docstring for why the asymmetry is safe rather than convenient.
+    ahead = order(newest) > order(shipping)
+
+    if newest != shipping and not ahead:
         message = (
             f"versionName is {shipping}, but the newest release notes are for {newest}.\n\n"
             f"play-metadata.py uploads the newest notes it finds, so {shipping} would ship {newest}'s\n"
@@ -107,25 +129,32 @@ def main() -> int:
             return 0
         sys.exit(message)
 
-    # The version matches; now prove the note set behind it is actually usable. play-whatsnew
-    # already enforces both halves, so failing here means the notes exist but could not ship.
+    # Now prove the newest note set is actually usable — in the ahead case too, because a note that
+    # cannot ship is worth finding on the branch that wrote it rather than on the release PR.
+    # play-whatsnew already enforces both halves, so failing here means the notes exist but could
+    # not ship.
     module = whatsnew()
-    _, notes = module.parse(text, shipping)
+    _, notes = module.parse(text, newest)
     shipped = module.shipped_locales()
     missing = sorted(shipped - notes.keys())
     if missing:
         sys.exit(
-            f"{shipping} has notes for {len(notes)} locales but the app ships {len(shipped)}.\n"
+            f"{newest} has notes for {len(notes)} locales but the app ships {len(shipped)}.\n"
             f"Missing: {', '.join(missing)}.\n"
             "A language the build carries and the listing does not falls back to English in the store."
         )
     over = {locale: len(body) for locale, body in notes.items() if len(body) > module.LIMIT}
     if over:
         detail = ", ".join(f"{locale} {n}/{module.LIMIT}" for locale, n in sorted(over.items()))
-        sys.exit(f"{shipping} has notes over Play's limit: {detail}.\nPlay truncates rather than warns.")
+        sys.exit(f"{newest} has notes over Play's limit: {detail}.\nPlay truncates rather than warns.")
 
     longest = max(len(body) for body in notes.values())
-    print(f"notes gate: {shipping} has {len(notes)} locales, longest {longest}/{module.LIMIT}")
+    if ahead:
+        print(
+            f"notes gate: {newest} is written and waiting, ahead of versionName {shipping} — "
+            "release-please's bump is what closes the gap."
+        )
+    print(f"notes gate: {newest} has {len(notes)} locales, longest {longest}/{module.LIMIT}")
     return 0
 
 

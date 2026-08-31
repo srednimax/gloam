@@ -828,7 +828,7 @@ after.
 | R7 | Permission dialog usable with the shade up | `pm revoke com.xiaomi.scanner CAMERA`, launch it with the shade live, then `dumpsys window windows` + `dumpsys display` | **Usable, and the platform is what makes it so.** With another app's dialog up and the shade live at dim 98, the shade's window stays registered but goes `mPolicyVisibility=false` `mForceHideNonSystemOverlayWindow=true`, and **the override goes with it** - `mWindowManagerBrightnessOverride=NaN`, the panel back to the user's own `0.42695385` - although the window still carries `sbrt=0.01`. The dialog's buttons read `clickable=true` and the tap landed the grant. Both come back by themselves when it closes, same window, no service restart |
 | R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Both, and Stop genuinely stops it** - tapping it released the override and the panel returned to the user's own 250.7 nits, service gone. `Notification(channel=shade ... flags=ONGOING_EVENT\|NO_CLEAR\|FOREGROUND_SERVICE\|SILENT actions=1)`, title *Screen dimmed*, undismissable. **But reaching Stop on HyperOS takes a long-press** - see below |
 | R9 | Override vs an app setting its own `screenBrightness` | MIUI's local player, swipe-to-dim on the left edge, then `dumpsys window windows` for `sbrt=` on both windows | **Ours wins, and in both directions.** The player does set its own window brightness - `sbrt=1.0` after swiping up, `0.007843138` after swiping down, either side of our `0.01` - and neither reached the panel: `mWindowManagerBrightnessOverride` stayed `0.01` tagged `io.github.srednimax.gloam.debug` throughout. It is the **topmost** window's value that applies, not the lowest one |
-| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | **Not taken - the AVD does not exist yet.** `~/Android/Sdk` carries no `emulator` package and no system image, so this needs `sdkmanager` to fetch both before anything can run. `/dev/kvm` is present, so it is a download rather than a blocker. It is `DOD.md`'s own *Create the API-33 AVD* item, and it is the single thing standing between this readings block and the phase's *Done when* |
+| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator -avd gloam-api33 -no-window`, then `dumpsys window windows` and `dumpsys display` | **All three, and it honours more than was expected.** Pixel 6 profile, `google_apis` x86_64, headless: the app launches, the ask fires before the shade, *Allow* lands `granted=true`, and the shade window comes up `ty=APPLICATION_OVERLAY` with `NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS` intact. **The override applies** - `mBrightnessReason=override`, and `Display Brightness` follows the window's `sbrt` to `0.01` at dim 99 |
 
 **What R8 found about the escape hatch, which is the phase's own safety claim.** `CLAUDE.md` says
 the foreground notification *is* the escape hatch. It is - but the **Stop action is not visible in
@@ -868,6 +868,20 @@ return with no service restart. **Phase 2 has nothing to work around here**: wha
 dialog, it arrives on an undimmed screen and leaves the shade as it found it. §1's rule is
 untouched by this and deliberately does not lean on it — `askForNotifications()` takes the shade
 down itself, so what R7 measures is *other* apps' dialogs, which is the half Gloam cannot control.
+
+**What R10 says, and the one thing it cannot.** Section 7 expected the emulator not to honour
+`screenBrightness` at all. It does, and it tracks the window's value exactly. What it has no answer
+for is **nits**: `DisplayDeviceConfig` reads `mBacklight=null, mNits=null` with an identity
+brightness-to-backlight spline, so the float is applied with nothing photometric behind it. That is
+the reason the phone stays the only place light is measured, made concrete rather than assumed. Two
+smaller things worth having from it. Its own `mBacklightMinimum` is `0.035433073`, **above**
+`MIN_BACKLIGHT` — the first display seen where the ramp's floor is under what the panel can
+represent, which the framework simply clamps, and which is the harmless direction rather than the
+`BRIGHTNESS_OVERRIDE_OFF` one the constant exists to prevent. And the composite is checkable there
+without a meter: `screencap` at dim 99 has mean RGB `(64.1, 61.3, 58.3)` against `(243.9, 234.0,
+222.0)` with the shade stopped. The ratio is **0.263**, and `1 - MAX_SHADE_ALPHA` is `0.05` in linear
+light, which re-encodes to sRGB as `0.05 ^ (1/2.2)` = `0.25`. The cap `ShadeRampTest` asserts on the
+JVM is the cap that reaches a screen.
 
 **What R1 costs the ramp, which is a correction and not a reassurance.** The offset is the whole
 story: `nits = 498.3 x u + 1.66` means the float range's bottom decade buys almost nothing. Halving
@@ -918,3 +932,7 @@ because sections 2 and 6 both argue from them:
   rather than for this phase.
 - **Or:** checkpoint B vetoed the backlight half, C was skipped, and the phase closed with that
   written down here rather than argued about later.
+
+**Phase 1 closed 2026-08-31, on the wide branch rather than the narrow one.** B did not veto, so the
+backlight half shipped and one dim level drives all three mechanisms. Every row in the readings block
+above has a result behind it, including the two taken for later phases rather than for this one.
