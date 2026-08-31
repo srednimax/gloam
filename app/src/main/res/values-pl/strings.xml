@@ -19,7 +19,7 @@
     <string name="dim_start">Włącz przyciemnianie</string>
     <string name="dim_stop">Wyłącz przyciemnianie</string>
     <string name="dim_permission_title">Gloam potrzebuje zgody na wyświetlanie nad innymi aplikacjami</string>
-    <string name="dim_permission_body">Zasłona to warstwa nad tym, co jest na ekranie, więc Android prosi o wyraźną zgodę. Gloam nie odczytuje niczego o aplikacjach pod spodem.</string>
+    <string name="dim_permission_body">Zasłona to warstwa nad tym, co jest na ekranie, więc Android prosi o wyraźną zgodę. Gloam nie odczytuje niczego o aplikacjach pod spodem. Po włączeniu przyciemniania pojawi się jeszcze prośba o zgodę na powiadomienie — to dzięki niemu można wyłączyć Gloam z dowolnego miejsca.</string>
     <string name="dim_permission_grant">Otwórz ustawienia</string>
 
     <string name="dim_notification_warning_title">Poza Gloam nie ma przycisku Zatrzymaj</string>

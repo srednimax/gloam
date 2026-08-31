@@ -42,7 +42,6 @@ class AppPreferences(
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MATERIAL_YOU = booleanPreferencesKey("material_you")
-        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val DIM_LEVEL = intPreferencesKey("dim_level")
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
         val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
@@ -71,9 +70,6 @@ class AppPreferences(
      * app's identity would be invisible on almost every device that runs it.
      */
     val materialYou: Flow<Boolean> = store.data.map { it[Keys.MATERIAL_YOU] ?: false }
-
-    /** Whether first-run setup has been completed. */
-    val onboardingDone: Flow<Boolean> = store.data.map { it[Keys.ONBOARDING_DONE] ?: false }
 
     /**
      * How dark the shade is, 0–100. **Not a brightness** — it runs the other way, and the backlight
@@ -140,10 +136,6 @@ class AppPreferences(
 
     suspend fun setMaterialYou(enabled: Boolean) {
         store.edit { it[Keys.MATERIAL_YOU] = enabled }
-    }
-
-    suspend fun setOnboardingDone(done: Boolean) {
-        store.edit { it[Keys.ONBOARDING_DONE] = done }
     }
 
     suspend fun setDimLevel(level: Int) {

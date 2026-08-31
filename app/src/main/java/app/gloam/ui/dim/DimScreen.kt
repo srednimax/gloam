@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
 import app.gloam.shade.canDrawShade
+import app.gloam.shade.escapeHatchLive
 import app.gloam.shade.readBacklightTop
 import app.gloam.shade.shadePermissionIntent
 import app.gloam.shade.startShade
@@ -43,7 +44,6 @@ import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.SectionHeader
 import app.gloam.work.AppChannel
 import app.gloam.work.NotificationPermissionOutcome
-import app.gloam.work.channelCanAppear
 import app.gloam.work.notificationRationaleAvailable
 import app.gloam.work.notificationsAllowed
 import app.gloam.work.openAppNotificationSettings
@@ -51,7 +51,10 @@ import app.gloam.work.openChannelNotificationSettings
 import app.gloam.work.rememberNotificationPermissionAsk
 
 /**
- * What the escape-hatch warning says, and which button it carries.
+ * **Which button the escape-hatch warning carries.** Whether it is shown at all is
+ * [escapeHatchLive]'s answer rather than this enum's, which is why there is no `None` case: "the
+ * hatch is live" is one named predicate that Phase 2b's gate also reads, and a fourth entry here
+ * would be a second copy of it waiting to drift.
  *
  * **Derived on every resume from what the system currently reports, not from how an ask ended.** An
  * outcome-driven banner is stale exactly when it matters: the user taps *Open notification settings*,
@@ -60,14 +63,11 @@ import app.gloam.work.rememberNotificationPermissionAsk
  * the app sat in the background with the shade up.
  *
  * Kotlin note: an enum rather than a handful of booleans threaded through the composable. The three
- * bad states each need a different button, and a discriminated set of cases is what stops a fourth
- * combination being drawn by accident — the same reason you would reach for a union type in
- * TypeScript instead of `{ denied?: boolean; muted?: boolean }`.
+ * bad states each need a different button, and a discriminated set of cases is what stops an
+ * impossible combination being drawn by accident — the same reason you would reach for a union type
+ * in TypeScript instead of `{ denied?: boolean; muted?: boolean }`.
  */
 private enum class ShadeWarning {
-    /** The notification can appear. There is a Stop button outside the app, so nothing to say. */
-    None,
-
     /** Permission off, and the system dialog is still worth firing. */
     AskPermission,
 
@@ -117,8 +117,13 @@ fun DimScreen(
     // The same property, three more times. Every one of these is a switch on a settings screen this
     // screen deliberately hands the user off to, so every one of them can change while the app is
     // backgrounded and none of them may be cached across that trip.
+    //
+    // `hatchLive` is the whole question — is there a way out of the shade that is not this screen? —
+    // and the two below it only pick which button the answer carries. That is why the permission is
+    // still read separately and the channel is not: the channel is the one thing left when the
+    // permission is on and the hatch is dead anyway.
+    var hatchLive by remember { mutableStateOf(context.escapeHatchLive()) }
     var notificationsOn by remember { mutableStateOf(context.notificationsAllowed()) }
-    var channelOn by remember { mutableStateOf(context.channelCanAppear(AppChannel.Shade)) }
     var rationaleLeft by remember { mutableStateOf(activity.notificationRationaleAvailable()) }
 
     // Whether this device hands Gloam a brightness it can trust. Answerable with no service and no
@@ -135,8 +140,8 @@ fun DimScreen(
 
     fun reread() {
         canDraw = context.canDrawShade()
+        hatchLive = context.escapeHatchLive()
         notificationsOn = context.notificationsAllowed()
-        channelOn = context.channelCanAppear(AppChannel.Shade)
         rationaleLeft = activity.notificationRationaleAvailable()
         backlightAvailable = readBacklightTop(context) != null
     }
@@ -206,15 +211,6 @@ fun DimScreen(
         requestNotifications()
     }
 
-    val warning =
-        when {
-            // Never asked and spent are indistinguishable from here, and both want the launcher.
-            !notificationsOn && (rationaleLeft || !dialogSpent) -> ShadeWarning.AskPermission
-            !notificationsOn -> ShadeWarning.OpenAppSettings
-            !channelOn -> ShadeWarning.OpenChannelSettings
-            else -> ShadeWarning.None
-        }
-
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text(stringResource(R.string.dim_title)) }) },
@@ -229,7 +225,18 @@ fun DimScreen(
 
             // Only while the shade is actually up. A first-launch user who has started nothing is
             // not missing an escape hatch, because there is nothing to escape from yet.
-            if (state.running && warning != ShadeWarning.None) {
+            if (state.running && !hatchLive) {
+                // Computed here rather than above, because it is only meaningful under this guard:
+                // the last branch is "the channel is muted", and that is only what is left over once
+                // the hatch is known dead and the permission known present.
+                val warning =
+                    when {
+                        // Never asked and spent are indistinguishable from here, and both want the
+                        // launcher.
+                        !notificationsOn && (rationaleLeft || !dialogSpent) -> ShadeWarning.AskPermission
+                        !notificationsOn -> ShadeWarning.OpenAppSettings
+                        else -> ShadeWarning.OpenChannelSettings
+                    }
                 NotificationWarning(
                     warning = warning,
                     onAct = {
@@ -238,7 +245,6 @@ fun DimScreen(
                             ShadeWarning.OpenAppSettings -> context.openAppNotificationSettings()
                             ShadeWarning.OpenChannelSettings ->
                                 context.openChannelNotificationSettings(AppChannel.Shade)
-                            ShadeWarning.None -> Unit
                         }
                     },
                 )
