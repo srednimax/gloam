@@ -219,6 +219,8 @@ here** as insurance against the 14-day requirement.
 
 ## Phase 2 — Safe to hand over
 
+**Detail: [`phase-2.md`](phase-2.md).**
+
 **This is the door.** Everything in it answers one question — *must a stranger have this before they
 can be handed the app?* — and nothing in it is a feature. Ultra dark used to live here and does not
 any more: it *depends* on the safety work, which is not the same as being part of it, and it is the

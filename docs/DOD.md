@@ -32,6 +32,10 @@ look likely — the panel was in its own inactivity dimming, not at the user's s
 The one item below that the phase still owns — starting the tester recruitment — stays here, because
 it is what the door is waiting on.
 
+**Phase 2 is planned, and its detail is [`phase-2.md`](phase-2.md)** — seven checkpoints, and two
+non-code items in front of them. Read that file for what to build; the boxes below are still the
+worklist.
+
 ## The standing schema gate — parked, because there is no database
 
 **Gloam has no database** (ADR-0007). It keeps a dim level and a shade-running flag in DataStore,
@@ -149,6 +153,14 @@ one step with an external queue is behind you.
       than a broken pipeline. The workflow carries `workflow_dispatch` precisely so a credential
       failure can be retried **without cutting a version nobody wanted** — so a bad first run costs a
       re-run, not a release.
+      ⚠️ **Answered on 2026-08-31, and the answer is red - but usefully so.** The first ever run
+      of `publish-play.yml` fired on tag `v0.3.0` and failed at the upload step with
+      *"Google Play Android Developer API has not been used in project 118298064751 before or it is
+      disabled"*. Neither of the two failures braced for above: the service account authenticated,
+      and the bundle built, signed and verified. The Cloud project simply has
+      `androidpublisher.googleapis.com` switched off. **Enable it in project `118298064751`, wait for
+      propagation, and re-run with `workflow_dispatch`** - no version has to be cut to retry, which
+      is exactly what that trigger is for. Until that run is green there is no route through the door.
       **`UPLOAD_KEYSTORE_BASE64` is not a backup.** A GitHub secret is write-only; you cannot get the
       keystore out of it again. It is a copy CI can use, not one you could recover from. The backup
       item above is untouched by this and remains the sharpest thing in this file.
