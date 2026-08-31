@@ -6,29 +6,37 @@ work by reading this file alone.
 
 Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 
-**Phase 1 is the open phase, and its worklist is [`phase-1.md`](phase-1.md)** — the entry gate,
-the ramp, warmth and the readings, as five checkpoints in the order they should be built. **B was that
-gate and it passed on 2026-08-30**, and C shipped the same day: the dim level now drives the
-backlight and then the shade, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the ramp is
-a pure function proven by a table sweep rather than by a screen. **D is next**: warmth, the second
-child and the composite bound.
+**Phase 1 is one reading from closed, and its worklist is [`phase-1.md`](phase-1.md)** — the entry
+gate, the ramp, warmth and the readings, as five checkpoints. **A, B, C and D shipped on 2026-08-30
+and E on 2026-08-31**: the dim level drives the backlight and then the shade, amber is tinted over
+the top of it, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the whole ramp is a pure
+function proven by a table sweep rather than by a screen. B could have vetoed the backlight half and
+did not; **ADR-0010's third amendment** says why, and withdraws the reading that had made a veto look
+likely — the panel was in its own inactivity dimming, not at the user's setting.
 
-The reading C took that nothing asked for is the one to carry forward, because it is load-bearing for
-D and for 3b: the system's own surfaces do **not** lift Gloam's brightness override — the
-notification shade, quick settings and the volume dialog all read it back unchanged — but **the
-keyguard releases it outright**, and it returns on its own after unlocking. So `MIN_BACKLIGHT` carries
-the whole escape-hatch argument, and the lock screen is a free one it does not pay for.
+**What is left is R10, and it is the AVD rather than the reading.** `~/Android/Sdk` carries no
+`emulator` package and no system image, so ADR-0008's end-of-phase pass on API 33 is waiting on the
+*Create the API-33 AVD* item further down this file. `/dev/kvm` is present, so it is a download and
+not a blocker. Until it is taken, `phase-1.md`'s *Done when* has R10 open against it and this phase
+does not tick.
 
-**One thing C found that Phase 2b should read before it builds the tile.** The notification's *Stop*
-action works, but HyperOS hides it in the long-press overlay rather than the collapsed row — and a
-plain tap lands on the app's own Stop button, which at maximum dim sits *under the shade* at 0.33
-nits. Recorded rather than worked around, because it is vendor behaviour (stock Android expands the
-top notification and shows the action) and copy naming a gesture would be wrong on most devices. It
-is what turns **2b's Quick Settings tile from a nicety into the one-gesture escape hatch**;
-`phase-1.md`'s readings block carries the measurement.
+**Two of Phase 1's readings were taken for later phases and are theirs to read**, both written up in
+`phase-1.md`'s readings block:
 
-The two items below that the phase owns (`POST_NOTIFICATIONS`, and starting the tester
-recruitment) stay here, because they are what the door is waiting on.
+- **2b.** The notification's *Stop* action works, but HyperOS hides it in the long-press overlay
+  rather than the collapsed row — and a plain tap lands on the app's own Stop button, which at
+  maximum dim sits *under the shade* at 0.33 nits. Recorded rather than worked around, because it is
+  vendor behaviour (stock Android expands the top notification and shows the action) and copy naming
+  a gesture would be wrong on most devices. It is what turns **2b's Quick Settings tile from a nicety
+  into the one-gesture escape hatch**.
+- **3b.** The brightness belongs to the **topmost window that asks for one**, measured from both
+  sides: system surfaces and a video player in swipe-to-dim both failed to move ours, while the
+  keyguard and any runtime permission dialog release it by hiding our window rather than by
+  out-ranking it. What that leaves 3b is narrower than the original go/no-go but not answered — see
+  ADR-0010's third amendment.
+
+The one item below that the phase still owns — starting the tester recruitment — stays here, because
+it is what the door is waiting on.
 
 ## The standing schema gate — parked, because there is no database
 

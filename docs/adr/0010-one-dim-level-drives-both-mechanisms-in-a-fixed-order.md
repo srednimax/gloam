@@ -119,3 +119,50 @@ keep the stranding failure it was rejected for, so the window override remains t
 What it changes is the confidence: the backlight half now depends on an estimate that has to be
 verified against the device before it ships, which is why Phase 1 carries an explicit checkpoint that
 can veto it and close the phase with the shade-only ramp instead.
+
+Amendment, 2026-08-31 (third). **The phase ran, and the checkpoint that could have vetoed the
+backlight half did not.** The decision is unchanged and now shipped; what changes is that the second
+amendment's central reading turned out to be an artifact, and that this ADR's one open question has
+an answer.
+
+**Checkpoint B passed, so the backlight half is in.** Computed `backlightTop` against the panel's own
+`mScreenBrightness` at `screen_brightness` 10, 20, 64 and 128 as well as 255, mode manual: the decode
+lands **1.2% to 5.0% under** the user's own float and never over it — which is the safe direction,
+because reading low can only make Gloam start darker than the user was. With `screen_brightness_mode`
+set to `1` deliberately, adaptive turns out to be an ordinary read: the framework stores its own
+choice back into the same integer, and the decode was 3.8% under at 6.3 lux. **No `null` path is
+needed on this device**, and the toggle-off case shares the branch with it rather than having one of
+its own.
+
+**The second amendment's `screen_brightness = 255` reading is withdrawn.** The panel was in its
+*inactivity DIM policy* at the time, not at the user's setting — `mBrightnessReason=manual [ dim ]` -
+so the 255 and the `6.83661E-4` were never two views of the same moment. On this phone raw 255 is 500
+nits and the two never coincide. So `Settings.System.SCREEN_BRIGHTNESS` **is** a usable reading of
+the user's brightness after all, within a few percent and in the conservative direction.
+**And the lesson that outlives the correction: read a panel with the screen held awake**
+(`settings put system screen_off_timeout 600000`, and put it back). Four of Phase 1's readings were
+first taken inside the inactivity timeout, and every one of them looked exactly like *the setting did
+nothing*.
+
+**Nothing downstream of that withdrawal moves.** The ramp still derives the split between its two
+stretches from `backlightTop` rather than from a constant, because that argument was never about the
+integer being unreadable — it was about the *range* being user state, running from 1 to 1000 on one
+panel, which the withdrawal does not touch. `MIN_BACKLIGHT` is `0.01f`, set by measurement rather
+than by argument: **6.64 nits** on the development panel, read against the criterion that the
+notification shade can be pulled down and *Stop* tapped in a dark room and a lit one.
+
+**The open question in *Consequences* — "when a second window appears above the shade, whose override
+applies?" — is measured.** From both sides, and it is the same rule: **the topmost window that asks
+for a brightness gets it, and a window that is hidden asks for nothing.** The system's own surfaces
+(notification shade, quick settings, volume dialog) read our `0.01` back unchanged. An ordinary app
+window below ours is not consulted at all — MIUI's video player in swipe-to-dim asked for `1.0` and
+then for `0.0078`, either side of ours, and neither reached the panel; it is the topmost value that
+applies, not the lowest. The two exceptions are both the system taking the window away rather than
+out-ranking it: the **keyguard** releases the override outright and returns it on unlock, and a
+**runtime permission dialog** force-hides every non-system overlay, which hands the user's own
+brightness back for exactly as long as the dialog is up.
+
+**What that leaves for Phase 3b is narrower than it was, but it is not answered.** What was measured
+is a requester *below* ours losing. A panel window of Gloam's own *above* the shade that sets no
+brightness of its own should leave the shade the topmost requester by the same rule — but "should, by
+the rule" is not a reading, and 3b owns taking it.
