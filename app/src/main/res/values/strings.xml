@@ -34,7 +34,7 @@
     <string name="dim_start">Start dimming</string>
     <string name="dim_stop">Stop dimming</string>
     <string name="dim_permission_title">Gloam needs permission to draw over other apps</string>
-    <string name="dim_permission_body">The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath.</string>
+    <string name="dim_permission_body">The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath. When you start dimming it will also ask to show a notification — that notification is how you stop Gloam from anywhere.</string>
     <string name="dim_permission_grant">Open settings</string>
 
     <!-- The escape-hatch warning. It makes a safety claim — that there is a Stop button outside the
