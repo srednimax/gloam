@@ -6,19 +6,13 @@ work by reading this file alone.
 
 Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 
-**Phase 1 is one reading from closed, and its worklist is [`phase-1.md`](phase-1.md)** — the entry
-gate, the ramp, warmth and the readings, as five checkpoints. **A, B, C and D shipped on 2026-08-30
-and E on 2026-08-31**: the dim level drives the backlight and then the shade, amber is tinted over
-the top of it, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the whole ramp is a pure
-function proven by a table sweep rather than by a screen. B could have vetoed the backlight half and
-did not; **ADR-0010's third amendment** says why, and withdraws the reading that had made a veto look
-likely — the panel was in its own inactivity dimming, not at the user's setting.
-
-**What is left is R10, and it is the AVD rather than the reading.** `~/Android/Sdk` carries no
-`emulator` package and no system image, so ADR-0008's end-of-phase pass on API 33 is waiting on the
-*Create the API-33 AVD* item further down this file. `/dev/kvm` is present, so it is a download and
-not a blocker. Until it is taken, `phase-1.md`'s *Done when* has R10 open against it and this phase
-does not tick.
+**Phase 1 is closed, and its record is [`phase-1.md`](phase-1.md)** — the entry gate, the ramp,
+warmth and the readings, as five checkpoints. **A, B, C and D shipped on 2026-08-30, E and the
+API-33 pass on 2026-08-31**: the dim level drives the backlight and then the shade, amber is tinted
+over the top of it, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the whole ramp is a
+pure function proven by a table sweep rather than by a screen. B could have vetoed the backlight half
+and did not; **ADR-0010's third amendment** says why, and withdraws the reading that had made a veto
+look likely — the panel was in its own inactivity dimming, not at the user's setting.
 
 **Two of Phase 1's readings were taken for later phases and are theirs to read**, both written up in
 `phase-1.md`'s readings block:
@@ -229,9 +223,16 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       per PR buying a checkmark with nothing behind it, and worse, a green tick that would keep
       showing green if a real instrumented test were added and then broke the install. Phase 2 either
       gives the matrix real tests or cuts it; recorded now so the next reader does not trust it.
-- [ ] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). `sdkmanager`,
-      `avdmanager` and `emulator` are all CLI — no Android Studio needed. The phone stays the only
-      place nits are measured; the emulator is the only place the non-36 range runs at all.
+- [x] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). Done 2026-08-31:
+      `gloam-api33`, `system-images;android-33;google_apis;x86_64` on a Pixel 6 profile, created and
+      booted headless entirely from the CLI — no Android Studio. R10 passed on it: the app launches,
+      the shade window appears with every safety flag intact, and the permission flow works.
+      **Two things it settled that had been guesses.** The emulator *does* honour the window
+      brightness override, which `phase-1.md` §7 expected it not to — and it has no nits calibration
+      at all (`mBacklight=null, mNits=null`, identity spline), so the float it applies means nothing
+      photometric and **the phone stays the only place light is measured**. The readings block
+      carries the numbers. Recreate with
+      `emulator -avd gloam-api33 -no-window -gpu swiftshader_indirect`.
 - [ ] **Re-read ADR-0004 now `minSdk` is 33.** The below-13 locale backport — the disabled
       `AppLocalesMetadataHolderService` manifest entry — exists only for devices the app no longer
       ships to. Removing it is ADR-0004's decision to amend, not a tidy-up. AppCompat itself stays
@@ -279,6 +280,14 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
       than written** — `WAKE_LOCK`, `ACCESS_NETWORK_STATE` and `RECEIVE_BOOT_COMPLETED`, all
       WorkManager's — which is exactly the reading the source cannot give you.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
+      **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
+      2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the
+      newest release notes are for 0.2.0` — which is the whole of what has kept 0.3.0 off Play. The
+      0.3.0 notes are now written in `store-listing.md`, and the gate learned to accept notes that
+      run **ahead** of `versionName` so they could be written on an ordinary branch rather than on
+      release-please's own, which the action force-pushes over. `RELEASING.md` carries the reasoning.
+      **The release PR still has to regenerate over the new `main` before it goes green** — that is
+      the thing to check rather than assume.
 - [ ] **Every dependency bump: re-run `licensee`.** The build fails on an unallowed licence, which is
       the point — but the fix is two things, the allowlist *and* the bundled text.
 - [ ] **Test the release-shaped build on a device.** A missing R8 keep rule does not crash; it makes

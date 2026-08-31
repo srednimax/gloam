@@ -16,7 +16,7 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 
 - [x] **Phase 0** — Skeleton, palette, and a shade that works
 - [ ] **Phase P** — The pipeline ← *parallel to everything; no code; starts now*
-- [ ] **Phase 1** — The mechanism is complete
+- [x] **Phase 1** — The mechanism is complete
 - [ ] **Phase 2** — Safe to hand over ← **the door: closed testing opens here**
 - [ ] **Phase 2b** — As dark as it goes
 - [ ] **Phase 3a** — The controls, from the launcher

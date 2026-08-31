@@ -197,3 +197,34 @@ Pierwsza wersja w Google Play. Jeden suwak przyciemnia ekran poniżej najciemnie
 
 Wymaga Androida 13 lub nowszego.
 ```
+
+### 0.3.0 — the mechanism is complete
+
+Phase 1 in one release: the backlight half of the ramp, the warmth layer over it, and the
+notification ask that makes the Stop action exist at all. The debug-only backlight sweep and the
+ramp's table sweep are in `CHANGELOG.md` and deliberately not here — a test is not a release note.
+
+0.2.0's note already described the backlight half, which only actually shipped here; that is not
+re-announced, because a reader cannot be told the same thing twice for the first time. What is new
+to them is the switch that turns it off, and the sentence explaining what it does to their own
+brightness slider.
+
+**English** — 458/500:
+
+```
+Warmth: a second slider tints the shade amber. It eases off on its own as the dim level nears its darkest, so what is underneath stays readable.
+
+Lowering your phone's own brightness is now a switch you can turn off. While it is on, your brightness slider does nothing until you stop dimming — and the app now says so rather than leaving you to guess.
+
+Gloam also asks to show notifications, because that notification is how you stop it from outside the app.
+```
+
+**Polish** — 478/500:
+
+```
+Ciepło barwy: drugi suwak zabarwia zasłonę na bursztynowo. Przy najciemniejszych ustawieniach efekt sam słabnie, żeby to, co pod spodem, wciąż dało się odczytać.
+
+Obniżanie podświetlenia to teraz przełącznik, który można wyłączyć. Gdy jest włączony, suwak jasności telefonu nic nie zmienia, dopóki przyciemnianie nie zostanie wyłączone — i aplikacja teraz to wyjaśnia.
+
+Gloam prosi też o zgodę na powiadomienia: to powiadomienie pozwala zatrzymać przyciemnianie spoza aplikacji.
+```
