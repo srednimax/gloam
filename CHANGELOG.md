@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0](https://github.com/srednimax/gloam/compare/v0.2.0...v0.3.0) (2026-08-31)
+
+
+### Features
+
+* ask for notification permission before the first shade ([ad2fe81](https://github.com/srednimax/gloam/commit/ad2fe81d8ecfd911541617e17caf62408a89d790))
+* take the backlight down with the dim level ([1f6720e](https://github.com/srednimax/gloam/commit/1f6720e076dee98cee8619e75017f12ff9ecae6f))
+* tint the shade amber ([6a56ccc](https://github.com/srednimax/gloam/commit/6a56cccd2bea332307bfcacdff70eb881c09b2bf))
+
 ## [0.2.0](https://github.com/srednimax/gloam/compare/v0.1.0...v0.2.0) (2026-08-30)
 
 
