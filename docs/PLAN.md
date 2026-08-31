@@ -197,15 +197,16 @@ promises: the **backlight** walked down to its floor first, and **warmth** tinti
 Both words have been in `CONTEXT.md` since the beginning and nothing reads either. With the backlight
 at its floor *and* the shade at its cap, the app finally reaches the place it exists to reach.
 
-Settled in ADR-0010 **and both of its 2026-08-30 amendments**: one dim level, one ramp, in a fixed
+Settled in ADR-0010 **and its three amendments**: one dim level, one ramp, in a fixed
 order, with the backlight half a toggle rather than a second slider. The first amendment is the half
 that matters to the schedule, because it hands this phase three things it is easy to read as somebody
 else's job — the safety invariant moving from a `View` to the composite once there are two layers,
 saying out loud that the override leaves the user's own brightness slider inert, and the ramp's
 bounds test. The second records what the phone said when this phase was planned, and it is why the
-phase carries **a checkpoint that can veto the backlight half**: `Settings.System.SCREEN_BRIGHTNESS`
-is not a usable reading of the user's brightness on the test device, so the estimate the backlight
-ramp starts from has to be verified against the phone before it ships.
+phase carried **a checkpoint that could veto the backlight half**, because the estimate that half
+starts from had to be verified against the phone before it shipped. **It passed** (checkpoint B,
+2026-08-30), and the third amendment records why the second one's alarming reading was an artifact
+of the screen's own inactivity dimming rather than a property of the device.
 
 It opens with an **entry gate**: ask for `POST_NOTIFICATIONS` before anything else, because this
 phase produces the darkest state the app will ever reach short of ultra dark and the ongoing

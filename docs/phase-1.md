@@ -825,10 +825,10 @@ after.
 | R4 | The same with adaptive deliberately on | `settings put system screen_brightness_mode 1` | **Adaptive is an ordinary read.** The framework stores its own choice back into the same integer (`raw=14` at 6.3 lux, 27.2 nits); decoded 3.8% under. No `null` path needed |
 | R5 | Whose override applies - lock screen, notification shade, volume dialog | `cmd statusbar expand-notifications` / `expand-settings` / `input keyevent VOLUME_UP`, each followed by `dumpsys display` | **Ours wins everywhere except the keyguard.** The notification shade, quick settings and the volume dialog all read back `mWindowManagerBrightnessOverride=0.01` unchanged - so `MIN_BACKLIGHT` carries the whole escape-hatch argument, the hostile branch. **The lock screen releases it outright** (`NaN`, `reason=manual`, back to the user's own 250.7 nits) and it returns by itself on unlock |
 | R6 | Override released on a ROM kill | `am force-stop` with the shade live | **Released, on the shade's own window** (re-confirmed at C; B had only the activity's). Holding 6.64 nits at dim 100, `am force-stop` returned the panel to the user's own 250.7 nits and `reason=manual` within a second |
-| R7 | Permission dialog usable with the shade up | by hand, on the phone | - |
-| R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Both, and Stop genuinely stops it** - tapping it released the override and the panel returned to the user's own 250.7 nits, service gone. `Notification(channel=shade ... flags=ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE|SILENT actions=1)`, title *Screen dimmed*, undismissable. **But reaching Stop on HyperOS takes a long-press** - see below |
-| R9 | Override vs an app setting its own `screenBrightness` | same, with a video player in swipe-to-dim | - |
-| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | - |
+| R7 | Permission dialog usable with the shade up | `pm revoke com.xiaomi.scanner CAMERA`, launch it with the shade live, then `dumpsys window windows` + `dumpsys display` | **Usable, and the platform is what makes it so.** With another app's dialog up and the shade live at dim 98, the shade's window stays registered but goes `mPolicyVisibility=false` `mForceHideNonSystemOverlayWindow=true`, and **the override goes with it** - `mWindowManagerBrightnessOverride=NaN`, the panel back to the user's own `0.42695385` - although the window still carries `sbrt=0.01`. The dialog's buttons read `clickable=true` and the tap landed the grant. Both come back by themselves when it closes, same window, no service restart |
+| R8 | Notification and Stop appear and work, at maximum dim | `dumpsys notification --noredact`, then by hand | **Both, and Stop genuinely stops it** - tapping it released the override and the panel returned to the user's own 250.7 nits, service gone. `Notification(channel=shade ... flags=ONGOING_EVENT\|NO_CLEAR\|FOREGROUND_SERVICE\|SILENT actions=1)`, title *Screen dimmed*, undismissable. **But reaching Stop on HyperOS takes a long-press** - see below |
+| R9 | Override vs an app setting its own `screenBrightness` | MIUI's local player, swipe-to-dim on the left edge, then `dumpsys window windows` for `sbrt=` on both windows | **Ours wins, and in both directions.** The player does set its own window brightness - `sbrt=1.0` after swiping up, `0.007843138` after swiping down, either side of our `0.01` - and neither reached the panel: `mWindowManagerBrightnessOverride` stayed `0.01` tagged `io.github.srednimax.gloam.debug` throughout. It is the **topmost** window's value that applies, not the lowest one |
+| R10 | API-33 AVD: launches, window appears, permission flow works | `emulator` + by hand | **Not taken - the AVD does not exist yet.** `~/Android/Sdk` carries no `emulator` package and no system image, so this needs `sdkmanager` to fetch both before anything can run. `/dev/kvm` is present, so it is a download rather than a blocker. It is `DOD.md`'s own *Create the API-33 AVD* item, and it is the single thing standing between this readings block and the phase's *Done when* |
 
 **What R8 found about the escape hatch, which is the phase's own safety claim.** `CLAUDE.md` says
 the foreground notification *is* the escape hatch. It is - but the **Stop action is not visible in
@@ -847,6 +847,27 @@ most ROM-fragile corner - a worse trade than the thing it fixes. **Phase 2b's Qu
 the one-gesture escape hatch** and this is the measurement that says why it is not a nicety. Phase 3a
 should note the other half: a control surface that lives under the shade it controls is only as
 legible as the shade allows.
+
+**What R7 and R9 together settle: the brightness belongs to the topmost window, and it is the same
+rule from both sides.** R5 asked the question for the system's own surfaces; R9 asks it for an
+ordinary app window, and the answer does not change. The shade is `TYPE_APPLICATION_OVERLAY`, which
+sits above every activity, so an app that sets its own `screenBrightness` is simply not consulted —
+the player asking for `1.0` and then for `0.0078` got neither, and it is the topmost value that
+applies rather than the lowest. **That is the stated use case working, and it has a cost worth
+naming rather than discovering:** an app that legitimately needs a bright screen cannot have one
+while the shade is up — a QR code, a boarding pass, a payment code. Gloam does not break that, it
+defers it, exactly as it defers the user's own brightness slider; and the way out is the one R8
+already pointed at, a stop that takes one gesture from wherever the user is. Phase 2b's tile.
+
+**R7 is the second way the override goes away, and like the keyguard it is the system taking the
+window rather than out-ranking it.** A runtime permission dialog force-hides every non-system overlay — `mPolicyVisibility=false`,
+`mForceHideNonSystemOverlayWindow=true` — which exists precisely so an app cannot draw over a
+consent prompt. A hidden window owns no brightness, so `sbrt=0.01` stays on our `LayoutParams` and
+the panel goes back to the user's own setting for exactly as long as the dialog is up, then both
+return with no service restart. **Phase 2 has nothing to work around here**: whatever raises a
+dialog, it arrives on an undimmed screen and leaves the shade as it found it. §1's rule is
+untouched by this and deliberately does not lean on it — `askForNotifications()` takes the shade
+down itself, so what R7 measures is *other* apps' dialogs, which is the half Gloam cannot control.
 
 **What R1 costs the ramp, which is a correction and not a reassurance.** The offset is the whole
 story: `nits = 498.3 x u + 1.66` means the float range's bottom decade buys almost nothing. Halving

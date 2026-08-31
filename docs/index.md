@@ -34,7 +34,9 @@ in a properly dark room. Gloam is the range underneath it.
 - **Dims past the floor.** One control, from *barely dimmed* to *very nearly dark*. Gloam first takes
   the backlight down to the lowest your phone allows, then draws a shade over the screen to go the
   rest of the way.
-- **Warms the screen.** A separate control tints the shade amber, as far or as little as you like.
+- **Warms the screen.** A separate control tints the shade amber. The tint eases off on its own as
+  the dim level nears its darkest, so the two controls together always leave something readable
+  underneath.
 - **Turns itself off.** Every shade you start by hand gets a deadline, so you never unlock a phone
   you cannot read the next morning. You can set that to **Never**, but it is on by default.
 

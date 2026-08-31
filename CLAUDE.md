@@ -69,8 +69,12 @@ let us do otherwise".
   with two children, black at the dim level and amber at the warmth, and bounding each child alone
   does not bound the result: black at `MAX_SHADE_ALPHA` still leaves content visible, and a heavy
   amber wash over it is a screen nothing can be read through, with neither child past its own limit.
-  `MAX_SHADE_ALPHA`, `MIN_BACKLIGHT` and the warmth bound are constants rather than preferences, and
-  the ramp is tested against all three together (ADR-0010).
+  **It takes two bounds, not one**: `(1 - shadeAlpha) * (1 - warmthAlpha) ≥ 1 - MAX_SHADE_ALPHA` for
+  the signal that survives, and `MAX_WARMTH_ALPHA * relativeLuminance(SHADE_AMBER) ≤ 1 -
+  MAX_SHADE_ALPHA` for the light the amber *adds*, which the first cannot see. `MAX_SHADE_ALPHA`,
+  `MIN_BACKLIGHT`, `MAX_WARMTH_ALPHA` and `WARMTH_EASE_FROM` are constants rather than preferences;
+  the second bound is also why the amber is a constant in `shade/` rather than a `MaterialTheme`
+  colour; and `ShadeRampTest` sweeps every input against all of it (ADR-0010).
 - **A branch merges with every shipped language complete.** Adding an English string does *not*
   redden your build — completeness is a merge gate (`scripts/translation-gate.py`), not a test, so
   copy is translated **once** rather than against draft wording and again after review. Everything
