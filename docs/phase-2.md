@@ -68,10 +68,18 @@ and ultra dark is the riskiest feature in the plan. Both ship into a running clo
 people can be watched, which is the whole argument for Phase 2b existing. What this phase owes the
 tile is the definition it will be gated against, not the tile.
 
-**One shape to keep, without building it.** Auto-off's controls are the dim *screen*'s, not
-`DimControls()`'s. Phase 3a renders the sliders and the backlight switch in a floating host; a row of
-duration chips and a "turns off at" line are not that, and putting them beside the sliders now with
-the assumption they travel together is how the extraction gets harder rather than easier.
+**One shape to keep, without building it.** The chips and the "turns off at" line stay on the dim
+*screen* this phase, outside whatever later becomes `DimControls()` — **a deferral, not a verdict.**
+Putting them beside the sliders now, on the assumption they travel together, is how the extraction
+gets harder rather than easier; `DimScreen`'s own comment already says the same about the sliders,
+that pulling out a composable with one caller is guesswork about the second caller's shape.
+
+**Phase 3a decides whether the floating host carries the deadline, and the twelve can answer it**
+(rule 5). The argument is live in both directions: the floating host is by construction the surface
+reached *while the shade is up, in the dark, without opening the app*, which is exactly where "turns
+off at 23:40" is worth reading and "give me two more hours" is worth tapping. On product grounds the
+deadline has a better claim to that host than the warmth slider does. That is 3a's call on 3a's
+evidence, not this phase's.
 
 ---
 
@@ -154,10 +162,14 @@ autostart is *offered once and claimed never*, and "once" implies remembering th
 | Key | English | Checkpoint |
 | --- | --- | --- |
 | `dim_permission_title` | *unchanged* | — |
-| `dim_permission_body` | **reworded**: The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath. When you first start dimming it will also ask to show a notification — that notification is how you stop Gloam from anywhere. | A |
+| `dim_permission_body` | **reworded**: The shade is a layer on top of whatever is on screen, so Android asks you to allow it explicitly. Gloam reads nothing about the apps underneath. When you start dimming it will also ask to show a notification — that notification is how you stop Gloam from anywhere. | A |
 
 Two asks named in one paragraph, in the order they arrive, with the reason for the second stated as
 what it buys the user rather than as a permission name.
+
+**"When you start dimming", not "when you first start dimming".** The explainer's whole virtue is
+that it is a live read and comes back the day the permission is revoked, and on that day the reader
+is not a first-run user. One word, and it is true both times.
 
 ---
 
@@ -189,14 +201,22 @@ the list is what currently satisfies it.
 | The **Quick Settings tile** | needs no permission and no channel; fails independently of the above | Phase 2b |
 | The **power menu** | unconditional, and outside the app entirely | the platform |
 
-**One line of that table is weaker than it looks and this phase makes it weaker still.** The power
-menu's only use is a restart — and reboot restore, which this phase adds, puts the shade back.
-§4 answers that rather than leaving it implied.
+**One line of that table is weaker than it looks and this phase makes it weaker still.** Clause 3
+holds for the power menu, but only for what it actually delivers. It is an unconditional route to an
+*undimmed screen*, not to a *control*: `BOOT_COMPLETED` arrives after the first unlock (§4), so the
+bright moment the user passes through is the keyguard — before the receiver has run, before the
+service is alive, and before any notification exists to act on. What a restart buys after this phase
+is sight and a bounded head start, not a permanent undo.
+
+So the honest reading of that row is **unconditional, and bounded in duration rather than
+permanent**. **R1's "how long after unlock" is the number behind the bound**, which is a better job
+for it than "does it work". §4 argues why it is still enough; 2b reads this paragraph, not the table
+alone.
 
 ### The predicate
 
 `DimScreen` already computes the notification half of this inline. It moves to one named function in
-`shade/`, because three callers want the identical answer and a second copy is how they drift:
+`shade/`, because two callers want the identical answer and a second copy is how they drift:
 
 ```kotlin
 /** Whether the shade's escape hatch — the ongoing notification's Stop action — can actually appear. */
@@ -206,7 +226,16 @@ fun Context.escapeHatchLive(): Boolean =
 
 The warning banner reads it to decide whether to appear at all (the enum keeps deciding *which*
 button). Phase 2b's gate reads it, live and continuously, and adds the tile as an independent second
-term — `escapeHatchLive() || tileAdded()` — rather than replacing it. Nothing else may.
+term — `escapeHatchLive() || tileAdded()` — rather than replacing it. **Nothing else reads it
+today**, which is a statement about this phase rather than a restriction on later ones.
+
+**2b will need a third caller, and it is worth saying here rather than discovering it there.** §4's
+boot receiver restores a shade without consulting this predicate, deliberately — §4 says why. In
+this phase that produces a shade with no Stop action over a screen at 0.33 nits: uncomfortable, and
+survivable, because R2 calibrated `MIN_BACKLIGHT` so the app's own controls stay legible at maximum
+dim in a dark room. Past `MAX_SHADE_ALPHA` it stops being survivable, and **2b's gate cannot see
+it** — that gate lives in the UI and the restore path has none. So the gate 2b builds has to cover
+the receiver too, and this is the paragraph that says so.
 
 **It is a `Context` extension and not a `ViewModel` property**, for the reason `CLAUDE.md` gives: it
 needs a `Context`, and a `ViewModel` holding one is a `ViewModel` outliving its scope.
@@ -256,6 +285,18 @@ obviously *not* "the next day", which is the failure being designed out.
 interrupted will otherwise conclude the app is broken. It is a choice they make, which is the same
 standard `DEFAULT_DIM_LEVEL` and warmth are held to.
 
+**And `Hours2` ships provisional, because `PLAN.md` rule 5 names this exact question as one of the
+two the twelve testers exist to answer.** The paragraph above is the best argument available from a
+room with one person in it, and it is an argument about a *taste* — while this is the phase that
+puts the thing in front of the only people who can turn a taste into evidence. So rule 5 stands
+unamended, `DOD.md` carries a line to put the question to them while they are still reachable and
+still paying attention, and `Hours2` is what they are asked about rather than what was settled
+without them.
+
+**Defaulting *on* is a different question and is not up for a vote.** That is the safety argument two
+paragraphs up — until 2b's tile ships, auto-off is the only hatch needing no gesture — and a
+preference poll is the wrong instrument for a safety floor.
+
 ### The deadline is an absolute instant, and the pure part is tested
 
 `shade/AutoOff.kt`, no Android imports, in the shape `ShadeRamp.kt` established:
@@ -276,15 +317,37 @@ and nothing about this shape has to be reworked.
 
 ### Where it runs, and the clock it is not allowed to trust
 
-A job on the service's own scope, re-armed whenever the stored deadline changes:
+A job on the service's own scope, **re-armed by `collectLatest` over `offAtMillis`**. The loop
+cannot capture the deadline once, because it changes twice in this phase for reasons other than
+starting: the chip rewrite from *now*, and §4's receiver restoring one at boot.
 
 ```kotlin
-while (isActive) {
-    val remaining = offAt - System.currentTimeMillis()
-    if (remaining <= 0) { preferences.endShade(); stopSelf(); return }
-    delay(min(remaining, DEADLINE_RECHECK_MS))   // 60_000
+preferences.offAtMillis.collectLatest { offAt ->
+    while (isActive) {
+        val remaining = offAt - System.currentTimeMillis()
+        if (remaining <= 0) {
+            // Must finish even though this write cancels the very block making it.
+            withContext(NonCancellable) { preferences.endShade() }
+            stopSelf()
+            return@collectLatest
+        }
+        delay(min(remaining, DEADLINE_RECHECK_MS))   // 60_000
+    }
 }
 ```
+
+**`NonCancellable` is required rather than defensive, and without it the failure is intermittent.**
+`endShade()` writes the very value this block is collecting: the write commits, the flow emits,
+`collectLatest` cancels the block that is still running — and the cancellation lands *between*
+`endShade()` returning and `stopSelf()`. The shade comes down, `shadeRunning` goes false, and the
+service stays alive holding an ongoing notification over a screen it is no longer dimming. Putting
+`stopSelf()` first does not help either: `onDestroy` calls `scope.cancel()`, which cancels the write
+from the other side. Cancellation is only observed at a suspension point, so once the
+`NonCancellable` block returns, the plain `stopSelf()` call after it always runs.
+
+**The fire path logs one line at the moment it stops.** R7 reads the lateness off logcat timestamps
+and has nothing else to read it from — a notification vanishing is visible but not timestamped.
+Logging is not developer *surface*, so it lives in `main/` rather than behind the debug seam.
 
 **The cap is the whole point and it is a platform fact rather than a style.** `delay` on Android's
 main dispatcher is a `Handler.postDelayed`, which is scheduled against `SystemClock.uptimeMillis` —
@@ -303,6 +366,28 @@ up has to be right at 22:00.
 **Firing while the screen is off is correct, not a bug to guard against.** The shade matters at the
 moment the user next looks; taking it down while they are not looking is precisely the behaviour that
 makes the morning fine.
+
+### The deadline needs a reader the service cannot provide
+
+Three things touch `off_at_millis` in this phase — `beginShade` arms it, the loop above fires it,
+§4's receiver checks it at boot — and there is a fourth case none of them covers. **HyperOS kills the
+process and `START_STICKY` does not always bring it back**, which is the premise this codebase is
+built on: `ShadeService`'s own notes say that promise "is worth less than the stored `shadeRunning`
+preference". The window dies with the process, `shadeRunning` stays `true`, the deadline stays where
+it was, and nothing is alive to notice it pass.
+
+Open Gloam the next morning and the button says **Stop** over a screen with no shade on it, under a
+line reading *"Turns off at 00:00"* — nine hours gone. That is the first time this app's two stored
+values can disagree *with each other*, which is exactly what §6's `beginShade`/`endShade` pairing
+exists to prevent. They are written together and drift apart anyway, because the clock moves and
+nobody is watching it.
+
+**The reader is one line in a block that already exists.** `DimScreen`'s `reread()` runs on every
+resume beside `canDrawShade()`; it gains `if (shadeRunning && isDue(now, offAt)) endShade()`. That is
+a comparison of two stored values against the wall clock — **not** a check of whether a process is
+alive, which is the thing `CLAUDE.md` forbids. The stored intent still decides what should be on
+screen; this only lets the user's own earlier instruction finish arriving. **R8b is the reading
+behind it.**
 
 ### What the user sees
 
@@ -393,6 +478,16 @@ Three of those four branches are refusals and each one earns its place:
   it; the app changing it for them is how a revoked permission turns into a lost setting. The next
   launch shows the explainer, which is the right place for that conversation.
 
+**The notification is deliberately *not* a fourth refusal, and this is the place to say so.** A user
+who denied `POST_NOTIFICATIONS` and started the shade anyway — which Phase 1 allows on purpose — gets
+it restored at boot with no Stop action and no app on screen to carry the warning banner. Phase 1
+settled the principle for the hand-started case: refusing to dim somebody's screen because they
+refused a notification is the app deciding it knows better, and a reboot does not change who decided.
+What the reboot *does* change is that nobody is watching, so the cost is stated rather than implied —
+the hatches left are the power menu and the app's own controls at 0.33 nits, and R2 is the reading
+that makes those legible rather than trapping. **Past `MAX_SHADE_ALPHA` they would not be**, which is
+the gap §2 hands to 2b.
+
 **One read, not two.** `AppPreferences` grows a `suspend fun shadeIntentNow()` returning both values
 from a single `store.data.first()` — the same shape and the same justification as `themeModeNow()`,
 which already exists for the one caller that must have an answer before anything else can happen. A
@@ -408,11 +503,18 @@ It survives that, and the argument is measured rather than reasoned. Phase 1's R
 **keyguard releases the brightness override outright** — `NaN`, `reason=manual`, back to the user's
 own setting — and returns it on unlock. The lock screen is also above `TYPE_APPLICATION_OVERLAY`, so
 the shade does not cover it. **Every restart therefore ends on one full-brightness, undimmed screen
-that the user must pass through**, with the app's own controls one unlock away and the notification
-already posted. The user who restarts to escape gets exactly the moment they were reaching for; what
-they do not get is a permanent undo of a setting they never changed. **This phase's R5 confirms that
-first half on a *restored* shade specifically**, because Phase 1's reading was taken on one started by
-hand and a restored window is added by a service with no Activity behind it.
+that the user must pass through.**
+
+**Be precise about what that screen offers, because it reads as more than it is.** `BOOT_COMPLETED`
+arrives *after* the first unlock — the same fact that rules out `LOCKED_BOOT_COMPLETED` above — so at
+the keyguard the receiver has not run, the service is not alive, and there is no notification to act
+on. What the bright keyguard gives is **sight, not a control**: the user sees a normal phone, unlocks,
+and then has whatever head start the restore takes before the shade returns. So a restart is not a
+permanent undo of a setting they never changed, and it is not an escape either — it is a bounded
+window with the app's own controls at the end of it. **R1 measures that window**: "how long after
+unlock" is the size of the head start rather than a curiosity. **This phase's R5 confirms the
+keyguard half on a *restored* shade specifically**, because Phase 1's reading was taken on one started
+by hand and a restored window is added by a service with no Activity behind it.
 
 The bounded version is auto-off, which applies to a restored shade through the same stored deadline —
 so the worst case is not "dimmed forever after a reboot", it is "dimmed for the remainder of what
@@ -512,15 +614,20 @@ their client, visible to them before they send it, and deletable line by line.
 manifest's `<queries>` already declares the `mailto:` intent, so a pre-check would answer honestly if
 one is ever added; none is added here, because the launch itself is the check.
 
-### The one thing this phase needs from the owner
+### The address
 
-**Which address the mail goes to.** It is the single decision in this document that cannot be made
-from inside the repository, and it is frozen in the same soft way the listing is — a shipped support
-address that stops being read is worse than none.
+**`gloam.dimmer@gmail.com`** — a dedicated account, already created. Settled 2026-08-31, and it was
+the one decision in this document that could not be made from inside the repository.
 
-The recommendation is a **plus-alias on the existing account** (`...+gloam@gmail.com`): it needs
-nothing set up, it filters server-side on the tag, and it can be re-pointed later without the address
-in the shipped build changing. A dedicated address is the alternative and costs an account.
+**Dedicated rather than a plus-alias on the personal account, and the reason is the freeze.** A
+shipped address is permanent in a way the listing is not: a sideloaded APK has no forced update, so
+whatever string is in the build keeps being mailed forever. `...+gloam@` cannot be re-pointed — it is
+welded to one Gmail account for as long as any build survives — while a dedicated address forwards
+anywhere and can be handed to another maintainer without handing over your own mail. The tag filter
+works identically either way.
+
+**The Play listing's contact field points at the same address.** It is the route a tester finds
+first, and two routes is one more than anybody needs.
 
 ### Copy
 
@@ -576,6 +683,11 @@ writing the deadline is a caller that can leave a stale deadline behind a fresh 
 restore reads exactly those two values together. `DataStore.edit` is transactional, which is what
 makes this free rather than a lock.
 
+**Two methods and not three: the chip-while-running rewrite is `beginShade` called with `running`
+already `true`.** Writing the same `true` back costs nothing and keeps the invariant the pair exists
+for — the deadline is never written without the flag beside it. Nothing grows a `setDeadline`; that
+is precisely the third writer this shape is built to refuse.
+
 **No migration, ever** — that is the point of the DataStore rule. A build that has never seen
 `off_at_millis` reads the default declared beside it, and the deleted key is simply never read again.
 
@@ -621,6 +733,10 @@ everything else that would want one. What it costs today is not nothing:
   line a reviewer can ask about, and the honest answer is "a dependency we do not use".
 - The `Configuration.Provider` on `MainApplication` and the `tools:node="remove"` manifest surgery
   against `androidx.startup`, both of which exist only to control when WorkManager initialises.
+- **Three more places the removal has to reach**, none of them the runtime dependency: the
+  `androidTestImplementation(libs.androidx.work.testing)` line in `app/build.gradle.kts`, and both
+  library entries plus the `workManager` version ref in `gradle/libs.versions.toml`. A left-behind
+  test dependency is how a removed library walks back in on somebody's next `implementation` line.
 
 **Recommendation: remove it**, as a second dated amendment on ADR-0003, and re-run
 `scripts/aab-permissions.py` on the resulting bundle to watch the permission list actually shrink —
@@ -653,8 +769,11 @@ should be the one thing a JVM test can never reach:
 
 That is the property `CLAUDE.md` calls load-bearing and the one whose failure is *the single worst
 thing this app could ship* — a phone that appears frozen with the way out underneath the thing
-freezing it. Phase 1 read it by hand off `dumpsys` twice (its R10 on the AVD, its R7 on the phone) and both
-readings expire the moment somebody edits `addShadeWindow`.
+freezing it. **Phase 1 enumerated those flags exactly once**, in its R10 on the AVD —
+`NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS` intact. Its R7 on the phone read the
+shade's window but recorded `mPolicyVisibility` and `sbrt=`, never the flag list. So **the phone has
+never had this property read off it at all**, and the one reading that exists expires the moment
+somebody edits `addShadeWindow`.
 
 **Two layers, because they fail differently:**
 
@@ -669,9 +788,17 @@ readings expire the moment somebody edits `addShadeWindow`.
   rather than the granted mode on the phone in this loop, which is a trap already recorded once.
   `POST_NOTIFICATIONS` comes from a `GrantPermissionRule`.
 
-**The matrix becomes API 33 and 36.** The floor and the target — which is exactly the pair ADR-0008
-already justifies for the end-of-phase pass — and it drops the leg that cannot install. Two legs with
-one real assertion is a better trade than three with none.
+**The matrix becomes API 33 and 36** — the floor and the target, exactly the pair ADR-0008 already
+justifies for the end-of-phase pass and for the `gloam-api33` AVD. Two legs with one real assertion
+is a better trade than three with none.
+
+**The case for dropping API 26 is not that it cannot install; it is that its stated purpose is
+already gone.** `ci.yml` justifies that leg in its own comment — *"the pre-S path into system backup
+settings, the pre-R agent branch and the pre-S theme, plus AppCompat's pre-13 locale backport
+(ADR-0004) run only down here"*. The backup agent went with the database (ADR-0007), and §7 removes
+the locale backport in this phase. That comment describes an app that no longer exists, which is the
+same disease as `SCENES` one file over. So cutting the leg removes dead weight rather than trading
+coverage for minutes — and minutes were never the argument, since the legs run in parallel.
 
 Honest about the cost: parsing `dumpsys window windows` is version-shaped text, so the instrumented
 half is the layer that will need attention when a platform changes its output. That is why the flag
@@ -691,15 +818,28 @@ because `screenshots.py` **imports** the table rather than copying it — the co
 so explicitly. So one rewrite serves the store screenshots and the edge-to-edge matrix, and it is the
 same work either way.
 
+**The table and the shipped screenshots are separable, and checkpoint F owes only the table.**
+`SCENES` can be rewritten and the matrix made honest with the placeholder mark still in place; what
+waits on §13.3 is the *pixels* the listing ships. F is therefore not blocked on the mark, and §13.4 is
+not blocked on F beyond the table landing.
+
 Gloam's whole surface is a much smaller table than the one it replaces: the dim screen at its top and
 bottom, the dim screen showing the permission explainer, Settings at its top and bottom, Support,
 Licences and the licence text. **No forms** — so the `imePadding` scenes that were the most valuable
 part of the old table have nothing to point at. Record that as a loss rather than deleting them
 silently: the day Gloam grows a text field, that scene comes back.
 
-**API 26 comes out of this matrix too**, and for the same reason: `installDebug` cannot put a
-`minSdk` 33 app on it. That leaves API 34 and 36, and the comment at the top of the job — *"the prize
-is API 26-28"* — stops being true and has to be rewritten rather than left to mislead.
+**API 26 comes out of this matrix too**, and this matrix goes to **the same 33 and 36** as the
+instrumented one. Two matrices with two different floors is a difference nobody could explain later:
+34 was never a floor of anything, and `ci.yml` calls that leg *"the long-standing leg, kept as-is"*,
+which is inertia rather than a reason. All four configurations stay — orientation and navigation mode
+are the axis that still varies, and they vary by device and by user setting rather than by platform
+release, so breadth is worth keeping when the legs run in parallel anyway.
+
+The comment at the top of the job — *"the prize is API 26-28"* — stops being true and has to be
+rewritten rather than left to mislead: the prize is now the configuration grid, not the API floor. If
+API 33's image turns out to lack the navbar overlays the way API 34's ATD does, `edge-to-edge.py`
+already reports that itself rather than failing silently.
 
 ---
 
@@ -707,11 +847,24 @@ is API 26-28"* — stops being true and has to be rewritten rather than left to 
 
 - **`PLAN.md`** — Phase 2 gains a *Detail: `phase-2.md`* line. **Rule 4's table is corrected**: the
   app can never re-read the autostart grant, so Phase 4's "re-read" means `device-gate.py`, run by a
-  developer (§4).
-- **`CONTEXT.md`** — **Auto-off** is already defined there, and the definition survives: *"One-shot,
-  set when they start it"* stays true, and the chip-while-running behaviour (§3) extends it rather
-  than contradicting it. **Escape hatch** is not in the vocabulary and should be, now that §2 makes it
-  a definition a later phase gates on.
+  developer (§4). **Rule 5 is left standing rather than amended**, and that is deliberate: it names
+  auto-off's default as one of the two questions the twelve answer, and §3 ships `Hours2` as
+  provisional rather than closing it.
+- **`CONTEXT.md`** — **three rows**, and the earlier claim that the existing definition survived was
+  simply wrong. *"One-shot, set when they start it"* is the clause a reader would rely on to predict
+  what the chip does mid-session, and §3 makes it false. **Deadline** is added because §6 is careful
+  that `off_at_millis` is named for *what it is* rather than for who set it, and Phase 4's
+  *earlier-deadline-wins* is unnameable without the noun. The three clauses stay in §2 — they are a
+  testable predicate, and `CONTEXT.md` is a glossary:
+
+  | Term | Means | Not |
+  | --- | --- | --- |
+  | **Deadline** | The one instant at which the shade next comes down, whoever set it. There is only ever one. | Not "auto-off" — that is one of the things that sets it. Not "timer" |
+  | **Auto-off** | The duration a hand-started shade lasts before it comes down on its own. One-shot — it never repeats — and choosing a duration re-sets the deadline from that moment, whether the shade is already up or not. | Not "timer" on its own — the schedule sets deadlines too |
+  | **Escape hatch** | A surface that stops the shade and can be reached without seeing Gloam's own UI, which the shade may be covering. Not every control that stops the shade is one. | Not the app's own *Stop dimming* button, which sits under the shade at high dim levels |
+- **`CLAUDE.md`** — one stale line. The layout block calls `app/src/debug/` "currently an empty seam",
+  and it has held Phase 1's backlight sweep since that phase's checkpoint B. §10's deadline button
+  adds to it again.
 - **ADR-0003 — a second dated amendment**, if §7's recommendation is taken: WorkManager removed, the
   three merged permissions with it. It also records §4's correction — the autostart grant has no
   in-app read, only a host-side scrape.
@@ -719,7 +872,8 @@ is API 26-28"* — stops being true and has to be rewritten rather than left to 
   AppCompat stays.
 - **`DOD.md`** — tick items as they close: the three scaffolding pieces, the emulator CI legs, the
   ADR-0004 re-read. The recruiting and listing items stay open until they are actually done, and the
-  standing checks never close.
+  standing checks never close. **One item *opens*:** put auto-off's default to the testers (rule 5,
+  §3), recorded here rather than in this file so the question outlives the phase that raised it.
 - **`docs/store-listing.md`** — release notes for whatever versions this phase cuts. `notes-gate.py`
   fails a release whose notes are behind it, and that is not hypothetical here; it already reddened
   0.3.0's release PR once.
@@ -746,11 +900,27 @@ need somebody at the phone, which is why R3 exists.
 | **R4** | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS <pkg>`, then R3 | that Android 15's blocklist really does not reach `specialUse` |
 | **R5** | After a restored shade: is the **keyguard** undimmed and at the user's own brightness? | §4's safety argument, which today leans on a Phase 1 reading taken on a hand-started shade |
 | **R6** | An app **update** over a live shade — does `MY_PACKAGE_REPLACED` bring it back? | the case twelve testers meet repeatedly for fourteen days |
-| **R7** | **Auto-off with the screen off.** A 2-minute deadline, screen off immediately, logcat timestamps on the stop | how late the uptime-clock `delay` really is (§3), and whether the 60-second cap is enough |
-| **R8** | Auto-off across a **process kill** — `kill -9` via `run-as`, not `am force-stop`, which cancels the `START_STICKY` restart | that the absolute deadline resumes rather than restarting the clock |
+| **R7** | **Auto-off with the screen off.** *Arm 2-minute deadline*, screen off immediately, logcat timestamps on the stop | how late the uptime-clock `delay` really is (§3), and whether the 60-second cap is enough |
+| **R8a** | Auto-off across a kill that **restarts** — `kill -9` via `run-as` | that the absolute deadline resumes across `START_STICKY` rather than restarting the clock |
+| **R8b** | Auto-off across a kill that **does not** — `am force-stop`, which cancels that restart | that the next foreground clears a deadline nothing was alive to fire (§3's resume reconcile) |
 | **R9** | The `mailto:` hand-off on this phone: does the **subject** arrive? | the Gmail `EXTRA_SUBJECT` trap, re-measured rather than inherited |
 | **R10** | The instrumented window-flags test on both emulator legs **and** on the phone | §8's assertion, and whether the split-APK workaround still works |
 | **R11** | **API-33 AVD end-of-phase pass** (ADR-0008): launches, window appears, permission flow, boot restore via R3, auto-off fires | the phase's own closing gate |
+
+**R7, R8a and R8b need a deadline shorter than thirty minutes, and nothing in the shipped app can
+make one.** `AutoOff`'s smallest value is `Minutes30`. A debug-only entry in that enum is out: it
+lives in `main/`, it drives the chip row, and its label would go through the translation gate — the
+exact "compiled into the release AAB with its strings still in the gate" failure the source-set seam
+exists to prevent. `adb` cannot do it either, because DataStore sits in credential-encrypted storage
+and the live process holds its state in memory. So the debug section grows one hardcoded-English
+button, **Arm 2-minute deadline**, calling `beginShade(now + 120_000)` — the same justification the
+backlight sweep beside it already carries, that only the app can do this to itself.
+
+**R8b is the reading the old R8 skipped.** It used to say `kill -9` and *not* `am force-stop`, on the
+grounds that force-stop cancels the `START_STICKY` restart — but the restarting path is the one that
+already works, since a restarted service re-reads the deadline in `onCreate`. The path that needed a
+new reader is the one where nothing comes back (§3), so force-stop is the more interesting reading
+rather than the avoided one.
 
 ### Derivations — arithmetic, and the test is the proof
 
@@ -808,10 +978,10 @@ the type below rather than taste.
 | Checkpoint | Commits |
 | --- | --- |
 | **A** | `refactor: name the escape hatch and drop the unused onboarding key` — `escapeHatchLive()`, the warning reading it, the key deleted, and `dim_permission_body` reworded in both locales. Nothing a release note would mention |
-| **B** | `chore: add the auto-off deadline` + `test: bound the auto-off deadline` — the pure function and its table, wired to nothing. Then `feat: take the shade down on its own after a while` — the two keys, `beginShade`/`endShade`, the service's job, the chips and the "turns off at" line |
+| **B** | `chore: add the auto-off deadline` + `test: bound the auto-off deadline` — the pure function and its table, wired to nothing. Then `feat: take the shade down on its own after a while` — the two keys, `beginShade`/`endShade`, the service's job, the resume reconcile, the chips and the "turns off at" line. Plus `chore: arm a short deadline from the debug section`, which is what R7 and R8 are read with |
 | **C** | `feat: put the shade back after a restart` — the receiver, both actions, `RECEIVE_BOOT_COMPLETED` declared, the deadline check, and the autostart row in Settings. Then **the readings**, which are not a commit |
 | **D** | `feat: add a Help and feedback screen` — the `Support` key, the screen, the two `mailto:` hand-offs and their prefilled body |
-| **E** | `chore: split the autostart hand-off out of BatteryExemption` + `chore: stop reporting a database that does not exist` + `refactor: drop AppCompat's below-13 locale backport`, and if ADR-0003 is amended, `chore: remove WorkManager` |
+| **E** | `chore: split the autostart hand-off out of BatteryExemption` + `chore: stop reporting a database that does not exist` + `refactor: drop AppCompat's below-13 locale backport`, and if ADR-0003 is amended, `chore: remove WorkManager` — runtime *and* `work-testing`, both catalogue entries and the version ref |
 | **F** | `test: assert the shade window's flags` + `ci: cut the API 26 legs and give the instrumented matrix something to run` + `chore: rewrite the edge-to-edge scenes against Gloam's screens` |
 | **G** | `docs: ...` — §9's edits, ADR-0003's and ADR-0004's amendments, and this file's readings block filled in |
 
@@ -857,6 +1027,16 @@ already a box in `DOD.md`. They run alongside A-G rather than after them.
   one nobody will be alive to collect. `goAsync()` is the platform's way of saying "hold the process
   for me", and it comes with a budget of roughly ten seconds and an obligation to call `finish()` on
   every path, the failing ones included.
+- **`NonCancellable` is the one place you deliberately leave structured concurrency.** Cancelling a
+  coroutine cancels everything it started, which is usually the point — but §3's fire path writes the
+  value it is itself collecting, so the write cancels its own block halfway through. Wrapping just
+  the write says "this much finishes regardless". JS has no analogue: a `Promise` cannot be cancelled
+  out from under you, so there is nothing to opt out of. Note also that cancellation is only observed
+  at a suspension point, which is why a plain call placed *after* the `NonCancellable` block still
+  runs.
+- **`collectLatest` is `switchMap`, not `forEach`.** A new emission cancels the block still running
+  for the previous one. That is what re-arms §3's deadline job when the chip rewrites it, and it is
+  also the mechanism that makes the trap above possible — the same property doing both jobs.
 - **`DataStore.edit {}` is a transaction, not a batch.** Two keys written inside one `edit` are
   visible to a reader together or not at all — which is why §6 replaces `setShadeRunning` with
   `beginShade`/`endShade` rather than calling two setters in a row and hoping.
@@ -891,8 +1071,9 @@ and put it back after.
 | R4 | The Android 15 blocklist does not reach `specialUse` | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS`, then R3 | — |
 | R5 | Keyguard undimmed after a restored shade | `dumpsys display` at the lock screen | — |
 | R6 | Update over a live shade | `adb install -r`, then `dumpsys window windows` | — |
-| R7 | Auto-off with the screen off, and how late | 2-minute deadline, `input keyevent SLEEP`, logcat timestamps | — |
-| R8 | Auto-off across a process kill | `run-as ... kill -9`, then watch the restart | — |
+| R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | — |
+| R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | — |
+| R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | — |
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | — |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
@@ -904,9 +1085,12 @@ and put it back after.
 - A new user meets one explanation naming both permission hand-offs in the order they arrive, and
   every one of the three asks that exists says what was given up when the answer is no.
 - The escape-hatch inventory is written down as three clauses and one predicate, and Phase 2b has a
-  definition to gate against that it did not write itself.
-- A shade started by hand comes down on its own, on an absolute deadline that survives a process kill,
-  and the screen says when — with **Never** available and chosen rather than defaulted into.
+  definition to gate against that it did not write itself — including the two things this phase makes
+  weaker: the power menu is bounded by restore latency rather than permanent, and the restore path is
+  a caller 2b's gate has to cover because it has no UI to live in.
+- A shade started by hand comes down on its own, on an absolute deadline that survives a process kill
+  — and is cleared on the next foreground when nothing was alive to fire it — and the screen says
+  when, with **Never** available and chosen rather than defaulted into.
 - The shade comes back after a restart and after an update; a deadline that passed while the phone was
   off means it does not; and where the ROM can veto that, the app says so without claiming to know
   whether the user fixed it.
