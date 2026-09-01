@@ -26,6 +26,7 @@ import app.gloam.ui.dim.DimScreen
 import app.gloam.ui.settings.SettingsScreen
 import app.gloam.ui.support.LicenceTextScreen
 import app.gloam.ui.support.LicencesScreen
+import app.gloam.ui.support.SupportScreen
 
 /**
  * What every back-stack entry is wrapped in — above all, **one `ViewModelStore` per entry**.
@@ -113,8 +114,12 @@ fun MainNavigation(modifier: Modifier = Modifier) {
                     }
                     entry<Settings> {
                         SettingsScreen(
+                            onOpenSupport = { backStack.add(Support) },
                             onOpenLicences = { backStack.add(Licences) },
                         )
+                    }
+                    entry<Support> {
+                        SupportScreen(onBack = { backStack.removeLastOrNull() })
                     }
                     entry<Licences> {
                         LicencesScreen(

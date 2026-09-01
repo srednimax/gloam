@@ -23,6 +23,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Settings : NavKey
 
+/**
+ * Help and feedback. A detail screen, not a tab: it is somewhere you go once, from Settings' *About*
+ * section, rather than a place the bottom bar switches to.
+ */
+@Serializable data object Support : NavKey
+
 @Serializable data object Licences : NavKey
 
 @Serializable
