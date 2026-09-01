@@ -59,6 +59,28 @@ private const val TAG = "ShadeService"
 private const val DEADLINE_RECHECK_MS = 60_000L
 
 /**
+ * The flags the shade's window is added with, named rather than written inline so that a test can
+ * hold them to account.
+ *
+ * **Two of these four are the property `CLAUDE.md` calls load-bearing.** `FLAG_NOT_TOUCHABLE` makes
+ * every touch pass through to whatever is underneath and `FLAG_NOT_FOCUSABLE` keeps key events with
+ * the app the user is actually in; a window over every other app that lost either one is a phone
+ * that appears frozen, with the way out behind the thing freezing it. The other two are layout —
+ * they put the window over the system bars instead of inside the content area — and nothing about
+ * safety rests on them.
+ *
+ * **`const` is what makes the JVM half of the test possible.** A `const val` is inlined into its
+ * callers at compile time, so `ShadeWindowFlagsTest` reads a number rather than calling into
+ * `android.jar`, where an unmocked method throws. `ShadeWindowTest` covers the half a constant
+ * cannot: that the window really arrives at the window manager carrying them.
+ */
+const val SHADE_WINDOW_FLAGS =
+    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+/**
  * The foreground service that owns the shade — one window, added above everything else.
  *
  * ## Why a service at all
@@ -305,10 +327,7 @@ class ShadeService : Service() {
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    SHADE_WINDOW_FLAGS,
                     PixelFormat.TRANSLUCENT,
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
