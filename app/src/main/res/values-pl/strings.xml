@@ -51,6 +51,10 @@
     <string name="settings_material_you_hint">Android 12 i nowsze. Domyślnie wyłączone, aby aplikacja zachowała własną paletę.</string>
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Systemowy</string>
+    <string name="settings_restart">Po ponownym uruchomieniu</string>
+    <string name="settings_restart_body">Gloam przywraca zasłonę po ponownym uruchomieniu telefonu. Ten telefon pozwala aplikacji działać po starcie tylko wtedy, gdy ma włączony autostart, a Gloam nie ma jak sprawdzić, czy jest włączony — więc jeśli zasłona nie wróci, to jest ustawienie, któremu warto się przyjrzeć.</string>
+    <string name="settings_restart_open">Otwórz ustawienia autostartu</string>
+
     <string name="settings_about">O aplikacji</string>
     <string name="settings_licences">Licencje open source</string>
 

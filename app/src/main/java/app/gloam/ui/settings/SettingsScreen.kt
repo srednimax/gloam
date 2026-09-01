@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -16,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +29,8 @@ import app.gloam.data.ThemeMode
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.SectionHeader
+import app.gloam.work.hasAutostartSettings
+import app.gloam.work.openAutostartSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +70,8 @@ fun SettingsScreen(
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
 
+            AutostartRow()
+
             SectionHeader(stringResource(R.string.settings_about))
             SettingsRow(stringResource(R.string.settings_licences), onClick = onOpenLicences)
 
@@ -75,6 +82,57 @@ fun SettingsScreen(
             // inside the translation gate. A hide is not a strip.
             DebugSettings()
         }
+    }
+}
+
+/**
+ * The autostart hand-off: **a permanent row, not a prompt, and no key remembers it** (ADR-0003).
+ *
+ * On HyperOS, autostart is what decides whether the process is started for a broadcast at all — not
+ * `BOOT_COMPLETED` specifically, any broadcast — so reboot restore is a feature the ROM allows or
+ * does not. Three reasons this is a row that is always here rather than a one-off ask:
+ *
+ * - **The app cannot know whether it worked.** There is no appop, the setting has no public state,
+ *   and the OEM screen's own checkbox reports `checked=false` for granted rows (`device-gate.py`
+ *   infers it from where the app's name sits relative to a divider, over `adb`, which is a
+ *   host-side capability the app will never have). A confirmation checkbox here would be the app
+ *   repeating the user's guess back to them as its own assurance. A row that is always present
+ *   makes no claim at all.
+ * - **A once-only prompt needs a stored "offered" flag** — a written DataStore key, frozen the day
+ *   a stranger's phone holds it, bought to answer a question this row does not ask. This phase
+ *   deleted one such key; adding another in the same phase would be a poor trade.
+ * - **The failure it explains is invisible and recurring**, and needs explaining on the day the
+ *   shade does not come back, which is not the day the app was installed.
+ *
+ * Gated on [hasAutostartSettings], which is honest only because the manifest names
+ * `com.miui.securitycenter` in `<queries>` — without that, package-visibility filtering answers
+ * "no such activity" on a phone where it exists. So the row is absent on every phone with no such
+ * screen, rather than being a button that does nothing.
+ *
+ * `remember` rather than a re-read on resume, unlike the dim screen's permission checks: whether the
+ * ROM *has* an autostart screen is a property of the phone, not a switch the user can flip.
+ */
+@Composable
+private fun AutostartRow() {
+    val context = LocalContext.current
+    if (!remember(context) { context.hasAutostartSettings() }) return
+
+    SectionHeader(stringResource(R.string.settings_restart))
+    Text(
+        text = stringResource(R.string.settings_restart_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = Spacing.base),
+    )
+    Button(
+        // The Boolean it returns is dropped rather than shown: the row only exists because
+        // `resolveActivity` already answered, so a false here means the screen was resolvable and
+        // then refused us — nothing the user could act on, and a message about it would be about
+        // Gloam rather than about their phone.
+        onClick = { context.openAutostartSettings() },
+        modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
+    ) {
+        Text(stringResource(R.string.settings_restart_open))
     }
 }
 

@@ -176,6 +176,20 @@ class AppPreferences(
      */
     suspend fun themeModeNow(): ThemeMode = themeMode.first()
 
+    /**
+     * The stored intent, read once, for a caller with no lifetime to collect a `Flow` in.
+     *
+     * The same shape and the same justification as [themeModeNow]: a `Flow` is the right answer for
+     * anything on screen, and the wrong one for code that must have a value *before* it can decide
+     * whether to exist at all. Phase 2's boot receiver is exactly that — it runs inside `goAsync()`,
+     * has roughly ten seconds, and either starts the service or finishes.
+     *
+     * **One read for both values, which is the point of [ShadeIntent].** `store.data.first()` reads
+     * the file once and answers both keys off the same snapshot, so the receiver cannot see a
+     * *running* written by one transaction beside a deadline from another.
+     */
+    suspend fun shadeIntentNow(): ShadeIntent = shadeIntent.first()
+
     suspend fun setThemeMode(mode: ThemeMode) {
         store.edit { it[Keys.THEME_MODE] = mode.name }
     }

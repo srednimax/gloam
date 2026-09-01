@@ -83,6 +83,15 @@
     <string name="settings_language_system">System</string>
     <string name="settings_language_english" translatable="false">English</string>
     <string name="settings_language_polish" translatable="false">Polski</string>
+    <!-- Reboot restore, and the hand-off to Xiaomi's autostart screen. Shown only where that
+         screen exists, which is what lets the second sentence say "this phone" — nobody whose
+         phone has no such setting ever reads it. It promises nothing about the outcome: the app
+         cannot read that setting back, and the honest thing is to name where to look rather than
+         to report a state it is guessing at. -->
+    <string name="settings_restart">After a restart</string>
+    <string name="settings_restart_body">Gloam puts the shade back when your phone restarts. This phone only lets an app run at startup if autostart is switched on for it, and Gloam has no way to check whether it is — so if the shade does not come back, this is the setting to look at.</string>
+    <string name="settings_restart_open">Open autostart settings</string>
+
     <string name="settings_about">About</string>
     <string name="settings_licences">Open-source licences</string>
 
