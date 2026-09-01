@@ -417,7 +417,7 @@ AUTOSTART_ACTIVITY = "com.miui.securitycenter/com.miui.permcenter.autostart.Auto
 # The label HyperOS lists this build under. The debug build takes `applicationIdSuffix = ".debug"`
 # and its own label, so it appears beside a Play install rather than replacing it —
 # which is the whole point, and also why the needle has to be the longer of the two names.
-AUTOSTART_LABEL = f"{project.APP_NAME} Debug"
+AUTOSTART_LABEL = project.DEBUG_APP_NAME
 
 
 def battery_exempt() -> bool:
@@ -447,14 +447,31 @@ def shell_ok(cmd: str) -> str:
     return done.stdout
 
 
-def _system_xml() -> str:
+def _system_xml(attempts: int = 4) -> str:
     """A `uiautomator` dump as raw XML, for the screens that are not this app's.
 
     `e2e.dump_ui` filters to the app's own package, which is right everywhere else and useless here:
     the autostart list and the channel settings both belong to the OEM.
+
+    **The file is deleted before every dump, and that is the whole point of this function.**
+    `uiautomator dump` fails while the screen is still moving — *"ERROR: could not get idle state"* —
+    and it fails by printing to stdout and leaving the **previous** dump on disk. Reading that back
+    is the failure this repository keeps meeting in new places: a stale reading that is
+    indistinguishable from a fresh one. It scrolled a list, dumped mid-fling, matched a row at
+    coordinates from before the swipe, and tapped whatever had moved into that spot — silently
+    granting autostart to a neighbouring app on a bad day.
+
+    So: remove, dump, and require a `<hierarchy` back. A missing file cannot be misread.
     """
-    e2e.shell("uiautomator dump /sdcard/alarm-gate.xml")
-    return e2e.adb("exec-out", "cat", "/sdcard/alarm-gate.xml")
+    for _ in range(attempts):
+        shell_ok("rm -f /sdcard/alarm-gate.xml")
+        shell_ok("uiautomator dump /sdcard/alarm-gate.xml")
+        xml = shell_ok("cat /sdcard/alarm-gate.xml")
+        if "<hierarchy" in xml:
+            return xml
+        # Still moving. Waiting is the fix; retrying immediately just fails again.
+        e2e.settle(1.0)
+    raise StepFailed("uiautomator dump never returned a hierarchy — is the screen still animating?")
 
 
 def autostart_state() -> tuple[int, bool]:
@@ -498,20 +515,30 @@ def set_autostart(on: bool) -> bool:
         # which reaches it whether it is in the allowed list or the long denied one below it.
         for _ in range(40):
             xml = _system_xml()
+            # **The switch's own bounds, not a margin computed from the screen width.** The row is an
+            # accessibility-wrapped Switch carrying the app's name as its content-desc, and the thing
+            # that actually toggles is the `sliding_button` inside it. Aiming at "the right-hand edge
+            # of the row" worked until it did not; the node knows where it is.
             row = re.search(
-                rf'text="{re.escape(AUTOSTART_LABEL)}"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml
+                rf'content-desc="{re.escape(AUTOSTART_LABEL)}"'
+                r'.*?sliding_button.*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+                xml,
+                re.S,
             )
             if row:
-                top, bottom = int(row.group(2)), int(row.group(4))
-                width = re.search(r'bounds="\[0,0\]\[(\d+),(\d+)\]"', xml)
-                right_margin = int(width.group(1)) - 130 if width else 1050
-                e2e.shell(f"input touchscreen tap {right_margin} {(top + bottom) // 2}")
+                left, top, right, bottom = (int(row.group(i)) for i in (1, 2, 3, 4))
+                e2e.shell(f"input touchscreen tap {(left + right) // 2} {(top + bottom) // 2}")
                 e2e.settle(2.0)
                 break
             # Downward through the list only. The upward direction is [autostart_state]'s problem
             # and it does not swipe at all any more.
-            e2e.shell("input swipe 600 2000 600 900 250")
-            e2e.settle(0.6)
+            #
+            # **Short and slow, because a fling skips rows.** 1100px in 250ms is a fling: the list
+            # keeps travelling after the finger leaves, and the app's row can pass through the
+            # screen entirely between two dumps — which is what a 107-row denied list did here, over
+            # and over, while the same helper found a row in the ten-row allowed list first time.
+            e2e.shell("input swipe 600 1900 600 1100 400")
+            e2e.settle(1.2)
         else:
             return False
     return autostart_state()[1] == on
