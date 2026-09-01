@@ -26,10 +26,15 @@ fun Context.canDrawShade(): Boolean = Settings.canDrawOverlays(this)
 /**
  * The settings screen where the user grants it, scoped to this app.
  *
- * `package:` in the Uri is what makes it land on Gloam's own row rather than the full list of every
- * installed app. Returning the Intent rather than launching it keeps this callable from a composable
- * that owns an activity-result launcher — the result is how the caller knows to re-read
- * [canDrawShade], since the system reports no result of its own.
+ * `package:` in the Uri asks for Gloam's own row rather than the full list of every installed app.
+ * **HyperOS ignores it** — measured while taking Phase 2's restore readings, where this landed on the
+ * whole *Display over other apps* list and the user has to find themselves in it alphabetically. The
+ * Uri stays because it is the documented behaviour and it is honoured elsewhere; what it must not do
+ * is make the copy that sends people here promise a screen with one switch on it.
+ *
+ * Returning the Intent rather than launching it keeps this callable from a composable that owns an
+ * activity-result launcher — the result is how the caller knows to re-read [canDrawShade], since the
+ * system reports no result of its own.
  */
 fun Context.shadePermissionIntent(): Intent =
     Intent(

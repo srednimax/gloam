@@ -898,7 +898,7 @@ need somebody at the phone, which is why R3 exists.
 | --- | --- | --- |
 | **R1** | **A real reboot with autostart granted**: does the shade come back, and how long after unlock? | reboot restore, end to end |
 | **R2** | The same with autostart **revoked** — does the process start for the broadcast at all? | whether §4's Settings copy describes a real failure or a theoretical one |
-| **R3** | `am broadcast -a android.intent.action.BOOT_COMPLETED <pkg>` as a stand-in for a reboot | whether the cheap loop is trustworthy; ADR-0003 says the ROM gates this broadcast identically |
+| **R3** | ~~`am broadcast -a android.intent.action.BOOT_COMPLETED <pkg>` as a stand-in for a reboot~~ **Refused: `BOOT_COMPLETED` is a protected broadcast and uid 2000 is not exempt.** The stand-in is `adb install -r`, which makes the *system* send `MY_PACKAGE_REPLACED` — the same receiver, the same four branches | whether the cheap loop is trustworthy; ADR-0003 says the ROM gates this broadcast identically |
 | **R4** | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS <pkg>`, then R3 | that Android 15's blocklist really does not reach `specialUse` |
 | **R5** | After a restored shade: is the **keyguard** undimmed and at the user's own brightness? | §4's safety argument, which today leans on a Phase 1 reading taken on a hand-started shade |
 | **R6** | An app **update** over a live shade — does `MY_PACKAGE_REPLACED` bring it back? | the case twelve testers meet repeatedly for fourteen days |
@@ -935,7 +935,7 @@ rather than the avoided one.
 adb devices
 python3 scripts/device-gate.py                       # autostart, battery, channel - read before any run
 python3 scripts/device-gate.py --autostart off       # then on, for R2
-adb shell am broadcast -a android.intent.action.BOOT_COMPLETED <applicationId>
+adb install -r -t app/build/outputs/apk/debug/app-debug.apk   # the reboot stand-in that works
 adb shell am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS <applicationId>
 adb logcat -s ShadeService:* ActivityManager:* | grep -i 'gloam\|ForegroundServiceStartNotAllowed'
 adb shell dumpsys window windows | grep -A6 gloam    # ty=, flags, sbrt=
@@ -1067,18 +1067,174 @@ and put it back after.
 
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
-| R1 | Real reboot, autostart on | reboot, `wait_for_unlock`, then `dumpsys window windows` | — |
-| R2 | Real reboot, autostart off | `device-gate.py --autostart off`, reboot | — |
-| R3 | `am broadcast` as a reboot stand-in | `am broadcast -a android.intent.action.BOOT_COMPLETED` | — |
-| R4 | The Android 15 blocklist does not reach `specialUse` | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS`, then R3 | — |
-| R5 | Keyguard undimmed after a restored shade | `dumpsys display` at the lock screen | — |
-| R6 | Update over a live shade | `adb install -r`, then `dumpsys window windows` | — |
+| R1 | Real reboot, autostart on | reboot, wait for the unlock, `dumpsys window windows` | **The shade comes back, 54.2 s after the unlock.** 2026-09-01 |
+| R2 | Real reboot, autostart off | `device-gate.py --autostart off`, reboot | **Not taken as a reboot** — the update path answers the same question and did. See below. 2026-09-01 |
+| R3 | `am broadcast` as a reboot stand-in | `am broadcast -a android.intent.action.BOOT_COMPLETED` | **Impossible on this device.** `SecurityException`, uid 2000. See below. 2026-09-01 |
+| R4 | The Android 15 blocklist does not reach `specialUse` | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS`, then reboot | **Confirmed, and it was already on** — `enableSinceTargetSdk=35`. Back 47.5 s after the unlock. 2026-09-01 |
+| R5 | Keyguard undimmed after a restored shade | `dumpsys display` at the lock screen | **Override released: `NaN`, tag `null`, panel back at the user's own 0.137.** 2026-09-01 |
+| R6 | Update over a live shade | `adb install -r`, then `dumpsys window windows` | **Restored, in a new process, both flags and `sbrt=0.01` intact.** 2026-09-01 |
+| R6b | The deadline that passed while nothing was alive | arm 2 min, hold the process dead, `adb install -r` | **`endShade()`, nothing restored.** The refusal §4 leans on. 2026-09-01 |
 | R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | **61 ms late**, screen off throughout. 2026-09-01 |
 | R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
 | R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | — |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
+
+### R3 — the cheap loop this phone refuses, and what took its place
+
+`am broadcast -a android.intent.action.BOOT_COMPLETED` does not run here:
+
+```
+java.lang.SecurityException: Permission Denial: not allowed to send broadcast
+android.intent.action.BOOT_COMPLETED from pid=10615, uid=2000
+```
+
+`BOOT_COMPLETED` is a **protected broadcast** — only the system may send it — and on this build the
+shell uid is not one of the exempt callers. That is the platform, not the ROM, and no flag turns it
+off. So the loop §10 was built around never existed, and the phase's own command block said to run
+something that cannot be run.
+
+**`adb install -r` is the replacement, and it is a better one than it looks.** It makes the *system*
+send `MY_PACKAGE_REPLACED` — a real protected broadcast, delivered to a real manifest receiver, into
+a process the ROM had to agree to start — and the receiver takes the same four branches whichever
+action it was handed. Everything below except R1, R2 and R4 was read through it, and each of those
+three is a reboot precisely because nothing else produces `BOOT_COMPLETED`.
+
+### R1 and R4 — it comes back, and the head start is about a minute
+
+Two real reboots, autostart granted, with the shade up and a two-hour deadline on it beforehand:
+
+```
+09-01 19:41:10.881 I/GloamBoot(19927): android.intent.action.BOOT_COMPLETED: shade restored, deadline=1788291397797
+09-01 19:46:03.985 I/GloamBoot(20105): android.intent.action.BOOT_COMPLETED: shade restored, deadline=1788291397797
+```
+
+**54.2 s and 47.5 s after the unlock**, measured from the moment `isKeyguardShowing` went false to
+the moment `dumpsys window windows` listed the overlay. The window came back with
+`ty=APPLICATION_OVERLAY`, `fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS` and
+`sbrt=0.01` — every safety attribute, on a window added by a service with no Activity behind it.
+
+**The deadline is the same integer in both lines, and it was set before the first reboot.** An
+absolute instant survived two restarts without being recomputed, which is the property §3 chose it
+for, read here rather than argued.
+
+**R4 turned out to be already true rather than newly true.** `dumpsys platform_compat` reports
+`FGS_BOOT_COMPLETED_RESTRICTIONS ... enableSinceTargetSdk=35`, and Gloam targets 36 — so Android
+15's blocklist was **already in force during R1**, and forcing the override on only made it
+unambiguous. It survived the reboot (`packageOverrides={…gloam.debug=true}` after boot), the shade
+came back anyway, and `ActivityManager` logged the allowance rather than a refusal:
+
+```
+W/ActivityManager: Foreground service started from background can not have location/camera/
+microphone access: service …/app.gloam.shade.ShadeService
+```
+
+That warning **is** the reading: it is what the platform says when it permits an FGS start from the
+background and merely narrows it. `specialUse` is not on the blocklist, on the device, with the
+restriction on.
+
+**About a minute of undimmed phone is the honest number to carry into 2b.** §4 argues the power menu
+survives as a hatch because a restart ends on a bright keyguard and then a bounded window before the
+shade returns. The window is bounded and it is roughly fifty seconds, most of it the ROM's own
+staggering of boot broadcasts rather than anything this app can shorten.
+
+### R2 — the ROM's veto, read off the update path
+
+Autostart revoked, shade running, process dead, then `adb install -r`: **the process was never
+started at all.** No pid, no `GloamBoot` line, no window — only the package installer's own
+`startProcess` entries in the log. Granted, the same sequence starts the process and restores the
+shade every time.
+
+So ADR-0003's observation holds on this build and on this Android version, and `settings_restart_body`
+describes a failure that really happens rather than a theoretical one. It was not taken as a *reboot*
+because a reboot would answer the same question at the cost of another unlock: what is being tested
+is whether the ROM starts the process for a broadcast, and `MY_PACKAGE_REPLACED` is a broadcast.
+
+**One thing that reading cost, and it is worth knowing before repeating it: revoking autostart
+force-stops the app.** A package in the *stopped* state receives no manifest broadcast at all,
+whatever autostart says, so a restore reading taken straight after a `--autostart off` is measuring
+the stopped flag. `dumpsys package <pkg> | grep stopped=` before believing any of it.
+
+### R5 — the keyguard releases the override, on a restored shade too
+
+`dumpsys display`, shade up, screen unlocked:
+
+```
+mWindowManagerBrightnessOverride=0.01
+mWindowManagerBrightnessOverrideTag=io.github.srednimax.gloam.debug
+mScreenBrightness=0.0053381873
+```
+
+The same dump at the lock screen, seconds later:
+
+```
+mWindowManagerBrightnessOverride=NaN
+mWindowManagerBrightnessOverrideTag=null
+mScreenBrightness=0.13694584
+```
+
+Phase 1's R5 was taken on a shade started by hand; this one was taken on a shade a `BroadcastReceiver`
+put up, and the answer is identical. `dumpsys window windows` also puts `NotificationShade`,
+`StatusBar` and the rest of the system layer **above** our window in z-order. So the bright screen a
+restart ends on is real, and it is what makes §4's safety argument survive the feature it is about.
+
+### R6b — the refusal, and what it took to hold the process dead long enough to read it
+
+The branch that matters most — a deadline that passed while nothing of ours was alive — is the one
+this phone fought hardest to show:
+
+- **`am force-stop` keeps the process dead and sets the *stopped* flag**, and no manifest receiver
+  runs in that state. The install went through, nothing was logged, and the reading was about the
+  flag rather than about the deadline.
+- **`kill -9` leaves the flag alone, and with autostart granted this ROM restarts the service.** It
+  came back, its own `awaitDeadline` loop fired, and the shade ended before the update ever arrived.
+  A clean reading of §3 and no reading at all of §4.
+
+Killing it every 1.5 s for the length of the deadline — five restarts — and then installing into the
+gap produced the branch:
+
+```
+09-01 19:35:55.233 I/GloamBoot(7610): android.intent.action.MY_PACKAGE_REPLACED:
+the deadline (1788284114261) passed while the phone was off
+```
+
+No window, and the stored intent cleared. **This also corrects R8a's premise.** That reading found
+"this ROM restarts nothing" — but it was taken with autostart *revoked*. With autostart granted,
+`START_STICKY` is honoured and the killed service comes straight back. Both halves of §3's argument
+therefore matter on this device: the restart path resumes the absolute deadline, and the
+no-restart path is what the resume reconcile is for.
+
+### Two things the toolchain was reporting wrongly, both found here
+
+Neither was a failure. Both were clean, confident, wrong answers, which is the failure mode this
+repository keeps meeting in new places — and both are fixed in `scripts/device-gate.py`:
+
+- **The autostart scrape looked for "Gloam Debug".** The debug source set names the app *Gloam
+  debug*. No row ever matched, so the grant could not be set, and `autostart allowed: no` was printed
+  whatever the truth was. The label now comes from `project.DEBUG_APP_NAME`, parsed out of the debug
+  `strings.xml`.
+- **`uiautomator dump` fails while the screen is moving and leaves the previous dump on disk.** The
+  helper read that back as a fresh one, matched a row at coordinates from before the swipe, and
+  tapped whatever had moved into that spot — on a 107-row list, that is a grant handed to a
+  neighbouring app. It now deletes the file first and requires a `<hierarchy` back, and it scrolls
+  with a slow 800 px swipe rather than a fling that carried the target through the screen between
+  dumps.
+
+### Two things about the permission hand-offs, recorded where §1 can find them
+
+- **HyperOS ignores the `package:` scoping on `ACTION_MANAGE_OVERLAY_PERMISSION`.** The intent lands
+  on the full *Display over other apps* list, not on Gloam's own row — so the user arrives at an
+  alphabetical list of every app and has to find themselves in it. `OverlayPermission.kt`'s comment
+  said the Uri is what makes it land on our row; that is the documented behaviour and not this
+  phone's. Not fixed here — there is nothing to fix, the intent is the only one there is — but the
+  copy that sends people there should not promise a screen with one switch on it.
+- **`adb install -r` resets an `appops`-granted `SYSTEM_ALERT_WINDOW`.** A grant made with
+  `appops set … allow` does not survive the next update, which turns every restore-after-update
+  reading into a reading about the appop: the receiver ran, found no overlay permission, and refused
+  — correctly, and about the wrong thing. Grant it through the system screen before taking these.
+  The refusal branch was read twice by accident this way, which is at least one branch proven for
+  free.
 
 ### R7 — 61 ms late, and what it does not prove
 
