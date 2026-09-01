@@ -1,24 +1,21 @@
 #!/usr/bin/env python3
 """Capture every screen in light and dark, as the before/after evidence for a redesign.
 
-INHERITED FROM ANOTHER APP - IT DOES NOT DESCRIBE GLOAM YET.
+INHERITED FROM ANOTHER APP - AND NOW POINTED AT THIS ONE.
 
-    This script and the [SCENES] table it drives came over with the template, written for a
-    different app: one with tabs, an `items` list, a database and seeded sample data. Gloam has one
-    screen (`ui/dim/`), no database and nothing to seed, so the scenes, the suites and the reseeding
-    below are that app's. A run here would walk to screens that do not exist.
+    The driver came over with the template, written for an app with tabs, an `items` list, a
+    database and seeded sample data. Keeping it was deliberate - the store listing needs
+    screenshots, a closed test does not open without them, and the driver is the expensive half -
+    but until Phase 2 it described screens that do not exist here.
 
-    It is kept rather than deleted because **the store listing needs it** - a closed test does not
-    open without screenshots - and the driver is the expensive half. Rebuilding it from nothing
-    would cost more than replacing a scene table.
+    Both halves of that are now closed. ADR-0007 took the database and the `mismatch` suite with
+    it, and checkpoint F rewrote [SCENES] against Gloam's own screens: the dim screen, Settings,
+    Support, Licences and a licence text, plus one wiped-install scene for the permission
+    explainer. The fixture went with it - Gloam has nothing to seed, so `reset_to_seeded` is a wipe
+    and two grants.
 
-    The database half of that inheritance is already gone: Phase 2 removed the `mismatch` suite
-    along with the last of the toolchain's belief in a database. What is left to do is rewrite
-    [SCENES] in `edge-to-edge.py` against the screens Gloam actually has. Until then, read every
-    mention of a suite, a seed or a named scene as a description of the previous app, not of this
-    one.
-
-The rest is design reasoning that survives that rewrite.
+    **What is still owed is the pixels, not the walk.** The shipped screenshots derive from the
+    placeholder mark, so they are replaced when it is - `DOD.md` carries that as a door item.
 
 This is not `edge-to-edge.py` with different flags - it is the same walk with a different axis and
 a different output. That script's matrix is **rotation x navigation mode** and its deliverable is
