@@ -420,6 +420,20 @@ AUTOSTART_ACTIVITY = "com.miui.securitycenter/com.miui.permcenter.autostart.Auto
 AUTOSTART_LABEL = f"{project.APP_NAME} Debug"
 
 
+def battery_exempt() -> bool:
+    """Whether the ROM has this build on the doze whitelist.
+
+    **The name in `dumpsys deviceidle whitelist` is the reading, and a `grep -c` over the whole dump
+    is not.** Each line is `<source>,<package>,<uid>` — read off this phone, 83 of them — so a
+    substring match is true for any package this one is a prefix of (`…gloam` matches the
+    `…gloam.debug` line), and the count it returns is a number of matching *lines*, which reads as a
+    boolean right up until two of them match. Matching the package as a whole comma-separated field
+    is the fix, and it survives the two-field form other Android versions print.
+    """
+    listed = shell_ok("dumpsys deviceidle whitelist")
+    return any(e2e.PACKAGE in [field.strip() for field in line.split(",")] for line in listed.splitlines())
+
+
 def shell_ok(cmd: str) -> str:
     """`adb shell`, tolerating a non-zero exit.
 
@@ -630,11 +644,19 @@ def main() -> int:
     if args.autostart:
         set_autostart(args.autostart == "on")
 
-    count, present = autostart_state()
-    print(f"autostart screen present : {present}")
+    # **`autostart_state`'s second value is "this build is allowed", not "the screen exists".** It
+    # was printed as `autostart screen present` and read `False` on a phone whose autostart screen is
+    # plainly there and had just been counted — the one misreading that would send checkpoint C
+    # looking for a missing Settings screen instead of at a revoked grant, which is the thing ADR-0003
+    # says makes a boot broadcast never arrive.
+    count, allowed = autostart_state()
+    print(f"autostart allowed        : {'yes' if allowed else 'no'}  ({AUTOSTART_LABEL})")
     print(f"apps allowed to autostart: {count}")
-    print(f"battery optimised        : {shell_ok(f'dumpsys deviceidle whitelist | grep -c {PACKAGE}').strip()}")
-    print(f"exact alarms permitted   : {'yes' if 'true' in shell_ok(f'dumpsys alarm | grep -A2 {PACKAGE}').lower() else 'unknown'}")
+    # `e2e.PACKAGE`, not a bare `PACKAGE`: this file has never had one of its own, and the package
+    # every other reading here is taken against is the **debug** applicationId — the build that is
+    # actually installed when anybody runs this.
+    print(f"battery exempt           : {'yes' if battery_exempt() else 'no'}")
+    print(f"exact alarms permitted   : {'yes' if 'true' in shell_ok(f'dumpsys alarm | grep -A2 {e2e.PACKAGE}').lower() else 'unknown'}")
     print(f"alarms filed under tag   : {ALARM_TAG}")
     for alarm in app_alarms():
         print(f"  {alarm}")
