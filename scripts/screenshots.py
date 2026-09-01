@@ -4,19 +4,19 @@
 INHERITED FROM ANOTHER APP - IT DOES NOT DESCRIBE GLOAM YET.
 
     This script and the [SCENES] table it drives came over with the template, written for a
-    different app: one with tabs, an `items` list, a database, seeded sample data and a
-    schema-mismatch screen. Gloam has one screen (`ui/dim/`), no database and nothing to seed, so
-    the scenes, the suites and the reseeding below are that app's. A run here would walk to
-    screens that do not exist.
+    different app: one with tabs, an `items` list, a database and seeded sample data. Gloam has one
+    screen (`ui/dim/`), no database and nothing to seed, so the scenes, the suites and the reseeding
+    below are that app's. A run here would walk to screens that do not exist.
 
-    It is kept rather than deleted because **Phase 5 needs it** - the Play listing wants
-    screenshots - and the driver is the expensive half. Rebuilding it from nothing then would cost
-    more than replacing a scene table.
+    It is kept rather than deleted because **the store listing needs it** - a closed test does not
+    open without screenshots - and the driver is the expensive half. Rebuilding it from nothing
+    would cost more than replacing a scene table.
 
-    Phase 5 owes two edits: rewrite [SCENES] in `edge-to-edge.py` against the screens Gloam
-    actually has, and delete whatever here turns out to have described the other app's data model.
-    Until then, read every mention of a suite, a seed or a named scene as a description of the
-    previous app, not of this one.
+    The database half of that inheritance is already gone: Phase 2 removed the `mismatch` suite
+    along with the last of the toolchain's belief in a database. What is left to do is rewrite
+    [SCENES] in `edge-to-edge.py` against the screens Gloam actually has. Until then, read every
+    mention of a suite, a seed or a named scene as a description of the previous app, not of this
+    one.
 
 The rest is design reasoning that survives that rewrite.
 
@@ -100,12 +100,11 @@ CONFIG = e2e.Config("portrait-gesture", 0, "gesture")
 # later — which is the redesign done twice.
 THEMES = {"light": "no", "dark": "yes"}
 
-# **The previous app's suites** (see the module docstring) - Gloam has no database, so `mismatch`
-# has no schema to corrupt and `full` has no sample data to show. Kept for the ordering argument,
-# which is the part that transfers: `empty` wipes, so it goes last or it takes the data the `full`
-# suite needs out from under it; `mismatch` is survivable in the middle, and running it after a wipe
-# would corrupt a database with nothing in it. Phase 5 replaces the tuple, not the reasoning.
-SUITES = ("full", "mismatch", "empty")
+# **The previous app's suites** (see the module docstring) - Gloam has no sample data for `full` to
+# show. Kept for the ordering argument, which is the part that transfers: `empty` wipes, so it goes
+# last or it takes the data the `full` suite needs out from under it. `mismatch` was the third and
+# is gone with the database it corrupted. Checkpoint F replaces the tuple, not the reasoning.
+SUITES = ("full", "empty")
 
 
 def set_theme(theme: str) -> None:
@@ -218,57 +217,40 @@ def run_cell(theme: str, locale: str | None, scenes: list, out: Path, reseed: bo
     set_theme(theme)
 
     results = []
-    # Set while the database on disk claims a schema this build cannot open, and cleared the moment
-    # it is put back. Not "did the mismatch suite run?" — that question has the wrong answer by the
-    # end of a cell, because `empty` runs afterwards and its `pm clear` deletes the backup file the
-    # restore reads. Restoring then fails on a missing file and takes the whole run down with it,
-    # which is what killed the dark cell on the first attempt.
-    schema_dirty = False
-    try:
-        for suite in SUITES:
-            wanted = [scene for scene in scenes if scene.suite == suite]
-            if not wanted:
+    for suite in SUITES:
+        wanted = [scene for scene in scenes if scene.suite == suite]
+        if not wanted:
+            continue
+        # `keeps_watch_prompt` scenes go first, and this is a fix rather than a preference. The
+        # seed leaves exactly one expired watch (Sznycel's 3-day, started 4 days ago; Lily's
+        # 7-day is still running), and every other scene opens by tapping `Close it` — which
+        # *deletes the row*, per WatchExpiry.kt's "close, dismiss and swipe-away are one
+        # action". In SCENES order `home` runs ~20 scenes before `watch-expiry`, so the prompt
+        # is long gone by then and `watch-expiry.png` is a plain Home screen wearing the name of
+        # a dialog. Sorting is stable, so everything else keeps its declared order.
+        # Seed group first, then the watch prompt inside it — the same order and the same
+        # reasons as `edge-to-edge.py`'s [run_matrix].
+        wanted.sort(key=lambda scene: (scene.seed, not scene.keeps_watch_prompt))
+        print(f"  -- {suite} ({len(wanted)} scenes)")
+        for scene in wanted:
+            if suite == "full" and reseed:
+                e2e.ensure_seed(scene.seed)
+            elif scene.seed:
+                # **Skipped rather than shot.** `--no-reseed` is the iterate-on-one-screen flag,
+                # and a scene whose whole point is a state the default fixture hides would come
+                # back as an ordinary screenshot under a name claiming otherwise. A cell that
+                # cannot fail is not evidence; a scene that says it did not run is.
+                results.append(
+                    {"scene": scene.name, "family": scene.family, "error": f"needs seed {scene.seed!r}; --no-reseed"},
+                )
+                print(f"     {scene.name:28s} SKIPPED  needs seed {scene.seed!r}")
                 continue
-            # `keeps_watch_prompt` scenes go first, and this is a fix rather than a preference. The
-            # seed leaves exactly one expired watch (Sznycel's 3-day, started 4 days ago; Lily's
-            # 7-day is still running), and every other scene opens by tapping `Close it` — which
-            # *deletes the row*, per WatchExpiry.kt's "close, dismiss and swipe-away are one
-            # action". In SCENES order `home` runs ~20 scenes before `watch-expiry`, so the prompt
-            # is long gone by then and `watch-expiry.png` is a plain Home screen wearing the name of
-            # a dialog. Sorting is stable, so everything else keeps its declared order.
-            # Seed group first, then the watch prompt inside it — the same order and the same
-            # reasons as `edge-to-edge.py`'s [run_matrix].
-            wanted.sort(key=lambda scene: (scene.seed, not scene.keeps_watch_prompt))
-            schema_dirty = schema_dirty or suite == "mismatch"
-            print(f"  -- {suite} ({len(wanted)} scenes)")
-            for scene in wanted:
-                if suite == "full" and reseed:
-                    e2e.ensure_seed(scene.seed)
-                elif scene.seed:
-                    # **Skipped rather than shot.** `--no-reseed` is the iterate-on-one-screen flag,
-                    # and a scene whose whole point is a state the default fixture hides would come
-                    # back as an ordinary screenshot under a name claiming otherwise. A cell that
-                    # cannot fail is not evidence; a scene that says it did not run is.
-                    results.append(
-                        {"scene": scene.name, "family": scene.family, "error": f"needs seed {scene.seed!r}; --no-reseed"},
-                    )
-                    print(f"     {scene.name:28s} SKIPPED  needs seed {scene.seed!r}")
-                    continue
-                result = capture(scene, out_dir, tag)
-                results.append(result)
-                if "error" in result:
-                    print(f"     {scene.name:28s} SKIPPED  {result['error'][:80]}")
-                else:
-                    print(f"     {scene.name:28s} {result['bytes'] // 1024:>5d} KB")
-            if schema_dirty:
-                # Immediately, while the backup still exists — not deferred to the `finally`.
-                e2e.restore_schema_version()
-                schema_dirty = False
-    finally:
-        # Only reachable when a scene threw mid-mismatch, which is exactly when a phone left claiming
-        # a schema this build cannot open is hardest to explain.
-        if schema_dirty:
-            e2e.restore_schema_version()
+            result = capture(scene, out_dir, tag)
+            results.append(result)
+            if "error" in result:
+                print(f"     {scene.name:28s} SKIPPED  {result['error'][:80]}")
+            else:
+                print(f"     {scene.name:28s} {result['bytes'] // 1024:>5d} KB")
 
     return {"theme": theme, "locale": locale or "device default", "scenes": results}
 

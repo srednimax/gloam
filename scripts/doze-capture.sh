@@ -12,7 +12,6 @@ set -euo pipefail
 
 # Read from the one place the toolchain keeps it, so a rename reaches this too.
 PKG=$(python3 "$(dirname "$0")/project.py" | awk '/^DEBUG_APPLICATION_ID/{print $2}')
-DB=$(python3 "$(dirname "$0")/project.py" | awk '/^DATABASE_FILE/{print $2}')
 OUT="${1:-doze-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUT"
 
@@ -33,11 +32,8 @@ adb shell dumpsys deviceidle              > "$OUT/deviceidle.txt"
 adb shell dumpsys battery                 > "$OUT/battery.txt"
 adb shell cmd appops get "$PKG" SCHEDULE_EXACT_ALARM > "$OUT/appops.txt"
 
-# The database says what the app believed; the dumps say what Android did. Both, or
-# neither explains the other. The WAL is not optional — without it courses look absent.
-for f in "$DB" "$DB-wal" "$DB-shm"; do
-  adb exec-out run-as "$PKG" cat "databases/$f" > "$OUT/$f" 2>/dev/null || true
-done
+# There used to be a database pull here — what the app believed, beside what the dumps
+# say Android did. Gloam has no database (ADR-0007), so the dumps are the whole record.
 
 date -Is > "$OUT/captured-at.txt"
 echo "Captured to $OUT/"

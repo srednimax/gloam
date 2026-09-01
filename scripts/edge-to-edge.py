@@ -1063,46 +1063,6 @@ def ensure_seed(variant: str) -> None:
         seed_variant(variant)
 
 
-DATABASE = f"/data/data/{PACKAGE}/databases/{project.DATABASE_FILE}"
-
-
-def fake_schema_mismatch() -> None:
-    """Make the database on disk claim a schema this build does not know, and relaunch.
-
-    `SchemaMismatchScreen` is the one screen that lives outside a `Scaffold` — it pads itself with
-    `safeDrawingPadding()` — so it is exactly the outlier this matrix has to look at, and there is
-    no way to it through the UI. The wipe guard reads SQLite's own `user_version`, four big-endian
-    bytes at offset 60 of the file header, so writing a version nothing recognises is enough.
-
-    The file is copied aside first and put back by [restore_schema_version]. Nothing here consents
-    to the wipe: the screen is captured and backed out of.
-    """
-    shell(f"am force-stop {PACKAGE}")
-    settle(0.5)
-    run_as = f"run-as {PACKAGE}"
-    # Only ever back up the *good* file. This runs once per cell of the matrix, and an unguarded
-    # copy on the second cell would file the already-corrupted database as the thing to restore —
-    # after which the restore faithfully puts the corruption back and the app never opens again.
-    shell(f'{run_as} sh -c "[ -f databases/{project.DATABASE_FILE}.e2e-backup ] || cp databases/{project.DATABASE_FILE} databases/{project.DATABASE_FILE}.e2e-backup"')
-    # `user_version` is a big-endian 32-bit field, and every version this project will ever have
-    # fits in its last byte — so only byte 63 has to change, to 99. Which is convenient,
-    # because 99 is ASCII 'c': `printf c` writes exactly the byte wanted with no escaping to get
-    # wrong through two layers of shell.
-    shell(f'{run_as} sh -c "printf c > databases/e2e-version.bin"')
-    shell(f"{run_as} dd if=databases/e2e-version.bin of=databases/{project.DATABASE_FILE} bs=1 seek=63 conv=notrunc")
-    shell(f"am start -n {ACTIVITY}")
-    wait_for_app()
-    settle(1.5)
-
-
-def restore_schema_version() -> None:
-    shell(f"am force-stop {PACKAGE}")
-    settle(0.5)
-    run_as = f"run-as {PACKAGE}"
-    shell(f"{run_as} cp databases/{project.DATABASE_FILE}.e2e-backup databases/{project.DATABASE_FILE}")
-    shell(f"{run_as} rm -f databases/{project.DATABASE_FILE}.e2e-backup databases/e2e-version.bin")
-
-
 STEP_RUNNERS = {
     "tap": lambda arg: tap(arg),
     "tap?": lambda arg: tap(arg, optional=True),
@@ -1116,7 +1076,6 @@ STEP_RUNNERS = {
     "type": type_text,
     "wait": lambda arg: settle(float(arg)),
     "wipe": lambda arg: wipe(),
-    "fake_schema_mismatch": lambda arg: fake_schema_mismatch(),
 }
 
 
@@ -1169,29 +1128,12 @@ class Scene:
 # ---------------------------------------------------------------------------------------------
 
 # The order matters only in that each scene starts from a relaunch, so they are independent.
-# **These scenes are the template's, not Gloam's.** `items`, the tabs and `schema-mismatch` describe
-# the app this repo was forked from - one with a database and a list. Gloam has `ui/dim/`, Settings
-# and Support, no database and nothing to seed, so nothing below resolves against it and a run walks
-# to screens that do not exist. **Phase 5 rewrites this table**, which is the one edit that makes
-# this script and `screenshots.py` usable here; the driver around it transfers unchanged.
+# **These scenes are the template's, not Gloam's.** `items` and the tabs describe the app this repo
+# was forked from - one with a database and a list. Gloam has `ui/dim/`, Settings and Support, no
+# database and nothing to seed, so nothing below resolves against it and a run walks to screens that
+# do not exist. **Checkpoint F rewrites this table**, which is the one edit that makes this script
+# and `screenshots.py` usable here; the driver around it transfers unchanged.
 SCENES = [
-    # --- the screen with no Scaffold at all, reachable only by lying to the schema guard --------
-    #
-    # `SchemaMismatchScreen` is the one screen outside a `Scaffold` — it pads itself — so it is
-    # exactly the outlier this matrix exists to look at, and there is no route to it through the UI.
-    Scene(
-        "schema-mismatch",
-        "chrome-free",
-        [("fake_schema_mismatch", "")],
-        suite="mismatch",
-    ),
-    Scene(
-        "schema-mismatch-bottom",
-        "chrome-free",
-        [("fake_schema_mismatch", ""), ("swipe_end", "")],
-        suite="mismatch",
-    ),
-
     # --- a wiped install: the empty states, which no seeded run can show ------------------------
     Scene("items-empty", "tab", [("wipe", "")], suite="empty"),
 
@@ -1449,9 +1391,8 @@ def reach_scene(scene: Scene) -> str | None:
     # alarm the app has placed. Arming into a live process is also the honest order — the banner
     # arrives *during* the scene, which is the case the driver has to survive.
     #
-    # **`full` only**, for the same reason [return_to_home] is: `empty` opens on a wiped install and
-    # `mismatch` replaces the whole screen before anything is captured. Arming there would fail every
-    # scene in both suites on a seed that is deliberately absent.
+    # **`full` only**, for the same reason [return_to_home] is: `empty` opens on a wiped install, so
+    # arming there would fail every scene in that suite on a seed that is deliberately absent.
     if _LIVE_NOTICE and scene.suite == "full":
         arm_live_notice()
     try:
@@ -1468,8 +1409,7 @@ def reach_scene(scene: Scene) -> str | None:
             # **`full` only, and that is a rule about which suites can be lost rather than a
             # shortcut.** Every `empty` scene opens with its own `wipe`, which clears saved state
             # outright and lands on the wizard — where there is no tab bar and this would fail every
-            # scene in the suite. `mismatch` replaces the whole screen with a chrome-free one before
-            # anything is captured. Both isolate themselves; only `full` inherits.
+            # scene in the suite. It isolates itself; only `full` inherits.
             if scene.suite == "full":
                 return_to_home()
         # `keeps_watch_prompt` scenes get neither step, deliberately. **Back can be a destructive
@@ -1495,7 +1435,7 @@ def run_scene(scene: Scene, config: Config, out_dir: Path, retries: int = 0) -> 
     # start wherever attempt one stopped; worse, a half-finished attempt may already have answered
     # the expiry prompt, which *deletes the row* — so the retry would shoot a stale screen and
     # record it clean. That is the exact failure retrying is supposed to avoid, arriving by the
-    # other road. It costs three scenes: `watch-expiry` and both `mismatch` cells.
+    # other road. It costs one scene: `watch-expiry`.
     allowed = 1 + (0 if scene.keeps_watch_prompt else max(retries, 0))
     for attempt in range(1, allowed + 1):
         error = reach_scene(scene)
@@ -1538,11 +1478,8 @@ def main() -> int:
     parser.add_argument(
         "--suite",
         default="full",
-        choices=["full", "empty", "mismatch"],
-        help=(
-            "'full' needs the debug sample data seeded; 'empty' WIPES the app to reach the wizard; "
-            "'mismatch' corrupts the database's version field and puts it back afterwards"
-        ),
+        choices=["full", "empty"],
+        help="'full' needs the debug sample data seeded; 'empty' WIPES the app to reach the wizard",
     )
     parser.add_argument(
         "--locale",
@@ -1662,11 +1599,6 @@ def main() -> int:
         # First in the block, because it is the one piece of cleanup that is about the *phone*
         # rather than about this run's output.
         set_dnd(False)
-        # The mismatch suite leaves a deliberately corrupted database behind, so putting it back is
-        # the one piece of cleanup that must happen even when a scene throws — a run that crashed
-        # halfway is exactly when an app left unopenable is hardest to explain.
-        if args.suite == "mismatch":
-            restore_schema_version()
         # Write whatever was reached, always. A full matrix is four cells over about two hours on a
         # phone somebody also owns, and writing the report only at the end means an interruption at
         # 95% produces *nothing* — the screenshots survive on disk but the inset findings, which are
@@ -1768,7 +1700,7 @@ def run_matrix(
         # leaves and cells 2-4 would shoot a stale screen however they are ordered. But the seed
         # starts with a `pm clear`, and a wipe costs the rotation (see [wipe]), so seeding after
         # `apply_config` silently unpins every landscape cell. `full` only: `empty` wipes on purpose
-        # to reach the wizard, and `mismatch` manages its own database surgery.
+        # to reach the wizard.
         if suite == "full":
             # Invalidated rather than compared: a cell must reseed even when the last one left the
             # right variant on the phone, because answering the watch-expiry prompt is permanent and
