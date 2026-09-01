@@ -71,9 +71,17 @@
     <!--
         `android:localeConfig` is read by Android 13+ only, which is every device this app ships to
         now that `minSdk` is 33 (ADR-0008) — so it no longer needs a tools:targetApi to silence
-        lint's "unused below minSdk" note. AppCompat's backport reads the same file, which is why the
-        list of shipped languages stays in one place (ADR-0004). That backport is now dead weight and
-        its removal is ADR-0004's call, not a tidy-up — see DOD.md.
+        lint's "unused below minSdk" note. It is the one declaration of the shipped languages that
+        the framework reads (ADR-0004); `AppLanguage` and `TranslationTest` are the other two, and
+        the test is what holds all three to the same claim.
+
+        **AppCompat's below-13 locale backport was here and is gone** — a disabled
+        `AppLocalesMetadataHolderService` entry carrying `autoStoreLocales`, which existed so
+        AppCompat could persist a language choice on devices with no per-app locale store of their
+        own. `minSdk` 33 means the app ships to none of them, so on every device it reaches the
+        framework persists the choice and the entry was ignored. Removed as a dated amendment on
+        ADR-0004, not as a tidy-up. **AppCompat itself stays**: ADR-0006 needs `setDefaultNightMode`,
+        and ADR-0004's switcher is `AppCompatDelegate.setApplicationLocales`.
 
         Auto Backup is the platform's default here, with no agent and no rules XML.
 
@@ -183,26 +191,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
-        <!--
-            Not a service anybody starts — `android:enabled="false"` means it can never run. It is a
-            manifest entry used as a storage slot: AppCompat looks itself up here, reads the
-            `autoStoreLocales` flag, and takes responsibility for persisting the chosen language on
-            devices below 13, where the platform has no per-app locale store of its own. On 13+ the
-            framework persists it and this is ignored.
-
-            Chosen over a DataStore key deliberately (ADR-0004): DataStore reads are asynchronous —
-            a Flow, so `suspend` before the value exists — and the app would already have drawn its
-            first frame in the phone's language before the stored one resolved.
-        -->
-        <service
-            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
-            android:enabled="false"
-            android:exported="false">
-            <meta-data
-                android:name="autoStoreLocales"
-                android:value="true" />
-        </service>
     </application>
 
 </manifest>
