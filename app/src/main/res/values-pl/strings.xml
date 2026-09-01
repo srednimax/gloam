@@ -56,7 +56,17 @@
     <string name="settings_restart_open">Otwórz ustawienia autostartu</string>
 
     <string name="settings_about">O aplikacji</string>
+    <string name="settings_support">Pomoc i opinie</string>
     <string name="settings_licences">Licencje open source</string>
+
+    <string name="support_title">Pomoc i opinie</string>
+    <string name="support_report">Zgłoś problem</string>
+    <string name="support_report_hint">Otwiera aplikację pocztową z już wpisanymi informacjami o telefonie, które Gloam zna.</string>
+    <string name="support_feature">Zaproponuj funkcję</string>
+    <string name="support_feature_hint">Każda funkcja w Gloam jest darmowa i zawsze taka pozostanie, więc jedyne pytanie brzmi, czy pasuje do aplikacji.</string>
+    <string name="support_body_bug">Co się stało i co powinno się stać zamiast tego:</string>
+    <string name="support_body_feature">Co Gloam mógłby robić?</string>
+    <string name="support_no_mail_app">Na tym telefonie nie ma aplikacji pocztowej do otwarcia.</string>
 
     <string name="licence_text_missing">Treść tej licencji nie jest dołączona do aplikacji.</string>
 

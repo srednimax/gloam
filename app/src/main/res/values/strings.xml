@@ -93,7 +93,25 @@
     <string name="settings_restart_open">Open autostart settings</string>
 
     <string name="settings_about">About</string>
+    <string name="settings_support">Help and feedback</string>
     <string name="settings_licences">Open-source licences</string>
+
+    <!-- Help and feedback. Both rows leave Gloam for the user's own mail app, so both hints say so
+         before the tap rather than after it. The two subjects are `translatable="false"` because
+         they carry a filter tag the developer sorts on and the user never reads — the prompt beside
+         each one is the sentence they actually see, and a Polish bug report under `Gloam #bug` is
+         the correct outcome of an app with a Polish locale. The prompts are second-person-free:
+         gender is not something the app knows (translator-brief.md 6.2). -->
+    <string name="support_title">Help and feedback</string>
+    <string name="support_report">Report a problem</string>
+    <string name="support_report_hint">Opens your email app with what Gloam knows about your phone already filled in.</string>
+    <string name="support_feature">Suggest a feature</string>
+    <string name="support_feature_hint">Every feature in Gloam is free and always will be, so the only question is whether it belongs.</string>
+    <string name="support_subject_bug" translatable="false">Gloam #bug</string>
+    <string name="support_subject_feature" translatable="false">Gloam #feature</string>
+    <string name="support_body_bug">What happened, and what you expected instead:</string>
+    <string name="support_body_feature">What would you like Gloam to do?</string>
+    <string name="support_no_mail_app">No email app on this phone to open.</string>
 
     <!-- Licences -->
     <string name="licence_text_missing">The text of this licence is not bundled with the app.</string>

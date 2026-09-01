@@ -35,6 +35,7 @@ import app.gloam.work.openAutostartSettings
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    onOpenSupport: () -> Unit,
     onOpenLicences: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel =
@@ -73,6 +74,10 @@ fun SettingsScreen(
             AutostartRow()
 
             SectionHeader(stringResource(R.string.settings_about))
+            // Above the licences, because it is the row a tester needs and the other is the row a
+            // licence obligation needs. Both are in *About* for the same reason: it is where someone
+            // looks when they want to know something about the app rather than change it.
+            SettingsRow(stringResource(R.string.settings_support), onClick = onOpenSupport)
             SettingsRow(stringResource(R.string.settings_licences), onClick = onOpenLicences)
 
             // The developer-only section. In a release build this composable is a no-op that
