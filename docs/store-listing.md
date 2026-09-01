@@ -228,3 +228,41 @@ Obniżanie podświetlenia to teraz przełącznik, który można wyłączyć. Gdy
 
 Gloam prosi też o zgodę na powiadomienia: to powiadomienie pozwala zatrzymać przyciemnianie spoza aplikacji.
 ```
+
+### 0.4.0 — safe to hand over
+
+Phase 2's three user-visible features in one release: auto-off, reboot restore, and the Help and
+feedback screen. The order in the note is the order a tester meets them — auto-off is the one that
+changes what the app does to you unasked, so it leads.
+
+**What is deliberately not in the note.** The escape-hatch rewording and the deleted `onboarding_done`
+key are invisible from outside; the autostart row is described as *what to check* rather than as a
+feature, because on every phone that is not a Xiaomi it does not appear at all and a note promising
+it would be wrong for most readers.
+
+**The permission list shrank, and this is the only place that says so.** `chore: remove WorkManager`
+took `WAKE_LOCK` and `ACCESS_NETWORK_STATE` out of the built artifact and left
+`RECEIVE_BOOT_COMPLETED` declared by us rather than merged by a library — read off the bundle by
+`scripts/aab-permissions.py`, 8 permissions down to 6. It is a `chore:`, so it never reaches
+`CHANGELOG.md`, and Play shows the permission list on the listing. It stays out of the fenced note
+below: a reader who was never told the app requested a wake lock cannot be told it stopped.
+
+**English** — 452/500:
+
+```
+Gloam can now turn itself off. Choose how long a dimmed screen should last — 30 minutes to 4 hours, or Never — and the shade comes down on its own, so a screen you dimmed and forgot about is not still dark tomorrow.
+
+The shade also comes back after your phone restarts, and Settings explains what to check on phones that only let an app start by itself with autostart switched on.
+
+New: Help and feedback, which fills in your version and phone for you.
+```
+
+**Polish** — 479/500:
+
+```
+Gloam potrafi teraz wyłączyć się sam. Wybierz, jak długo ma trwać przyciemnienie — od 30 minut do 4 godzin albo nigdy — a zasłona zdejmie się automatycznie, więc przyciemniony i zapomniany ekran nie będzie ciemny także jutro.
+
+Zasłona wraca też po ponownym uruchomieniu telefonu, a Ustawienia wyjaśniają, co sprawdzić w telefonach, które pozwalają aplikacji działać po starcie tylko z włączonym autostartem.
+
+Nowość: Pomoc i opinie — wersja i model telefonu uzupełniają się same.
+```
