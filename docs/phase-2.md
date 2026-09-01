@@ -1077,7 +1077,7 @@ and put it back after.
 | R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | **61 ms late**, screen off throughout. 2026-09-01 |
 | R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
 | R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
-| R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | — |
+| R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | **It arrives.** `Gloam #bug`, address and body all prefilled. 2026-09-01 |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
 
@@ -1314,6 +1314,49 @@ is the only way to see what the app actually stored rather than what it draws. S
 Both keys, together, on the next foreground — which is `endShade()` doing exactly what §6's pairing
 was written for. `auto_off_minutes` never appears in the file at all, because nothing has written it:
 the default lives in the read, which is the DataStore rule holding in practice.
+
+### R9 — the subject arrives, and the note it re-measures stays worth having
+
+Tapped from the phone, on the debug build, with the shade up:
+
+```bash
+adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n <applicationId>/app.gloam.MainActivity
+adb exec-out screencap -p > mail.png    # Settings > Help and feedback > Report a problem
+```
+
+Two apps claim `mailto:` on this phone — Gmail and, unexpectedly, PayPal — so the hand-off lands on
+the system chooser rather than straight in a composer. Worth knowing before writing copy that
+promises "your email app": on a phone with more than one, the first thing the user sees is a
+question. Nothing to fix; the chooser is the platform being correct.
+
+Gmail then opened with **all three** fields filled: `gloam.dimmer@gmail.com`, subject `Gloam #bug`,
+and the body
+
+```
+What happened, and what you expected instead:
+
+
+---
+Gloam debug 0.3.0 (66)
+Android 16 (SDK 36)
+Xiaomi 24115RA8EG
+```
+
+**The subject is the whole reading, and it passes** — which is a result about the query string rather
+than about Gmail having been fixed. `EXTRA_SUBJECT` was never tried here; §5's design put the subject
+in the URI precisely so that this reading could not fail, and the reading confirms the URI route
+works rather than clearing the extra. The note it inherited from Binky stays in the file for the next
+person who reaches for the obvious API.
+
+Two smaller things it settled in passing: `app_name` reaches the body as **Gloam debug** on a
+sideloaded build, which is the disambiguation §5 wanted and only a real hand-off could show; and the
+version code is the commit count, so a report identifies the exact build without anybody typing it.
+
+**One thing it did not settle.** `adb shell input tap` cannot open Gmail's compose overflow menu —
+three attempts, no menu — so the draft was left by pressing Back rather than by *Discard*. That is a
+fact about driving another app's UI over `adb`, not about Gloam, and it is recorded here only so the
+next person taking this reading expects to tidy up by hand.
 
 ---
 
