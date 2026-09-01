@@ -3,12 +3,17 @@ package app.gloam.ui.dim
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -19,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,8 +39,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
+import app.gloam.shade.AutoOff
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
+import app.gloam.shade.isDue
 import app.gloam.shade.readBacklightTop
 import app.gloam.shade.shadePermissionIntent
 import app.gloam.shade.startShade
@@ -49,6 +57,7 @@ import app.gloam.work.notificationsAllowed
 import app.gloam.work.openAppNotificationSettings
 import app.gloam.work.openChannelNotificationSettings
 import app.gloam.work.rememberNotificationPermissionAsk
+import java.util.Date
 
 /**
  * **Which button the escape-hatch warning carries.** Whether it is shown at all is
@@ -146,11 +155,46 @@ fun DimScreen(
         backlightAvailable = readBacklightTop(context) != null
     }
 
+    /**
+     * **The deadline nobody was alive to fire.**
+     *
+     * HyperOS kills the process and `START_STICKY` does not always bring it back: the window dies,
+     * the stored intent still says running, and the deadline sits there while the clock walks past
+     * it. Open Gloam the next morning and the button says *Stop* over a screen with no shade on it,
+     * under a line reading "Turns off at 00:00" — the one way this app's two stored values can
+     * disagree with each other.
+     *
+     * This is a comparison of two stored values against the wall clock, **not** a check of whether
+     * a process is alive, which is the thing `CLAUDE.md` forbids. The stored intent still decides
+     * what should be on screen; this only lets the user's own earlier instruction finish arriving.
+     *
+     * `stopShade()` as well as the write, because the two are not the same question: if a service
+     * *is* alive and its own loop is still inside its recheck interval, clearing the deadline alone
+     * would cancel that loop and leave the shade up over an intent that says it is down. On the
+     * usual path — nothing alive — `stopService` is a no-op.
+     */
+    fun endShadeIfDue() {
+        if (state.running && isDue(System.currentTimeMillis(), state.offAtMillis)) {
+            viewModel.endShade()
+            context.stopShade()
+        }
+    }
+
+    // Two triggers, because the check depends on two things that move independently. The state keys
+    // catch a deadline that is already past when the first stored values arrive — a cold launch
+    // after a force-stop, where `ON_RESUME` has come and gone before DataStore answered. The resume
+    // observer catches the other half: the values did not change, the clock did, because the app sat
+    // in the background for three hours.
+    LaunchedEffect(state.running, state.offAtMillis) { endShadeIfDue() }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) reread()
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    reread()
+                    endShadeIfDue()
+                }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -166,12 +210,12 @@ fun DimScreen(
     /**
      * The intent and the service, together, in one place.
      *
-     * They are written together on purpose: if `setRunning(true)` landed on the button press and the
+     * They are written together on purpose: if `beginShade()` landed on the button press and the
      * user backgrounded the app mid-dialog, DataStore would say *running* with no service alive, and
      * that flag is exactly what Phase 2's reboot restore reads back.
      */
     fun beginDimming() {
-        viewModel.setRunning(true)
+        viewModel.beginShade()
         context.startShade()
     }
 
@@ -215,7 +259,12 @@ fun DimScreen(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text(stringResource(R.string.dim_title)) }) },
     ) { insets ->
-        Column(modifier = Modifier.padding(insets)) {
+        Column(
+            modifier =
+                Modifier
+                    .padding(insets)
+                    .verticalScroll(rememberScrollState()),
+        ) {
             if (!canDraw) {
                 PermissionExplainer(
                     onGrant = { requestOverlay.launch(context.shadePermissionIntent()) },
@@ -324,7 +373,7 @@ fun DimScreen(
                 onClick = {
                     when {
                         state.running -> {
-                            viewModel.setRunning(false)
+                            viewModel.endShade()
                             context.stopShade()
                         }
                         // Granted, or one denial already spent. Android permits two denials before
@@ -342,9 +391,87 @@ fun DimScreen(
             ) {
                 Text(stringResource(if (state.running) R.string.dim_stop else R.string.dim_start))
             }
+
+            // **Under the button, and deliberately outside the block above.** Phase 3a renders the
+            // sliders in a second host; whether the deadline travels with them is that phase's call
+            // on twelve testers' evidence, so putting the chips beside the sliders now would be a
+            // guess dressed up as a decision.
+            SectionHeader(stringResource(R.string.dim_auto_off_label))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
+                modifier = Modifier.padding(horizontal = Spacing.base),
+            ) {
+                // `FlowRow` rather than `Row`: five chips reading "After 30 minutes" do not fit one
+                // line on a narrow screen in any language, and a clipped safety control is worse
+                // than a wrapped one.
+                for (choice in AutoOff.entries) {
+                    FilterChip(
+                        selected = state.autoOff == choice,
+                        onClick = { viewModel.setAutoOff(choice) },
+                        label = { Text(stringResource(choice.labelRes())) },
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.dim_auto_off_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
+            )
+
+            // Only with a shade up and a deadline on it — `Never` has nothing to say here, and a
+            // stopped shade's deadline was cleared with the intent that owned it.
+            val offAt = state.offAtMillis
+            if (state.running && offAt != null) {
+                Text(
+                    text = stringResource(R.string.dim_auto_off_at, rememberTimeText(offAt)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = Spacing.base,
+                            vertical = Spacing.tight,
+                        ),
+                )
+            }
         }
     }
 }
+
+/**
+ * A clock time rather than a countdown, **and that is a saving rather than a compromise.**
+ *
+ * A countdown has to tick, which is a recomposition every minute for the length of a session, and it
+ * has to be formatted into words that plural correctly in every locale. A time does neither: it is
+ * one string with one argument, and it does not change, so nothing ticks.
+ *
+ * Its one weakness, recorded so nobody re-discovers it as a bug: four hours from 23:00 reads as
+ * "03:00" with no date. At a four-hour ceiling that is unambiguous enough in context.
+ *
+ * `DateFormat.getTimeFormat` is the platform's, so 12- or 24-hour follows the phone's own setting
+ * and the locale for free — never a hand-built format string (`translator-brief.md` §4).
+ */
+@Composable
+private fun rememberTimeText(instant: Long): String {
+    val context = LocalContext.current
+    return remember(context, instant) {
+        android.text.format.DateFormat
+            .getTimeFormat(context)
+            .format(Date(instant))
+    }
+}
+
+/**
+ * Kotlin note: an extension on the enum rather than a field in it. The resource ids belong to the UI
+ * layer and `AutoOff` has no Android in it at all — which is what lets `AutoOffTest` run on the JVM.
+ */
+private fun AutoOff.labelRes(): Int =
+    when (this) {
+        AutoOff.Never -> R.string.dim_auto_off_never
+        AutoOff.Minutes30 -> R.string.dim_auto_off_30m
+        AutoOff.Hour1 -> R.string.dim_auto_off_1h
+        AutoOff.Hours2 -> R.string.dim_auto_off_2h
+        AutoOff.Hours4 -> R.string.dim_auto_off_4h
+    }
 
 /**
  * The shade is up and the notification that stops it cannot appear.

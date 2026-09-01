@@ -52,6 +52,21 @@
     <string name="dim_backlight_hint">Takes your screen\'s own brightness down to its lowest before the shade starts, so Gloam has less light to cover. While it is on, your phone\'s brightness slider will not do anything until you stop dimming.</string>
     <string name="dim_backlight_unavailable">This phone does not report its brightness in a way Gloam can use, so Gloam dims by drawing over the screen only.</string>
 
+    <!-- Auto-off (CONTEXT.md). It cannot be switched "off" — "off" is reserved for the shade not
+         being drawn, so the choice that disables it is Never. The hint says what the feature buys
+         rather than what it does: the failure being designed out is a phone dimmed at midnight and
+         still dark at breakfast. "Turns off at 23:40" is a clock time formatted by the platform,
+         never a countdown built out of words. -->
+    <string name="dim_auto_off_label">Turn off on its own</string>
+    <string name="dim_auto_off_never">Never</string>
+    <string name="dim_auto_off_30m">After 30 minutes</string>
+    <string name="dim_auto_off_1h">After 1 hour</string>
+    <string name="dim_auto_off_2h">After 2 hours</string>
+    <string name="dim_auto_off_4h">After 4 hours</string>
+    <string name="dim_auto_off_hint">Gloam takes the shade down by itself after this long, so a screen you dimmed and forgot about is not still dark tomorrow.</string>
+    <!-- %1$s is a time of day, formatted for the phone's own locale and 12/24-hour setting. -->
+    <string name="dim_auto_off_at">Turns off at %1$s</string>
+
     <!-- The warmth slider. "Warmth" per CONTEXT.md: not "night mode" — that is the app's own dark
          theme — and not any wording about filtering or cutting blue light, which an overlay cannot
          do. It adds amber over an already-dark screen. -->

@@ -32,6 +32,15 @@
     <string name="dim_backlight_hint">Zmniejsza własną jasność ekranu do minimum, zanim pojawi się zasłona, więc Gloam ma mniej światła do zakrycia. Gdy ta opcja jest włączona, suwak jasności telefonu nic nie zmienia, dopóki przyciemnianie nie zostanie wyłączone.</string>
     <string name="dim_backlight_unavailable">Ten telefon nie podaje swojej jasności w sposób, którego Gloam może użyć, więc Gloam przyciemnia tylko zasłoną nad ekranem.</string>
 
+    <string name="dim_auto_off_label">Samoczynne wyłączanie</string>
+    <string name="dim_auto_off_never">Nigdy</string>
+    <string name="dim_auto_off_30m">Po 30 minutach</string>
+    <string name="dim_auto_off_1h">Po godzinie</string>
+    <string name="dim_auto_off_2h">Po 2 godzinach</string>
+    <string name="dim_auto_off_4h">Po 4 godzinach</string>
+    <string name="dim_auto_off_hint">Gloam zdejmuje zasłonę automatycznie po tym czasie, więc przyciemniony i zapomniany ekran nie będzie ciemny także jutro.</string>
+    <string name="dim_auto_off_at">Wyłączy się o %1$s</string>
+
     <string name="dim_warmth_label">Ciepło barwy</string>
 
     <string name="settings_appearance">Wygląd</string>

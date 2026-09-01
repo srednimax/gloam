@@ -5,10 +5,33 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import app.gloam.shade.AutoOff
+import app.gloam.shade.NO_DEADLINE
+import app.gloam.shade.deadlineOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+
+/**
+ * The two values that say what the shade should be doing, read together because they are written
+ * together (see [AppPreferences.beginShade]).
+ *
+ * **They are one fact, not two.** A caller that can read *running* without the deadline beside it is
+ * a caller that can believe a shade is up nine hours after it should have come down — which is the
+ * one way this app's stored values can disagree with each other. Phase 2's boot receiver wants
+ * exactly this pair in one read, and so does the screen's resume reconcile.
+ *
+ * @param running what the user asked for, **not** whether the service is alive. The ROM kills the
+ *   service without the user changing their mind; this is the value that survives that.
+ * @param offAtMillis the instant the shade next comes down, or `null` for no deadline. Storage's `0`
+ *   is collapsed to `null` here, at the one boundary that knows the sentinel.
+ */
+data class ShadeIntent(
+    val running: Boolean,
+    val offAtMillis: Long?,
+)
 
 /** Which colour scheme applies, regardless of what the phone is set to. */
 enum class ThemeMode {
@@ -46,6 +69,8 @@ class AppPreferences(
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
         val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
         val WARMTH = intPreferencesKey("warmth")
+        val AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
+        val OFF_AT_MILLIS = longPreferencesKey("off_at_millis")
     }
 
     /**
@@ -82,13 +107,34 @@ class AppPreferences(
     val dimLevel: Flow<Int> = store.data.map { (it[Keys.DIM_LEVEL] ?: DEFAULT_DIM_LEVEL).coerceIn(0, 100) }
 
     /**
-     * Whether the shade should be on screen.
+     * Whether the shade should be on screen, and when it next comes down.
      *
      * The user's intent, not the live state of the service — those are different questions and only
      * this one survives the process being killed. Xiaomi will kill the service; what it cannot do is
      * change this, which is what lets the shade come back rather than silently staying off.
+     *
+     * One `Flow` for both keys rather than one each, because [beginShade] and [endShade] write them
+     * in a single transaction and a reader that could take them apart is a reader that can see a
+     * half-written intent.
      */
-    val shadeRunning: Flow<Boolean> = store.data.map { it[Keys.SHADE_RUNNING] ?: false }
+    val shadeIntent: Flow<ShadeIntent> =
+        store.data.map { prefs ->
+            ShadeIntent(
+                running = prefs[Keys.SHADE_RUNNING] ?: false,
+                offAtMillis = deadlineOrNull(prefs[Keys.OFF_AT_MILLIS] ?: NO_DEADLINE),
+            )
+        }
+
+    /**
+     * How long a hand-started shade stays up before Gloam takes it down (CONTEXT.md: **auto-off**).
+     *
+     * Stored as **minutes rather than the enum's name**, which is the opposite of what [themeMode]
+     * does; `AutoOff.ofMinutes` carries the reason and the fallback. Defaults to `AutoOff.Default`
+     * — on rather than to `Never`, because until Phase 2b's tile ships this is the only way out of
+     * the shade that needs no gesture at all.
+     */
+    val autoOff: Flow<AutoOff> =
+        store.data.map { AutoOff.ofMinutes(it[Keys.AUTO_OFF_MINUTES] ?: AutoOff.Default.minutes) }
 
     /**
      * Whether Gloam may take the **backlight** down before it draws the shade (ADR-0010).
@@ -142,8 +188,44 @@ class AppPreferences(
         store.edit { it[Keys.DIM_LEVEL] = level.coerceIn(0, 100) }
     }
 
-    suspend fun setShadeRunning(running: Boolean) {
-        store.edit { it[Keys.SHADE_RUNNING] = running }
+    suspend fun setAutoOff(choice: AutoOff) {
+        store.edit { it[Keys.AUTO_OFF_MINUTES] = choice.minutes }
+    }
+
+    /**
+     * The user wants the shade up, and this is when it comes down. **One transaction, both keys.**
+     *
+     * There is deliberately no `setShadeRunning` beside this and no `setDeadline` under it. A caller
+     * that can write *running* without the deadline is a caller that can leave a stale deadline
+     * behind a fresh start — the shade would come down minutes after going up, on a deadline set
+     * hours ago — and `DataStore.edit` being transactional is what makes writing them together free
+     * rather than a lock.
+     *
+     * **Also the "give me two more hours" path**, called with `running` already `true` when the user
+     * taps a different auto-off chip. Writing the same `true` back costs nothing and keeps the
+     * invariant, which is why that case did not need a third method.
+     *
+     * @param offAtMillis `null` for no deadline, stored as [NO_DEADLINE].
+     */
+    suspend fun beginShade(offAtMillis: Long?) {
+        store.edit {
+            it[Keys.SHADE_RUNNING] = true
+            it[Keys.OFF_AT_MILLIS] = offAtMillis ?: NO_DEADLINE
+        }
+    }
+
+    /**
+     * The shade is down, however it got there — the user, the notification's Stop action, or the
+     * deadline arriving.
+     *
+     * Clears the deadline with the flag, so the next read cannot find one belonging to a shade that
+     * is no longer up.
+     */
+    suspend fun endShade() {
+        store.edit {
+            it[Keys.SHADE_RUNNING] = false
+            it[Keys.OFF_AT_MILLIS] = NO_DEADLINE
+        }
     }
 
     suspend fun setLowerBacklight(enabled: Boolean) {
