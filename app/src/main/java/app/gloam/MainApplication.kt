@@ -1,8 +1,6 @@
 package app.gloam
 
 import android.app.Application
-import android.util.Log
-import androidx.work.Configuration
 import app.gloam.data.AppPreferences
 import app.gloam.data.ThemeMode
 import app.gloam.theme.applyThemeMode
@@ -27,9 +25,7 @@ import kotlinx.coroutines.runBlocking
  * Kotlin note: `by lazy` computes on first read and caches — the closest JS analogue is a memoised
  * getter.
  */
-class MainApplication :
-    Application(),
-    Configuration.Provider {
+class MainApplication : Application() {
     /**
      * The scope for work that outlives any screen. `SupervisorJob` so one failed child does not
      * cancel its siblings — the closest JS analogue is `Promise.allSettled` semantics rather than
@@ -51,17 +47,6 @@ class MainApplication :
         private set
 
     val container: AppContainer by lazy { AppContainer(this, preferences, applicationScope) }
-
-    /**
-     * WorkManager builds itself the first time `getInstance` is called, rather than from an
-     * androidx.startup initializer inside a ContentProvider. See the manifest for the other half.
-     */
-    override val workManagerConfiguration: Configuration
-        get() =
-            Configuration
-                .Builder()
-                .setMinimumLoggingLevel(if (BuildConfig.DEBUG) Log.DEBUG else Log.INFO)
-                .build()
 
     override fun onCreate() {
         super.onCreate()

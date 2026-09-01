@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
         SYSTEM_ALERT_WINDOW is the whole app. It is a **special** permission, not a runtime one:
@@ -28,12 +27,13 @@
         **normal** permission: no dialog, no runtime ask, granted at install, and the only thing it
         buys is being told the phone has started.
 
-        **Declared rather than inherited, and that is the point of the line.** It is already in the
-        built artifact today, merged in by WorkManager rather than written by us — one dependency
-        bump away from disappearing, and it would disappear *silently*: the receiver would simply
-        stop being called, on a feature nobody tests by rebooting their phone. `aab-permissions.py`
-        reads the artifact rather than this file precisely because merged permissions are invisible
-        from here.
+        **Declared rather than inherited, and this line is now the only thing declaring it.** Until
+        Phase 2 removed WorkManager the permission was in the built artifact anyway, merged in by a
+        library rather than written by us — one dependency bump away from disappearing, and it would
+        have disappeared *silently*: the receiver would simply stop being called, on a feature nobody
+        tests by rebooting their phone. Declaring it first and removing the merge afterwards is the
+        order that never left a gap. `aab-permissions.py` reads the artifact rather than this file
+        precisely because merged permissions are invisible from here.
     -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -110,32 +110,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--
-            **WorkManager initialises on demand, not at process start.** Removing its entry from
-            androidx.startup's provider is half of that; `MainApplication : Configuration.Provider`
-            is the other half, and WorkManager then builds itself the first time
-            `WorkManager.getInstance` is called.
-
-            The default is an initializer that runs inside a ContentProvider, before
-            `Application.onCreate` — and `Application.onCreate` is where the schema wipe guard lives
-            (ADR-0001). Initialisation order between "the database may be about to be destroyed" and
-            "background work may start touching it" is not something to inherit from whatever the
-            merged manifest happens to produce.
-
-            `tools:node="remove"` on the meta-data alone, not on the provider: androidx.startup is
-            shared, and other libraries may register initialisers there.
-        -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
-        </provider>
 
         <!--
             The shade. `exported="false"` because nothing outside this app has any business starting
