@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/srednimax/gloam/compare/v0.3.0...v0.4.0) (2026-09-01)
+
+
+### Features
+
+* add a Help and feedback screen ([ad06566](https://github.com/srednimax/gloam/commit/ad065661fdd5a365fb7777388f7e0615e3fb9251))
+* put the shade back after a restart ([872e743](https://github.com/srednimax/gloam/commit/872e743167fd08fcd8a241b95d8b70504817443a))
+* take the shade down on its own after a while ([1231b17](https://github.com/srednimax/gloam/commit/1231b17106451dca34a287e6b57015052710801e))
+
+
+### Bug Fixes
+
+* log the restore under a tag the platform does not already use ([280caa6](https://github.com/srednimax/gloam/commit/280caa62043167fee52fa43229ee3310d5e5114a))
+* make device-gate report what it actually read ([778cbc1](https://github.com/srednimax/gloam/commit/778cbc1f92bf5d5ff50c48defdac5387f653e70a))
+* point device-gate at the label the phone actually shows ([50a7017](https://github.com/srednimax/gloam/commit/50a701772f8f19e3ac988fb9b8a7d6fa5e94aca5))
+
 ## [0.3.0](https://github.com/srednimax/gloam/compare/v0.2.0...v0.3.0) (2026-08-31)
 
 
