@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Who this app is — the one place the toolchain looks it up.
 
-Every script in `scripts/` that needs the package name, the database file or a Kotlin
-constant imports it from here rather than hard-coding it. `bootstrap.py` rewrites this
+Every script in `scripts/` that needs the package name or a Kotlin constant imports
+it from here rather than hard-coding it. `bootstrap.py` rewrites this
 file once when you clone the template, and after that nothing else has to be hunted for.
 
 **Namespace and applicationId are parsed out of `app/build.gradle.kts`, not stored here.**
 Gradle is the build's source of truth for both, and a second copy of a value that must
 agree with the build is a copy that will one day disagree with it. Everything the build
-file does *not* know — the database filename, the names of the schema constants — is a
-plain constant below.
+file does *not* know — the names of the schema constants, say — is a plain constant
+below.
 
 Import it from a sibling script like this:
 
@@ -79,11 +79,11 @@ def _debug_app_name() -> str:
 # The label the launcher, and every OEM permission screen, shows for the installed debug build.
 DEBUG_APP_NAME = _debug_app_name()
 
-# --- Room -------------------------------------------------------------------------------------
-# The filename passed to Room.databaseBuilder, and so what lands in /data/data/<pkg>/databases/.
-DATABASE_FILE = "gloam.db"
-
-# The schema constants `schema-gate.py` reads. Renaming these in Kotlin means renaming them here.
+# --- Room, parked ------------------------------------------------------------------------------
+# **There is no database** (ADR-0007), so there is no DATABASE_FILE here and nothing pulls one off
+# the phone. These two survive because `schema-gate.py` survives: it reports "no database, nothing
+# to gate" and passes, and it comes back whole the day a feature adds a table. Renaming these in
+# Kotlin means renaming them here.
 SCHEMA_VERSION_CONST = "APP_SCHEMA_VERSION"
 MIGRATIONS_CONST = "APP_MIGRATIONS"
 
@@ -107,7 +107,6 @@ if __name__ == "__main__":
         ("NAMESPACE", NAMESPACE),
         ("APPLICATION_ID", APPLICATION_ID),
         ("DEBUG_APPLICATION_ID", DEBUG_APPLICATION_ID),
-        ("DATABASE_FILE", DATABASE_FILE),
         ("MAIN_ACTIVITY", MAIN_ACTIVITY),
     ]:
         print(f"{name:22} {value}")
