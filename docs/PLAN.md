@@ -15,7 +15,7 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 ## Status
 
 - [x] **Phase 0** — Skeleton, palette, and a shade that works
-- [ ] **Phase P** — The pipeline ← *parallel to everything; no code; starts now*
+- [x] **Phase P** — The pipeline
 - [x] **Phase 1** — The mechanism is complete
 - [ ] **Phase 2** — Safe to hand over ← **the door: closed testing opens here**
 - [ ] **Phase 2b** — As dark as it goes
@@ -67,7 +67,7 @@ phones, four things stop being free to change:
 
 | Frozen at the door | Why | State |
 | --- | --- | --- |
-| `applicationId` | Registration is keyed to the signing key and cannot be re-pointed | Ratified; **Phase P must land before the door** |
+| `applicationId` | Registration is keyed to the signing key and cannot be re-pointed | Ratified; **Phase P landed 2026-08-30** — registered and married to the upload key |
 | `minSdk` | Raising it strands existing installs on the last build that fitted them (ADR-0008) | Settled at 33 |
 | Every DataStore key **that has been written** | A key on a real phone cannot be renamed or removed without consequence | `onboardingDone` is the open one — Phase 2 |
 | The escape-hatch inventory | Ultra dark is gated on it, and the gate has to mean the same thing forever | Phase 2 |
@@ -186,6 +186,12 @@ carried; they belong here too, and none of them blocks Phase 1.
 
 **This must complete before the door**, not merely "early" — `applicationId` is one of the four
 things Phase 2 freezes.
+
+**Closed 2026-08-30**, with the record in `DOD.md`'s Phase P section. One box was ticked ahead of its
+evidence and is worth naming: the five Play secrets could only ever be proven by a green
+`publish-play.yml`, which arrived on **2026-08-31** — run `33412104006`, attempt 4, 0.3.0 on the
+internal track — after `androidpublisher.googleapis.com` turned out to be switched off in the Cloud
+project. Until then that loose end was tracked as a door blocker in `phase-2.md` §0, not here.
 
 ## Phase 1 — The mechanism is complete
 
