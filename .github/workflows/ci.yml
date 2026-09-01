@@ -124,28 +124,28 @@ jobs:
     # condition that is always true is worse than no condition, because it looks like
     # a gate. Restore it if `push` ever widens past main again.
     #
-    # Almost none of that time is the tests: the suite runs in about 8 seconds, and the
-    # rest is the emulator image and boot (the dominant chunk, and the one that varies
+    # Almost none of that time is the tests: the suite is one window-flags assertion and
+    # the rest is the emulator image and boot (the dominant chunk, and the one that varies
     # run to run) plus building and installing the two APKs. Worth knowing before
     # reaching for test sharding to speed this up — splitting 8 seconds across more
     # jobs buys nothing while each new job pays the setup again. The lever that would
     # actually work is AVD snapshot caching, and at these times it is not worth it.
     strategy:
       # Every level reports. Stopping the matrix at the first red would hide whether a
-      # failure is "this build is broken" or "this build is broken *below API 31*",
-      # which is the entire question the bottom of the matrix exists to answer.
+      # failure is "this build is broken" or "this build is broken *at the `minSdk`
+      # floor*", which is the entire question the bottom of the matrix exists to answer.
       fail-fast: false
       matrix:
         include:
-          # The `minSdk` floor. Three SDK_INT branches — the pre-S path into system
-          # backup settings, the pre-R agent branch and the pre-S theme — plus
-          # AppCompat's pre-13 locale backport (ADR-0004) run *only* down here, and a
-          # single modern emulator never executes any of them. `default` rather than
-          # `aosp_atd`: the slim ATD images start at API 30, so 26 has no such image.
-          - api-level: 26
-            target: default
-          # The long-standing leg, kept as-is.
-          - api-level: 34
+          # The `minSdk` floor (ADR-0008), and the reason this leg is 33 rather than the
+          # 26 it used to be: the three SDK_INT branches that justified 26 — the pre-S
+          # path into system backup settings, the pre-R agent branch and the pre-S theme
+          # — went with the database (ADR-0007), and AppCompat's pre-13 locale backport
+          # went with `minSdk` 33 (ADR-0004's amendment). The leg was arguing for
+          # coverage of code that no longer exists, on a level this app cannot install
+          # on. `aosp_atd` is the slim image and enough here: reading a window's flags
+          # out of dumpsys needs no SystemUI.
+          - api-level: 33
             target: aosp_atd
           # `targetSdk`. Where the platform applies its newest behaviour changes to us
           # rather than grandfathering them.
@@ -193,9 +193,12 @@ jobs:
 
   # The edge-to-edge matrix, on emulators rather than on the one physical phone.
   #
-  # **The prize is API 26-28, not parallelism.** The phone is the only physical device and it is
-  # modern, so every claim about how the app draws under the system bars below API 29 was argued
-  # from theme XML and never observed. An emulator observes it.
+  # **The prize is the configuration grid, not the API floor.** It used to be API 26-28, on the
+  # argument that every claim about drawing under the system bars below API 29 was argued from theme
+  # XML and never observed — true until `minSdk` 33 put those levels out of reach entirely. What is
+  # left is the axis that still varies on devices this app ships to: orientation and navigation mode
+  # vary by device and by user setting rather than by platform release, and the phone is one device
+  # in one configuration. An emulator observes the other seven.
   #
   # Deliberately NOT on `pull_request`, and deliberately not part of `instrumented-gate`:
   # `edge-to-edge.py` walks ~75 scenes per cell by driving uiautomator taps, and its `settle()`
@@ -220,30 +223,20 @@ jobs:
       # these cells are now siblings rather than steps inside one job.
       fail-fast: false
       matrix:
-        api-level: [26, 34, 36]
+        api-level: [33, 36]
         config: [portrait-gesture, portrait-threebutton, landscape-gesture, landscape-threebutton]
         include:
-          - api-level: 26
-            target: default
-          # `default`, not `aosp_atd`, and API 36 next door keeps ATD deliberately. The API 34 ATD
-          # image ships no `com.android.internal.systemui.navbar.*` overlays and no readable
-          # `secure navigation_mode`, so every cell on it was a configuration nothing could confirm
-          # the device was in — four red jobs saying exactly that. ATD strips SystemUI pieces to run
-          # faster, and how much it strips varies by level: the same target on API 36 has the
-          # overlays and runs all four cells. A full AOSP image has them at every level.
-          - api-level: 34
+          # `default`, not `aosp_atd`, and API 36 next door keeps ATD deliberately. This is the
+          # lesson the API 34 leg cost: its ATD image ships no `com.android.internal.systemui.navbar.*`
+          # overlays and no readable `secure navigation_mode`, so every cell on it was a
+          # configuration nothing could confirm the device was in — four red jobs saying exactly
+          # that. ATD strips SystemUI pieces to run faster and how much it strips varies by level;
+          # a full AOSP image has the overlays at every level, which is why the floor takes one
+          # rather than betting that 33's ATD is the 36 kind.
+          - api-level: 33
             target: default
           - api-level: 36
             target: aosp_atd
-        exclude:
-          # API 26-28 has no gesture navigation at all. `usable_configs` knows that and would skip
-          # the cell green, but only after booting an emulator to be told a platform fact — so the
-          # job is not created in the first place. Everything the script discovers at *runtime*, an
-          # image with no navigation overlays included, is deliberately left to the script.
-          - api-level: 26
-            config: portrait-gesture
-          - api-level: 26
-            config: landscape-gesture
     steps:
       - uses: actions/checkout@v7
 
