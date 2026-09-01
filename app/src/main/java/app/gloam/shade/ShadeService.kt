@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.IBinder
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -15,22 +16,47 @@ import androidx.core.app.NotificationCompat
 import app.gloam.MainActivity
 import app.gloam.MainApplication
 import app.gloam.R
+import app.gloam.data.AppPreferences
 import app.gloam.work.AppChannel
 import app.gloam.work.ensureNotificationChannels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
+import kotlin.math.min
 
 /** The notification's Stop action, delivered straight to the service so it needs no Activity. */
 private const val ACTION_STOP = "app.gloam.shade.STOP"
 
 private const val NOTIFICATION_ID = 1
+
+/** Logcat's own name for this class, so `adb logcat -s ShadeService:*` finds the auto-off line. */
+private const val TAG = "ShadeService"
+
+/**
+ * How long the deadline loop is ever allowed to sleep in one go.
+ *
+ * **A platform fact rather than a style.** `delay` on the main dispatcher is a `Handler.postDelayed`,
+ * scheduled against `SystemClock.uptimeMillis` — a clock that **stops advancing in deep sleep**. One
+ * two-hour `delay` on a phone that slept for ninety minutes of it fires ninety minutes late. Waking
+ * to re-read the wall clock at most a minute at a time bounds the error to a minute *of CPU-awake
+ * time*, which is the most any mechanism without an alarm can promise — and it costs nothing while
+ * the phone is asleep, because `postDelayed` sets no alarm and holds no wakelock. The message is
+ * simply overdue when the device next wakes for some other reason, and the loop notices immediately.
+ */
+private const val DEADLINE_RECHECK_MS = 60_000L
 
 /**
  * The foreground service that owns the shade — one window, added above everything else.
@@ -79,16 +105,36 @@ private const val NOTIFICATION_ID = 1
  * off. `dim_backlight_hint` says so, always visible, because the symptom recurs and a dismissed
  * dialog is not there when it does.
  *
+ * ## The deadline it takes itself down on
+ *
+ * Auto-off is a job on this service's own scope and needs no permission at all, which is the whole
+ * difference between taking something down and putting something up: taking it down only has to be
+ * right the next time the user looks at the screen. [awaitDeadline] is the loop, and the deadline it
+ * watches is an absolute instant in DataStore rather than a countdown in this object — so a ROM kill
+ * and a `START_STICKY` restart resume the right deadline instead of silently restarting the clock.
+ *
+ * **Nothing here covers the kill that does *not* restart.** The window dies with the process, the
+ * stored intent still says running, and no code of ours is alive to notice the deadline pass. That
+ * case belongs to the screen's resume reconcile, not to this class.
+ *
  * ## Kotlin/Android notes
  *
  * A `Service` is not a thread — every callback here runs on the main thread, which is why the
  * preference `Flow` is collected on a scope this class owns and cancels rather than blocking in
  * `onStartCommand`. `START_STICKY` asks Android to recreate the service if it is killed for memory;
- * on Xiaomi that promise is worth less than the stored `shadeRunning` preference, which is why the
- * intent to be dimming lives in DataStore rather than in this object.
+ * on Xiaomi that promise is worth less than the stored intent, which is why what the user asked for
+ * lives in DataStore rather than in this object.
  */
 class ShadeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * Read through the `Application` rather than held, because a `Service` outlives nothing and
+     * owns nothing: `application` is valid from `onCreate` on, and a `get()` accessor means there is
+     * no field to be stale.
+     */
+    private val preferences: AppPreferences
+        get() = (application as MainApplication).preferences
 
     private var windowManager: WindowManager? = null
 
@@ -143,7 +189,6 @@ class ShadeService : Service() {
         // `DimSettings` rather than three callbacks it would have to reconcile, racing each other
         // into `updateViewLayout`. `distinctUntilChanged` after it is what stops an unrelated
         // preference write re-applying the window layout.
-        val preferences = (application as MainApplication).preferences
         combine(
             preferences.dimLevel,
             preferences.warmth,
@@ -153,6 +198,50 @@ class ShadeService : Service() {
         }.distinctUntilChanged()
             .onEach { settings -> applyShadeValues(settings) }
             .launchIn(scope)
+
+        // Auto-off. `collectLatest` is `switchMap` rather than `forEach`: a new deadline cancels the
+        // wait still running for the old one, which is what re-arms the loop when the user taps a
+        // different chip while the shade is up, and when the boot receiver restores a deadline. The
+        // loop cannot capture the deadline once, because it moves for reasons other than starting.
+        scope.launch {
+            preferences.shadeIntent
+                .map { it.offAtMillis }
+                .distinctUntilChanged()
+                .collectLatest { offAt -> awaitDeadline(offAt) }
+        }
+    }
+
+    /**
+     * Wait out one deadline and take the shade down, or return immediately if there is none.
+     *
+     * **`NonCancellable` is required here rather than defensive, and without it the failure is
+     * intermittent.** [AppPreferences.endShade] writes the very value this block is collecting: the
+     * write commits, the flow emits, `collectLatest` cancels the block that is still running — and
+     * the cancellation lands *between* the write returning and [stopSelf]. The shade comes down,
+     * the intent goes false, and the service stays alive holding an ongoing notification over a
+     * screen it is no longer dimming. Putting `stopSelf()` first does not help either: `onDestroy`
+     * cancels the scope, which cancels the write from the other side.
+     *
+     * Kotlin note: cancellation is only ever observed at a suspension point, so once the
+     * `NonCancellable` block returns, the plain `stopSelf()` after it always runs. This is the one
+     * place worth stepping outside structured concurrency, and JS has no analogue — a `Promise`
+     * cannot be cancelled out from under you, so there is nothing to opt out of.
+     */
+    private suspend fun awaitDeadline(offAtMillis: Long?) {
+        if (offAtMillis == null) return
+        while (coroutineContext.isActive) {
+            val remaining = offAtMillis - System.currentTimeMillis()
+            if (remaining <= 0) {
+                // The one line R7 reads the lateness off. A notification vanishing is visible on the
+                // phone and is not timestamped, and logging is not developer *surface*, so it lives
+                // here rather than behind the debug seam.
+                Log.i(TAG, "auto-off fired ${-remaining}ms after the deadline")
+                withContext(NonCancellable) { preferences.endShade() }
+                stopSelf()
+                return
+            }
+            delay(min(remaining, DEADLINE_RECHECK_MS))
+        }
     }
 
     override fun onStartCommand(
@@ -165,7 +254,7 @@ class ShadeService : Service() {
             // still says "running", and the next launch — or a system restart of a START_STICKY
             // service — would helpfully put the shade back over a user who just dismissed it.
             scope.launch {
-                (application as MainApplication).preferences.setShadeRunning(false)
+                preferences.endShade()
                 stopSelf()
             }
             return START_NOT_STICKY
