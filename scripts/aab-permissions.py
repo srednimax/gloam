@@ -9,8 +9,9 @@ app declared two permissions and the artifact declared six: WorkManager's
 manifest had merged in WAKE_LOCK, ACCESS_NETWORK_STATE and FOREGROUND_SERVICE,
 none of which appeared anywhere in that app's source. Later it happened again
 and bigger — an ML Kit dependency brought INTERNET through a transitive nobody
-would think to read. Gloam inherits the hazard along with WorkManager: three of
-the eight permissions in its own artifact today are merged, not written.
+would think to read. Gloam carried three merged permissions itself until Phase 2
+removed WorkManager, which is what the EXPECTED list below is now short of — and
+the hazard is not gone with them, only the current instance of it.
 
 So the permission set is asserted against the list kept here, and adding a
 dependency that merges a new one **fails** rather than passing quietly. When it
@@ -70,9 +71,13 @@ PRIM_BOOLEAN = 8
 PRIM_INT_DEC = 6
 PRIM_INT_HEX = 7
 
-# Every <uses-permission> the release artifact is allowed to carry. Four are
-# declared in app/src/main/AndroidManifest.xml; the rest arrive merged from
-# WorkManager and AndroidX, which is the whole reason this reads the artifact.
+# Every <uses-permission> the release artifact is allowed to carry. Five are
+# declared in app/src/main/AndroidManifest.xml; the last one arrives merged from
+# AndroidX, which is the whole reason this reads the artifact rather than that
+# file. WAKE_LOCK and ACCESS_NETWORK_STATE were here too, both WorkManager's,
+# and both left with it in Phase 2 — an artifact that carries either one again
+# has a new dependency that wants network state or a wake lock, which is a Play
+# data-safety question before it is a build one.
 EXPECTED = {
     # The mechanism. Not a runtime permission and not grantable by a dialog: it is
     # a Settings hand-off, and shade/OverlayPermission.kt asks canDrawOverlays()
@@ -81,17 +86,14 @@ EXPECTED = {
     # The escape hatch. Invisible until granted on Android 13+, which is why the
     # ask is a gate in front of the first startShade() rather than a courtesy.
     "android.permission.POST_NOTIFICATIONS": "ours — the ongoing notification, PLAN.md rule 4",
-    "android.permission.FOREGROUND_SERVICE": "ours — ShadeService (WorkManager declares it too)",
+    "android.permission.FOREGROUND_SERVICE": "ours — ShadeService",
     # Paired with android:foregroundServiceType="specialUse" and the <property>
     # beside it. Required from Android 14; the AndroidManifest comment carries why
     # specialUse rather than one of the named types.
     "android.permission.FOREGROUND_SERVICE_SPECIAL_USE": "ours — ShadeService's type",
-    "android.permission.WAKE_LOCK": "WorkManager",
-    "android.permission.ACCESS_NETWORK_STATE": "WorkManager — reads state, not network access",
-    # NOT ours today — WorkManager declares it to re-enqueue its own jobs at boot.
-    # Phase 2's reboot restore makes it ours as well, at which point this note
-    # changes and nothing else does: the permission is already in the artifact.
-    "android.permission.RECEIVE_BOOT_COMPLETED": "WorkManager; becomes ours at Phase 2's reboot restore",
+    # Ours since Phase 2's reboot restore, and written in the manifest rather
+    # than inherited: WorkManager used to merge it, and WorkManager is gone.
+    "android.permission.RECEIVE_BOOT_COMPLETED": "ours — shade/BootReceiver.kt",
     # AndroidX defines and uses this itself, signature-level. The prefix is the
     # applicationId, which differs between the debug and release builds, so it is
     # matched by suffix rather than spelled out.
