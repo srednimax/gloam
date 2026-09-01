@@ -57,6 +57,28 @@ DEBUG_APPLICATION_ID = f"{APPLICATION_ID}.debug"
 # `app_name` in res/values/strings.xml; this is only for things outside the APK.
 APP_NAME = "Gloam"
 
+
+def _debug_app_name() -> str:
+    """What the **debug** build's launcher label actually says.
+
+    Parsed rather than derived, and the reason is a bug this cost a device session to find: the
+    debug source set overrides `app_name` with **"Gloam debug"**, and `device-gate.py` was looking
+    for `f"{APP_NAME} Debug"` — a capital D the app has never had. Every OEM settings screen lists
+    an app under this string, so a scrape aimed at the wrong one finds no row at all, cannot set the
+    toggle, and reports *not allowed* for an app that may well be allowed. A wrong answer that looks
+    like a reading is worse than an error.
+    """
+    path = ROOT / "app/src/debug/res/values/strings.xml"
+    if path.exists():
+        match = re.search(r'<string name="app_name"[^>]*>([^<]+)</string>', path.read_text(encoding="utf-8"))
+        if match:
+            return match.group(1)
+    return APP_NAME
+
+
+# The label the launcher, and every OEM permission screen, shows for the installed debug build.
+DEBUG_APP_NAME = _debug_app_name()
+
 # --- Room -------------------------------------------------------------------------------------
 # The filename passed to Room.databaseBuilder, and so what lands in /data/data/<pkg>/databases/.
 DATABASE_FILE = "gloam.db"
@@ -81,6 +103,7 @@ if __name__ == "__main__":
     # first when a script reports a package that surprises you.
     for name, value in [
         ("APP_NAME", APP_NAME),
+        ("DEBUG_APP_NAME", DEBUG_APP_NAME),
         ("NAMESPACE", NAMESPACE),
         ("APPLICATION_ID", APPLICATION_ID),
         ("DEBUG_APPLICATION_ID", DEBUG_APPLICATION_ID),
