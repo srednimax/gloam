@@ -371,8 +371,10 @@ makes the morning fine.
 
 Three things touch `off_at_millis` in this phase — `beginShade` arms it, the loop above fires it,
 §4's receiver checks it at boot — and there is a fourth case none of them covers. **HyperOS kills the
-process and `START_STICKY` does not always bring it back**, which is the premise this codebase is
-built on: `ShadeService`'s own notes say that promise "is worth less than the stored `shadeRunning`
+process and `START_STICKY` does not always bring it back** — and R8a, taken 2026-09-01, is stronger
+than that sentence: on this phone it did not bring it back *at all*, in either attempt, so what
+follows is the ordinary path rather than the unlucky one. It is the premise this codebase is built
+on: `ShadeService`'s own notes say that promise "is worth less than the stored `shadeRunning`
 preference". The window dies with the process, `shadeRunning` stays `true`, the deadline stays where
 it was, and nothing is alive to notice it pass.
 
@@ -901,7 +903,7 @@ need somebody at the phone, which is why R3 exists.
 | **R5** | After a restored shade: is the **keyguard** undimmed and at the user's own brightness? | §4's safety argument, which today leans on a Phase 1 reading taken on a hand-started shade |
 | **R6** | An app **update** over a live shade — does `MY_PACKAGE_REPLACED` bring it back? | the case twelve testers meet repeatedly for fourteen days |
 | **R7** | **Auto-off with the screen off.** *Arm 2-minute deadline*, screen off immediately, logcat timestamps on the stop | how late the uptime-clock `delay` really is (§3), and whether the 60-second cap is enough |
-| **R8a** | Auto-off across a kill that **restarts** — `kill -9` via `run-as` | that the absolute deadline resumes across `START_STICKY` rather than restarting the clock |
+| **R8a** | Auto-off across a kill that **restarts** — `kill -9` via `run-as` | that the absolute deadline resumes across `START_STICKY` rather than restarting the clock . **Taken 2026-09-01, and the premise did not hold: this ROM restarts nothing.** See the readings block |
 | **R8b** | Auto-off across a kill that **does not** — `am force-stop`, which cancels that restart | that the next foreground clears a deadline nothing was alive to fire (§3's resume reconcile) |
 | **R9** | The `mailto:` hand-off on this phone: does the **subject** arrive? | the Gmail `EXTRA_SUBJECT` trap, re-measured rather than inherited |
 | **R10** | The instrumented window-flags test on both emulator legs **and** on the phone | §8's assertion, and whether the split-APK workaround still works |
@@ -1071,12 +1073,91 @@ and put it back after.
 | R4 | The Android 15 blocklist does not reach `specialUse` | `am compat enable FGS_BOOT_COMPLETED_RESTRICTIONS`, then R3 | — |
 | R5 | Keyguard undimmed after a restored shade | `dumpsys display` at the lock screen | — |
 | R6 | Update over a live shade | `adb install -r`, then `dumpsys window windows` | — |
-| R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | — |
-| R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | — |
-| R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | — |
+| R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | **61 ms late**, screen off throughout. 2026-09-01 |
+| R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
+| R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | — |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
+
+### R7 — 61 ms late, and what it does not prove
+
+Armed 18:15:34.204 for a deadline 120 s out, `input keyevent SLEEP` immediately after, and the fire
+line landed at 18:17:34.240: **61 ms after the deadline**, with `mWakefulness=Dozing` for the whole
+two minutes. On the awake path the 60-second re-check costs essentially nothing in accuracy.
+
+**It does not prove the case the cap exists for, and the reason is `adb` itself.** The phone was on
+USB and charging throughout — `dumpsys deviceidle` read `mState=ACTIVE mCharging=true` — so it never
+suspended, and `SystemClock.uptimeMillis` never stopped advancing. §3's argument is about deep sleep,
+which is unreachable while the cable that carries the reading is plugged in. **The variant that would
+close it**: arm, unplug, wait past the deadline, plug back in and read the buffer, which survives the
+disconnection. Worth taking before the door, and it can only make the case for the cap stronger — a
+single two-hour `delay` would come back *later* than a loop that re-reads the wall clock, never
+earlier.
+
+### R8a — HyperOS did not restart the service at all
+
+The reading was written to ask whether an absolute deadline resumes across a `START_STICKY` restart.
+**It could not be taken, because there was no restart**, and that answer is worth more than the one
+it replaced.
+
+`run-as ... kill -9` on the live process at 18:25:26, deadline 18:26:34. Two and a half minutes later
+`pidof` was empty, `dumpsys activity services` held **zero** `ShadeService` records — not even a
+pending restart — and the deadline had passed with nothing alive to notice. `ActivityManager` logged
+the death (`Process ... has died: fg TOP`, `Cancel FGS notification`) and scheduled nothing. Repeated
+once, with the same result.
+
+**The absence of a "Scheduling restart of crashed service" line is not the evidence.** That string
+appears **zero** times in this ROM's whole buffer for any package, so its absence proves nothing
+here. The empty `pidof` and the zero service records are the reading.
+
+So the premise `ShadeService`'s own notes already carry — that `START_STICKY` "is worth less than the
+stored preference" — is not a hedge on this phone, it is the normal case. **What that promotes is
+§3's resume reconcile**: it was written for the kill that does not come back, and on this ROM that is
+*every* kill. It is not a corner case; it is the path.
+
+### R8a's other half — the app can claim a shade that is not there
+
+Killed at 18:33:07 with the deadline at **18:34:48, still in the future**, then reopened. The stored
+values were untouched — `shade_running = true`, `off_at_millis = 1788280488482` — the reconcile
+correctly did nothing, and the screen read **"Stop dimming"** over **"Turns off at 18:34"** with no
+shade on screen and no service alive.
+
+Every part of that is the design working as written: the stored intent is what the user asked for,
+the live service is what the ROM allowed, and `CLAUDE.md` forbids inferring one from the other. But
+the *screen* is now asserting a shade that does not exist, and this ROM produces that state on every
+kill rather than rarely.
+
+**This is checkpoint C's to answer, and it is a wider question than the one C was scoped to.** C
+restores the shade on `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED`; nothing restores it on a plain
+foreground, which is when the user actually notices. The options are C's to weigh — restore from the
+Dim screen when the intent says running and no service is alive, or say so rather than silently
+claiming otherwise — and checkpoint B deliberately does neither, because both change what "running"
+means to Phase 2b's gate.
+
+### R8b — proven off the stored file, not off the screen
+
+`phase-1.md` learned to distrust a reading that looks like a pass; the DataStore equivalent of the
+WAL trap is trusting a *screen* that renders a default while the file still holds the old value. So
+this was read from the file on both sides of the event:
+
+```bash
+adb shell "run-as <pkg> cat files/datastore/app_preferences.preferences_pb"   # then decode
+```
+
+It is a protobuf `map<string, Value>`, and thirty lines of Python read it — worth keeping, because it
+is the only way to see what the app actually stored rather than what it draws. Sequence, 2026-09-01:
+
+| Time | Event | `shade_running` | `off_at_millis` |
+| --- | --- | --- | --- |
+| 18:29:37 | armed, 120 s out | `true` | `1788280297377` (18:31:37) |
+| 18:29:43 | `am force-stop`; `pidof` empty, 0 services | `true` | `1788280297377` |
+| 18:32:18 | 41 s past the deadline, nothing alive | `true` | `1788280297377` |
+| 18:32:22 | app opened | **`false`** | **`0`** |
+
+Both keys, together, on the next foreground — which is `endShade()` doing exactly what §6's pairing
+was written for. `auto_off_minutes` never appears in the file at all, because nothing has written it:
+the default lives in the read, which is the DataStore rule holding in practice.
 
 ---
 
