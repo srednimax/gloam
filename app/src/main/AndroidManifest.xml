@@ -24,6 +24,20 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!--
+        RECEIVE_BOOT_COMPLETED is owned by reboot restore — `shade/BootReceiver.kt`. It is a
+        **normal** permission: no dialog, no runtime ask, granted at install, and the only thing it
+        buys is being told the phone has started.
+
+        **Declared rather than inherited, and that is the point of the line.** It is already in the
+        built artifact today, merged in by WorkManager rather than written by us — one dependency
+        bump away from disappearing, and it would disappear *silently*: the receiver would simply
+        stop being called, on a feature nobody tests by rebooting their phone. `aab-permissions.py`
+        reads the artifact rather than this file precisely because merged permissions are invisible
+        from here.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
         Package visibility (API 30+) for the one OEM screen the app offers to open: Xiaomi's
         autostart manager, which on HyperOS decides whether background work runs at all. Without
         this declaration `resolveActivity` returns null on a phone where the activity exists, and
@@ -140,6 +154,35 @@
                 android:value="Draws a user-controlled dimming overlay above other apps, which must
                     remain on screen while the user is in those apps." />
         </service>
+
+        <!--
+            Reboot restore. `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED` are two of the three
+            documented exemptions from the ban on starting a foreground service from the background,
+            and Android 15's blocklist for the first does not reach `specialUse` — the reasoning, and
+            what the receiver refuses to do, is in `shade/BootReceiver.kt`.
+
+            **`exported="true"` is required rather than chosen**: both of these are system broadcasts,
+            and a receiver the system cannot reach is a receiver that never runs. It also makes the
+            feature testable without a reboot — `am broadcast -a android.intent.action.BOOT_COMPLETED`
+            reaches it, which is R3. What another app could do with that is put back a shade the user
+            themselves asked for, on a phone where they have already granted the overlay permission.
+
+            **`directBootAware` is left at its default of false, deliberately.** Gloam's DataStore
+            lives in credential-encrypted storage, so before the first unlock there is nothing for
+            this receiver to read — which is also why `LOCKED_BOOT_COMPLETED` is not in the filter.
+
+            No `MY_PACKAGE_REPLACED` data element: that broadcast is delivered only to the app that
+            was replaced, so it needs no package filter to be about us.
+        -->
+        <receiver
+            android:name=".shade.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!--
             Not a service anybody starts — `android:enabled="false"` means it can never run. It is a
