@@ -10,8 +10,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** `adb logcat -s BootReceiver:*` is how R1, R3 and R6 read which branch below was taken. */
-private const val TAG = "BootReceiver"
+/**
+ * `adb logcat -s GloamBoot:*` is how the restore readings see which branch below was taken.
+ *
+ * **Not `BootReceiver`**, which is what this file was called first: the platform has a
+ * `com.android.server.BootReceiver` of its own, and at every restart it writes a stack trace and
+ * forty lines of `fs_stat` under exactly that tag. One line of ours arrived buried in it. The debug
+ * build's backlight sweep already logs as `GloamSweep`; this is the same idea.
+ */
+private const val TAG = "GloamBoot"
 
 /**
  * Puts the shade back after the phone restarts, and after Gloam itself is updated.
