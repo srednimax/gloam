@@ -1077,7 +1077,7 @@ and put it back after.
 | R7 | Auto-off with the screen off, and how late | *Arm 2-minute deadline*, `input keyevent SLEEP`, logcat timestamps | **61 ms late**, screen off throughout. 2026-09-01 |
 | R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
 | R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
-| R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen | **It arrives.** `Gloam #bug`, address and body all prefilled. 2026-09-01 |
+| R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen, send it | **It arrives, and so does the mail.** `Gloam #bug` prefilled; delivered and forwarded on. 2026-09-01 |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
 
@@ -1353,10 +1353,19 @@ Two smaller things it settled in passing: `app_name` reaches the body as **Gloam
 sideloaded build, which is the disambiguation §5 wanted and only a real hand-off could show; and the
 version code is the commit count, so a report identifies the exact build without anybody typing it.
 
-**One thing it did not settle.** `adb shell input tap` cannot open Gmail's compose overflow menu —
-three attempts, no menu — so the draft was left by pressing Back rather than by *Discard*. That is a
-fact about driving another app's UI over `adb`, not about Gloam, and it is recorded here only so the
-next person taking this reading expects to tidy up by hand.
+**And the mail was then sent by hand, which answered a question this reading was not built to
+ask.** It arrived at `gloam.dimmer@gmail.com` **and forwarded to the developer's own account**, so
+the route is proven end to end rather than to the composer and no further. That matters more than it
+looks: §5 chose a dedicated address over a `…+gloam@` alias on the argument that a real mailbox
+*forwards anywhere* and can be handed to another maintainer without handing over your own mail. The
+forwarding was the load-bearing half of that argument and was, until now, an assumption. It is a
+reading.
+
+**One thing this did not settle.** `adb shell input tap` cannot open Gmail's compose overflow menu —
+three attempts, no menu — so the composer was left by pressing Back rather than by *Discard*, and the
+send above happened by hand at the phone. That is a fact about driving another app's UI over `adb`,
+not about Gloam, and it is recorded so the next person taking this reading knows the tidy-up is
+theirs.
 
 ---
 
