@@ -21,12 +21,12 @@ strangers hold it.
 
 ---
 
-## 0. Two things blocking the door that are not code, and one is already red
+## 0. Two things blocking the door that are not code, and one of them is now closed
 
-Both are calendar rather than effort, both were predicted by `DOD.md`, and one has now happened.
+Both were calendar rather than effort, both were predicted by `DOD.md`, and the pipeline half is done.
 
-**The publish pipeline's first run failed, on 2026-08-31.** `Publish to Play` ran for the first time
-ever against tag `v0.3.0` and went red — not on the credentials, which is the failure `DOD.md` braced
+**The publish pipeline is green, on its fourth attempt, since 2026-08-31.** `Publish to Play` first
+ran against tag `v0.3.0` and went red — not on the credentials, which is the failure `DOD.md` braced
 for, but one step further in:
 
 ```
@@ -35,12 +35,18 @@ or it is disabled.  Enable it by visiting
 https://console.developers.google.com/apis/api/androidpublisher.googleapis.com/overview?project=118298064751
 ```
 
-That is the good failure. The service account authenticated, the bundle built, was signed and was
-verified; the Cloud project simply has `androidpublisher.googleapis.com` switched off. **Enable the
-API in project `118298064751`, wait for propagation, and re-run the workflow with
-`workflow_dispatch`** — which is exactly what that trigger was put there for, so no version has to be
-cut to retry. Until that run is green, `PLAY_SERVICE_ACCOUNT_JSON` is still unproven and the door has
-no route through it. Do this first; it is minutes of work with an unknown propagation delay attached.
+That was the good failure. The service account authenticated, the bundle built, was signed and was
+verified; the Cloud project simply had `androidpublisher.googleapis.com` switched off. Enabling it in
+project `118298064751` and re-running with `workflow_dispatch` closed it: **run `33412104006`,
+attempt 4, which put 0.3.0 on the internal track in 2m53s.**
+
+**The part worth carrying forward is the trigger rather than the API.** Four attempts cost four
+re-runs and not one extra version, because `workflow_dispatch` is there for exactly this. A
+propagation delay and a broken credential look identical from outside; what separates them is whether
+re-running fixes it, which is only cheap to find out when retrying is free.
+
+**So `PLAY_SERVICE_ACCOUNT_JSON` is proven and the pipeline is no longer what the door waits on.**
+What it waits on is the item below.
 
 **Recruiting the twelve testers has not started.** Phase 1 owned starting it (`phase-1.md` §10) and
 `DOD.md` still carries the box unticked. Fourteen *continuous* days is the longest lead item in the
@@ -1002,8 +1008,9 @@ the release-notes prose in `store-listing.md`, which is written by hand anyway.
 Not build tasks, in this phase because the door does not open without them, and every one of them is
 already a box in `DOD.md`. They run alongside A-G rather than after them.
 
-1. **Enable `androidpublisher.googleapis.com` and get a green `publish-play.yml`** (§0). Minutes of
-   work, an unknown propagation delay, and nothing else in this list can be proven without it.
+1. ~~**Enable `androidpublisher.googleapis.com` and get a green `publish-play.yml`**~~ (§0).
+   **Done 2026-08-31**, on the fourth attempt. It was the item nothing else in this list could be
+   proven without, and it now has a run number behind it rather than a plan.
 2. **Recruit more than twelve testers** (§0). The long pole. Calendar time, other people's replies.
 3. **Replace the placeholder mark** — `art/mark.py`, then `make-launcher-icon.py` and
    `make-feature-graphic.py`, with the provenance recorded in `art/README.md`. The listing's graphic

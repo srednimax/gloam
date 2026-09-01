@@ -145,22 +145,22 @@ one step with an external queue is behind you.
       `local.properties` opens the keystore, `keytool -list` reports the single alias `upload`, and
       the certificate SHA-256 is the one `RELEASING.md` records. That check exists because GitHub
       never reads a secret back, so "set" is all the dry run can ever tell you.
-      **`PLAY_SERVICE_ACCOUNT_JSON` is set but unproven, and that is the honest state.** Nothing on
-      this machine can tell you the JSON is valid or that Play granted the right scope; **the first
-      run of `publish-play.yml` is the proof**, and it is the first thing in this pipeline that has
-      never executed. Two failures to expect and not debug in a panic: a 401 is usually just
+      **`PLAY_SERVICE_ACCOUNT_JSON` is proven, and it took four attempts to prove it.** Nothing on
+      this machine could ever have told you the JSON was valid or that Play had granted the right
+      scope; **the first green run of `publish-play.yml` was the only possible proof**, and it
+      arrived on 2026-08-31 - run `33412104006`, tag `v0.3.0`, **attempt 4**, job *Bundle, verify,
+      upload to internal testing*, 2m53s, the AAB and its mapping on the internal track.
+      **What the three red attempts were, and it was one cause rather than three:** neither of the
+      failures this box braced for. The service account authenticated on the very first try and the
+      bundle built, signed and verified; the Cloud project simply had
+      `androidpublisher.googleapis.com` switched off - *"Google Play Android Developer API has not
+      been used in project 118298064751 before or it is disabled"*. Enabling it in project
+      `118298064751` was the whole fix, and the retries after it were its propagation delay.
+      **The lesson is the trigger, not the API.** `workflow_dispatch` is what let four attempts cost
+      four re-runs instead of four versions nobody wanted; reach for it before reaching for a tag.
+      The two failures originally braced for are still the ones to expect next time: a 401 is usually
       Play-to-API propagation and is worth re-running first, and a 403 is a permission missing rather
-      than a broken pipeline. The workflow carries `workflow_dispatch` precisely so a credential
-      failure can be retried **without cutting a version nobody wanted** — so a bad first run costs a
-      re-run, not a release.
-      ⚠️ **Answered on 2026-08-31, and the answer is red - but usefully so.** The first ever run
-      of `publish-play.yml` fired on tag `v0.3.0` and failed at the upload step with
-      *"Google Play Android Developer API has not been used in project 118298064751 before or it is
-      disabled"*. Neither of the two failures braced for above: the service account authenticated,
-      and the bundle built, signed and verified. The Cloud project simply has
-      `androidpublisher.googleapis.com` switched off. **Enable it in project `118298064751`, wait for
-      propagation, and re-run with `workflow_dispatch`** - no version has to be cut to retry, which
-      is exactly what that trigger is for. Until that run is green there is no route through the door.
+      than a broken pipeline.
       **`UPLOAD_KEYSTORE_BASE64` is not a backup.** A GitHub secret is write-only; you cannot get the
       keystore out of it again. It is a copy CI can use, not one you could recover from. The backup
       item above is untouched by this and remains the sharpest thing in this file.

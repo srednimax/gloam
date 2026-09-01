@@ -185,6 +185,18 @@ R8 mapping**, keep both as a build artifact for 90 days, delete the key.
 The mapping matters from 1.9.0: R8 is on, so without it every Play crash report is
 obfuscated frames.
 
+**It has run green end to end once**, on 2026-08-31: run `33412104006`, tag `v0.3.0`,
+attempt 4, 2m53s, AAB and mapping on the internal track. The three attempts before it were
+one cause - `androidpublisher.googleapis.com` disabled in Cloud project `118298064751`,
+then its propagation delay - and they were paid in `workflow_dispatch` re-runs rather than
+in versions. Retry before you debug.
+
+⚠️ **The upload step warns on every run**: `r0adkll/upload-google-play@v1.1.5` reports
+`'track' is deprecated and will be removed in a future release. Please migrate to
+'tracks'`. It uploads correctly today, and it is written down because of when the removal
+would otherwise be discovered - a pinned action bump breaking a release is the worst
+possible moment to read a deprecation notice for the first time.
+
 ### The upload key
 
 Created 2026-08-30 and the only one there will ever be, short of a reset with Google:
