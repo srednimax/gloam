@@ -397,9 +397,29 @@ class Rect:
         return [self.left, self.top, self.right, self.bottom]
 
 
+# **Two spellings, because the platform renamed these underneath the driver.** API 36 prints
+# `InsetsSource id=ba5c0001 type=navigationBars …`; API 33 prints `InsetsSource
+# type=ITYPE_NAVIGATION_BAR …` — no `id=`, and the framework's old internal names. A regex that
+# knows only the modern spelling matches nothing at the `minSdk` floor and [read_insets] hands back
+# an empty dict, at which point every scene in the cell is reported **clean because nothing was
+# checked**. That is the failure this whole matrix exists to not have, so `id=` is optional and the
+# old names are mapped below.
 INSET_RE = re.compile(
-    r"InsetsSource id=\w+ type=(\w+) frame=\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\] visible=(\w+)"
+    r"InsetsSource (?:id=\w+ )?type=(\w+) frame=\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\] visible=(\w+)"
 )
+
+# The pre-34 names for the three types this driver cares about. The cutout has one source per edge
+# down there and one type up here, which is why several map to the same name — [read_insets] already
+# keeps the largest of any repeated type.
+LEGACY_INSET_TYPES = {
+    "ITYPE_STATUS_BAR": "statusBars",
+    "ITYPE_NAVIGATION_BAR": "navigationBars",
+    "ITYPE_EXTRA_NAVIGATION_BAR": "navigationBars",
+    "ITYPE_TOP_DISPLAY_CUTOUT": "displayCutout",
+    "ITYPE_BOTTOM_DISPLAY_CUTOUT": "displayCutout",
+    "ITYPE_LEFT_DISPLAY_CUTOUT": "displayCutout",
+    "ITYPE_RIGHT_DISPLAY_CUTOUT": "displayCutout",
+}
 
 
 def read_insets() -> dict[str, Rect]:
@@ -413,6 +433,7 @@ def read_insets() -> dict[str, Rect]:
     found: dict[str, Rect] = {}
     for match in INSET_RE.finditer(dump):
         kind, left, top, right, bottom, visible = match.groups()
+        kind = LEGACY_INSET_TYPES.get(kind, kind)
         if kind not in INSET_TYPES or visible != "true":
             continue
         rect = Rect(int(left), int(top), int(right), int(bottom))
@@ -609,8 +630,8 @@ def relaunch() -> None:
 # it is exactly the question "is a top-level destination on screen?" — and [HOME_TAB] is the bar's
 # first item, the one the back stack is rooted at. Naming them here rather than inline is what lets
 # a locale run translate them with the rest of the table.
-TAB_BAR = "Items"
-HOME_TAB = "Items"
+TAB_BAR = "Dim"
+HOME_TAB = "Dim"
 
 # The top-level destinations, named so [tap] can tell a tab from anything else it is asked to
 # press. Two things follow from being on this list, and both are about a tab label being a *short*
@@ -932,11 +953,15 @@ def type_text(value: str) -> None:
 
 
 def wipe() -> None:
-    """Back to a first run: no preferences, no database, so the setup wizard shows.
+    """Back to a first run: no preferences and, more to the point here, no grants.
 
     Destructive, and deliberately only reachable from the `empty` suite — the `full` suite runs
-    against seeded sample data and a wipe in the middle of it would quietly capture empty screens
-    under populated names.
+    against an app that has been used, and a wipe in the middle of it would quietly capture the
+    permission explainer under the name of whatever screen was meant to be behind it.
+
+    **What `pm clear` costs is different in this app.** There is no database and no wizard: what it
+    drops that shows on screen is the overlay appop and POST_NOTIFICATIONS, which is exactly the
+    state the `empty` suite exists to photograph.
     """
     global _SEEDED
     _SEEDED = None
@@ -958,40 +983,59 @@ def wipe() -> None:
         settle(1.5)
 
 
+def deny_asks() -> None:
+    """Take both grants away and relaunch, so a first-run scene shows a first run.
+
+    **A wipe is not enough, and the emulator is where that shows.** `pm clear` resets the overlay
+    appop to its *default*, and the default is not the same answer everywhere: on the phone it means
+    denied, on an AOSP emulator image the app can draw overlays straight after a wipe. So
+    `dim-permission` photographed the ordinary dim screen on the API 33 leg — a scene whose name
+    promised the explainer, delivering evidence that looks like evidence.
+
+    Denying explicitly makes the scene mean the same thing on every device it runs on, which is the
+    only way a matrix cell is comparable to another one.
+
+    The relaunch at the end is not optional: `pm revoke` restarts the app's process, so without it
+    every step after this one would be driving a screen that is no longer there.
+    """
+    shell(f"appops set {PACKAGE} SYSTEM_ALERT_WINDOW deny")
+    if api_level() >= POST_NOTIFICATIONS_MIN_API:
+        shell(f"pm revoke {PACKAGE} android.permission.POST_NOTIFICATIONS")
+    shell(f"am start -S -n {ACTIVITY}")
+    wait_for_app()
+    settle(0.8)
+
+
 def reset_to_seeded() -> None:
-    """Wipe, skip the wizard, and seed the debug sample data — a known state, not just a clean one.
+    """Wipe, then put both grants back — which is the whole of Gloam's fixture.
 
-    The inverse of [wipe], and the step this file has been missing: the `empty` suite ends with the
-    install wiped, so a matrix run leaves the phone with no sample data and no media directories at
-    all. That is exactly what DOD §1 recorded after the 5 Aug run, where the wipe took the armed
-    medication course with it and nothing put it back.
+    **This app has nothing to seed, and that is a property of what it stores rather than an
+    omission.** Gloam keeps a dim level and a shade-running flag in DataStore and no records at all
+    (ADR-0007), so there is no sample data, no debug seed receiver and no wizard to walk. The only
+    thing that distinguishes a wiped install from an app in use is *permission state*, so that is
+    the fixture: overlay allowed, notifications granted.
 
-    It matters more than tidiness for repeat runs. `seedWatches` back-dates `startedAt`, so a fresh
-    seed restores the *unanswered* watch-expiry prompt — and answering that prompt is permanent, so
-    without this a second capture cell would find it already gone and quietly shoot the wrong screen.
+    Both matter to a screenshot rather than only to behaviour. Without the overlay grant every
+    `full` scene photographs the permission explainer on the dim screen; without the notification
+    grant the same screen carries the escape-hatch warning, which is a true state of the app and
+    the wrong one to shoot under a name that means "in use". The `empty` suite is the deliberate
+    exception and keeps both denials, because there they are the truth of a first run.
     """
     wipe()
-    for label in SEED_WALK:
-        # `tap` scrolls when it cannot find its target, which is what reaches *Add the sample data*:
-        # the sample-data block is the debug-only tail of a scrolling Settings column.
-        tap(label)
-    settle(1.0)
-
-    # Last, because `pm grant` can kill the process and everything above is a tap sequence that
-    # would die with it. Every caller relaunches before its next screenshot, so the app picks the
-    # permission up cleanly.
+    # The appop rather than a walk through the system settings screen. Granting the overlay is a
+    # hand-off to another app's UI (`shadePermissionIntent`), and a scene driver that taps its way
+    # through HyperOS's Settings is one ROM update away from photographing the wrong app.
     #
-    # `pm clear` revokes POST_NOTIFICATIONS, and a denied notification permission is *visible*: the
-    # Care screen grows a "notifications are off" banner whose button is labelled `action_open` —
-    # the same "Open" the medication-course row uses. `tap("Open")` then matches the banner first
-    # and launches HyperOS's notification settings, so `medication-course` screenshotted the system
-    # Settings app and `record-dose` failed with an empty node list, the foreground no longer being
-    # this package. Granting it back is also the honest state: a seeded install stands in for an app
-    # in use, not for one whose permission was just refused. The `empty` suite is the deliberate
-    # exception and keeps the denied state, because there it is the truth of a first run.
+    # Never read this back with `appops get`: it reports last-use rather than the granted mode on
+    # the phone in this loop. Nothing here needs to — the next screenshot shows whether the
+    # explainer is gone, which is a better check than the one that lies.
+    shell(f"appops set {PACKAGE} SYSTEM_ALERT_WINDOW allow")
+
+    # Last, because `pm grant` can kill the process. Every caller relaunches before its next
+    # screenshot, so the app picks both grants up cleanly.
     if api_level() >= POST_NOTIFICATIONS_MIN_API:
         shell(f"pm grant {PACKAGE} android.permission.POST_NOTIFICATIONS")
-        settle(0.5)
+    settle(0.5)
     global _SEEDED
     _SEEDED = ""
 
@@ -1028,18 +1072,18 @@ def seed_variant(variant: str) -> None:
     settle(1.0)
 
 
-# Whether every scene runs with a notification trying to post over it. Off unless `--live-notice`
-# asks for it, because it changes what every screenshot contains.
+# **The hazard this app cannot reproduce, recorded rather than pretended.** A heads-up notification
+# posting over the screen exactly where the driver is about to tap is what wrecks a driver run and
+# is impossible to diagnose from the artifacts afterwards: the tap lands on the banner, `AUTO_CANCEL`
+# clears it, and every scene after that relaunches somewhere unexpected and fails on a needle that
+# was never wrong. [set_dnd] is the standing fix and stays.
 #
-# **This reproduces the hazard that wrecks a driver run and is impossible to diagnose from the
-# artifacts.** A heads-up notification posts over the screen exactly where the driver is about to
-# tap. The tap lands on the banner, `AUTO_CANCEL` clears it, and every scene after that relaunches
-# somewhere unexpected and fails on a needle that was never wrong. `set_dnd` is the fix — and this
-# flag is what makes a clean run mean anything, because DND suppressing a banner nobody posted is
-# not evidence of DND.
-#
-# Wire it to whatever your debug build can make post on demand, the way `seed_variant` is wired.
-_LIVE_NOTICE = False
+# The template had a `--live-notice` flag that armed an overdue dose reminder to *prove* DND was
+# doing something. It is gone, and it was never real here in two ways: the function it called was
+# never ported, and `main` read an argument name that did not exist either — so every invocation of
+# this script died on an `AttributeError` before its first tap. Gloam has exactly one notification,
+# the shade's own ongoing one, and an ongoing notification does not heads-up. Wire a flag like that
+# back the day this app can post something on demand.
 
 
 def invalidate_seed() -> None:
@@ -1076,6 +1120,7 @@ STEP_RUNNERS = {
     "type": type_text,
     "wait": lambda arg: settle(float(arg)),
     "wipe": lambda arg: wipe(),
+    "deny": lambda arg: deny_asks(),
 }
 
 
@@ -1128,37 +1173,45 @@ class Scene:
 # ---------------------------------------------------------------------------------------------
 
 # The order matters only in that each scene starts from a relaunch, so they are independent.
-# **These scenes are the template's, not Gloam's.** `items` and the tabs describe the app this repo
-# was forked from - one with a database and a list. Gloam has `ui/dim/`, Settings and Support, no
-# database and nothing to seed, so nothing below resolves against it and a run walks to screens that
-# do not exist. **Checkpoint F rewrites this table**, which is the one edit that makes this script
-# and `screenshots.py` usable here; the driver around it transfers unchanged.
+#
+# **This table is Gloam's, and it is much smaller than the one it replaced.** The template's scenes
+# walked `items`, `item-detail`, `Add an item`, `Backup and restore` and a schema-mismatch screen
+# reached by patching a version byte into a database file. None of those exist here: the whole
+# surface is one screen over DataStore, a Settings tab, and three detail screens behind it. Until
+# this rewrite the nightly walked to screens that do not exist — a job that could not pass, which is
+# not coverage but a red light everyone learns to ignore.
+#
+# **The `form` family is gone, and it is a loss rather than a tidy-up.** The three `item-editor`
+# scenes were the most valuable cells in the old table: they are what catches a window being
+# *panned* instead of resized, where the top bar and its Save button slide off the top of the screen
+# and only a screenshot shows it. Gloam has no text field anywhere, so there is nothing to focus and
+# no IME to raise — `imePadding` has nothing to prove here. The day this app grows a field, that
+# family comes back, and this paragraph is the note saying what it was for.
 SCENES = [
-    # --- a wiped install: the empty states, which no seeded run can show ------------------------
-    Scene("items-empty", "tab", [("wipe", "")], suite="empty"),
+    # --- a wiped install: the two denials, which no granted run can show ------------------------
+    # The screen a first user actually meets. `wipe` clears the preferences and `deny` puts both
+    # asks back to refused — explicitly, because a wipe leaves the overlay appop at its *default*
+    # and that default is "allowed" on an AOSP emulator image. Without the second step this scene
+    # showed the ordinary dim screen on the API 33 leg, under a name that says otherwise.
+    Scene("dim-permission", "tab", [("wipe", ""), ("deny", "")], suite="empty"),
 
     # --- the tabs ------------------------------------------------------------------------------
-    Scene("items", "tab", []),
-    Scene("items-bottom", "tab", [("swipe_end", "")]),
+    Scene("dim", "tab", []),
+    Scene("dim-bottom", "tab", [("swipe_end", "")]),
     Scene("settings", "tab", [("tap", "Settings")]),
     Scene("settings-bottom", "tab", [("tap", "Settings"), ("swipe_end", "")]),
 
     # --- detail screens: no bottom bar, so the navigation-bar inset is the app's own problem ----
-    Scene("item-detail", "detail", [("tap", "First item")]),
-    Scene("backup", "detail", [("tap", "Settings"), ("tap", "Backup and restore")]),
+    Scene("support", "detail", [("tap", "Settings"), ("tap", "Help and feedback")]),
     Scene("licences", "detail", [("tap", "Settings"), ("tap", "Open-source licences")]),
     Scene("licences-bottom", "detail", [("tap", "Settings"), ("tap", "Open-source licences"), ("swipe_end", "")]),
-
-    # --- forms: the keyboard is an inset too, and this is where `imePadding` is proved ----------
-    Scene("item-editor", "form", [("tap", "Add an item")]),
-    Scene("item-editor-bottom", "form", [("tap", "Add an item"), ("swipe_end", "")]),
+    # The one long scrolling body in the app, and the only needle in this table that is not a string
+    # resource: the licence's own name comes from Licensee's output, is identical in every locale,
+    # and [resolve_needles] passes it through untranslated for exactly that reason.
     Scene(
-        "item-editor-keyboard",
-        "form",
-        # Focus the first field and wait for the keyboard to finish animating in. This is the scene
-        # that catches a window being *panned* instead of resized — the top bar, Save button and all,
-        # slides off the top of the screen and only a screenshot shows it.
-        [("tap", "Add an item"), ("tap_field", "0"), ("wait", "1.5")],
+        "licence-text",
+        "detail",
+        [("tap", "Settings"), ("tap", "Open-source licences"), ("tap", "Apache License 2.0")],
     ),
 ]
 
@@ -1182,11 +1235,6 @@ DEBUG_RES_DIR = Path(__file__).resolve().parent.parent / "app" / "src" / "debug"
 # A dialog that greets every launch and must be dismissed before a scene can be walked. The
 # template has none; leave it as None until yours does, and see `keeps_watch_prompt`.
 WATCH_CLOSE: "str | None" = None
-
-# The walk from a wiped install to the seeded fixture: into Settings and through the debug-only
-# sample-data block at the end of it. Extend this as your app grows a first-run wizard in front of it.
-SEED_WALK = ("Settings", "Seed sample data")
-
 
 def require_bcp47(tag: str) -> None:
     """Refuse the resource spelling of a locale, wherever it is handed in.
@@ -1249,7 +1297,9 @@ def load_strings(locale: str | None) -> dict[str, str]:
 
 def scene_needles() -> set[str]:
     """Every string this driver will look for on screen, across all suites."""
-    needles = {TAB_BAR, HOME_TAB, WATCH_CLOSE, *SEED_WALK}
+    # `WATCH_CLOSE` is None in an app with no greeting dialog, and a None in this set is a
+    # `TypeError` in the `sorted()` one caller down — a locale run that dies before its first tap.
+    needles = {needle for needle in (TAB_BAR, HOME_TAB, WATCH_CLOSE) if needle}
     for scene in SCENES:
         needles.update(arg for kind, arg in scene.steps if kind in ("tap", "tap?", "tap_text"))
     return needles
@@ -1387,14 +1437,6 @@ def reach_scene(scene: Scene) -> str | None:
     still produce a screenshot of *something*.
     """
     relaunch()
-    # After the relaunch, not before: `am start -S` force-stops, and a force-stop cancels every
-    # alarm the app has placed. Arming into a live process is also the honest order — the banner
-    # arrives *during* the scene, which is the case the driver has to survive.
-    #
-    # **`full` only**, for the same reason [return_to_home] is: `empty` opens on a wiped install, so
-    # arming there would fail every scene in that suite on a seed that is deliberately absent.
-    if _LIVE_NOTICE and scene.suite == "full":
-        arm_live_notice()
     try:
         if not scene.keeps_watch_prompt:
             # The prompt is hosted above the shell and so composes a beat after it; asking before
@@ -1488,15 +1530,6 @@ def main() -> int:
             "through the resource names before the first tap; default leaves the device alone"
         ),
     )
-    parser.add_argument(
-        "--live-notice",
-        action="store_true",
-        help=(
-            "re-arm an unanswered dose slot a minute in the past before every scene, so a reminder "
-            "banner tries to post over each one — the case DND exists for, without waiting for the "
-            "seed's own 20:00 dose. Debug build only; see [arm_live_dose]"
-        ),
-    )
     parser.add_argument("--restore", action="store_true", help="undo the pinned rotation and nav mode")
     parser.add_argument(
         "--retry-unreached",
@@ -1519,9 +1552,6 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
-
-    global _LIVE_NOTICE
-    _LIVE_NOTICE = args.live_dose
 
     if args.restore:
         set_locale(None)
