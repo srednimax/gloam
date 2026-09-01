@@ -1080,6 +1080,7 @@ and put it back after.
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen, send it | **It arrives, and so does the mail.** `Gloam #bug` prefilled; delivered and forwarded on. 2026-09-01 |
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
+| R12 | The language switcher without AppCompat's backport | tap *Polski*, `cmd locale get-app-locales`, force-stop, relaunch | **The framework holds it: `[pl]`, and a cold start comes up Polish.** 2026-09-01 |
 
 ### R3 — the cheap loop this phone refuses, and what took its place
 
@@ -1366,6 +1367,32 @@ three attempts, no menu — so the composer was left by pressing Back rather tha
 send above happened by hand at the phone. That is a fact about driving another app's UI over `adb`,
 not about Gloam, and it is recorded so the next person taking this reading knows the tidy-up is
 theirs.
+
+### R12 — the locale backport was carrying nothing, read from the store that was
+
+§7 removes AppCompat's `AppLocalesMetadataHolderService` entry on the argument that `minSdk` 33 means
+the app ships to no device that needs it. That argument is about *other* devices, so what it owes the
+phone is the other half: that nothing on a device the app does ship to was leaning on it.
+
+Taken on the debug build with the entry gone. Tapping **Polski** in Settings, then:
+
+```
+$ adb shell cmd locale get-app-locales io.github.srednimax.gloam.debug
+Locales for io.github.srednimax.gloam.debug for user 0 are [pl]
+```
+
+— the **framework's** per-app locale store, which is the one AppCompat delegates to on 13+, holding
+the choice the switcher made. A force-stop and a cold launch then came up in Polish (`Poziom
+przyciemnienia`, `Włącz przyciemnianie`), so the choice survives process death with nothing of
+AppCompat's persisting it.
+
+**What this does and does not prove.** It proves the switcher writes to the platform store and reads
+back from it on API 36 — the removal is invisible to a user on any device this app reaches. It says
+nothing about devices below 13, and cannot: there are none. That is the removal's whole argument
+rather than a gap in the reading.
+
+The phone was put back afterwards — `cmd locale set-app-locales … --locales ""`, confirmed empty, and
+the app relaunched in English.
 
 ---
 
