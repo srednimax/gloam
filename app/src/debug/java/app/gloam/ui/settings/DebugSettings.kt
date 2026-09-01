@@ -19,14 +19,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import app.gloam.MainApplication
 import app.gloam.shade.readBacklight
+import app.gloam.shade.startShade
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SectionHeader
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * The developer-only section of Settings. **This file exists only in the debug source set** — see
@@ -51,6 +55,17 @@ import kotlinx.coroutines.delay
  * floor regardless of any setting or override — which reads exactly like "the override did nothing"
  * and is how an earlier session mis-measured this phone by three orders of magnitude.
  *
+ * ## The two-minute deadline — Phase 2, checkpoint B
+ *
+ * R7, R8a and R8b all need a deadline shorter than thirty minutes, and **nothing in the shipped app
+ * can make one**: `AutoOff`'s smallest value is `Minutes30`, and a debug-only entry in that enum
+ * would live in `main/`, drive the chip row, and put its label through the translation gate — the
+ * exact failure this source-set seam exists to prevent. `adb` cannot do it either, because DataStore
+ * sits in credential-encrypted storage and the live process holds its state in memory.
+ *
+ * So the same justification the sweep above carries applies here: **only the app can do this to
+ * itself**, which is why the button is in the app and behind the seam rather than in a script.
+ *
  * None of this reaches a release binary, and none of its strings reach the translation gate — which
  * is why the text here is hardcoded English rather than a string resource.
  */
@@ -58,6 +73,8 @@ import kotlinx.coroutines.delay
 fun DebugSettings() {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
+    val scope = rememberCoroutineScope()
+    val preferences = remember(context) { (context.applicationContext as MainApplication).preferences }
 
     // Bumping this re-reads the settings; the read is cheap and there is nothing to observe, so a
     // button beats a ContentObserver for a developer row.
@@ -131,6 +148,26 @@ fun DebugSettings() {
                 Text("Hold top")
             }
             OutlinedButton(onClick = { readCount++ }) { Text("Re-read") }
+        }
+
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            // `beginShade` rather than a deadline setter, because there is no deadline setter: the
+            // intent and the deadline are written as a pair so that neither can be stale beside the
+            // other. Starting the service alongside it keeps the two agreeing when the button is
+            // tapped with no shade up — the arrival is the thing being measured, and a deadline with
+            // nothing running measures the resume reconcile instead.
+            Button(
+                onClick = {
+                    scope.launch {
+                        val deadline = System.currentTimeMillis() + ARM_MILLIS
+                        preferences.beginShade(deadline)
+                        context.startShade()
+                        Log.i(TAG, "armed auto-off for $deadline (${ARM_MILLIS}ms out)")
+                    }
+                },
+            ) {
+                Text("Arm 2-minute deadline")
+            }
         }
     }
 }
@@ -208,3 +245,10 @@ private val SWEEP =
     )
 
 private const val STEP_MILLIS = 2500L
+
+/**
+ * Two minutes: short enough to sit through with the phone in hand, and — deliberately — **longer
+ * than one** `DEADLINE_RECHECK_MS`, so R7 measures the re-check loop waking up rather than a single
+ * `delay` that happened to be shorter than the cap.
+ */
+private const val ARM_MILLIS = 120_000L
