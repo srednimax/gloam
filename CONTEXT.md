@@ -24,8 +24,10 @@ user-facing word genuinely differ, both are written here with the difference sta
 | Backlight top | The backlight Gloam takes over from. Captured the moment the override is applied and held until it is released. **Not a device constant** - it is where the user left their own brightness, so it decides how much of the slider the backlight half is worth. | Not "maximum brightness" - it is the user's starting point, not the panel's ceiling |
 | Warmth | How far the shade is tinted amber. It **adds** amber over an already-dark screen, shifting the average colour. A separate control from the dim level, but not an unbounded one: the two together decide whether anything underneath stays legible, so both are capped. | Not "night mode" - that name is already the app's own dark theme. Not "cutting blue" - an overlay composites source-over and can only add light, never subtract a channel from what is underneath |
 | Running | The shade is on screen and the service is in the foreground. A live state. | Not "enabled", which reads as a settings toggle |
-| Auto-off | The deadline that takes a shade the user started by hand back down on its own. One-shot, set when they start it. | Not "timer" on its own - the schedule sets deadlines too |
+| Deadline | The one instant at which the shade next comes down, whoever set it. There is only ever one. | Not "auto-off" - that is one of the things that sets it. Not "timer" |
+| Auto-off | The duration a hand-started shade lasts before it comes down on its own. One-shot - it never repeats - and choosing a duration re-sets the deadline from that moment, whether the shade is already up or not. | Not "timer" on its own - the schedule sets deadlines too |
 | Schedule | The nightly window: on at one time, off at another. One pair, not two independent switches. | Not "alarm" - nothing rings, and Gloam claims no exact-alarm permission |
+| Escape hatch | A surface that stops the shade and can be reached without seeing Gloam's own UI, which the shade may be covering. Not every control that stops the shade is one. | Not the app's own *Stop dimming* button, which sits under the shade at high dim levels |
 
 ## Words we deliberately avoid
 
@@ -49,7 +51,7 @@ user-facing word genuinely differ, both are written here with the difference sta
 
 ## Naming conventions in code
 
-Some names in this codebase are deliberately generic — `AppDatabase`, `AppTheme`, `AppPreferences`,
-`AppContainer`, `MainApplication`, `MainActivity`. They stay correct whatever the app is called, so
+Some names in this codebase are deliberately generic — `AppTheme`, `AppPreferences`, `AppContainer`,
+`MainApplication`, `MainActivity`. They stay correct whatever the app is called, so
 renaming the app is a package move rather than a repo-wide find-and-replace. Don't rename them to
 match the product; name the *domain* types after the domain instead.

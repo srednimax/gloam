@@ -105,7 +105,7 @@ let us do otherwise".
 ./gradlew assembleDebug          # build
 ./gradlew installDebug           # build + install on the connected phone
 ./gradlew test                   # JVM unit tests
-./gradlew connectedAndroidTest   # instrumented Room/DAO tests — needs a device
+./gradlew connectedAndroidTest   # instrumented tests — the shade window's flags. Needs a device
 ./gradlew lint
 ./gradlew spotlessApply          # format (the CI gate is spotlessCheck)
 ./gradlew assembleDebug -PreleaseShapedDebug   # debug id, R8 on — find minification bugs early
@@ -129,10 +129,12 @@ app/src/main/java/<namespace>/
   shade/       ShadeService.kt, the overlay window and the foreground service that owns it;
                OverlayPermission.kt, the SYSTEM_ALERT_WINDOW read and the settings hand-off
   theme/       generated palette, type scale, spacing, the night-mode window half
-  ui/          Compose screens + ViewModels, one package per area. ui/dim/ is the app's one screen
+  ui/          Compose screens + ViewModels, one package per area — dim/ is the app's home screen,
+               with settings/, support/ and the shared pieces in common/
   work/        notification channels, the notification-permission ask, Xiaomi battery/autostart
 
-app/src/debug/    the developer-only build: Settings' debug section, currently an empty seam
+app/src/debug/    the developer-only build: Settings' debug section — the backlight sweep and the
+                  two-minute deadline button, neither of which anything outside the app can do
 app/src/release/  only the no-op half of that seam, so main/ can call it unconditionally
 scripts/          the Python toolchain. project.py is the one place the app's identity lives
 art/             mark.py is the identity; both generators derive from it

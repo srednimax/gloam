@@ -1085,8 +1085,8 @@ and put it back after.
 | R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
 | R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen, send it | **It arrives, and so does the mail.** `Gloam #bug` prefilled; delivered and forwarded on. 2026-09-01 |
-| R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | — |
-| R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
+| R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | **Both emulator legs green, and red under mutation. The phone is still out of reach.** See below. 2026-09-02 |
+| R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The phase's four behaviours, on the floor** — launch, shade, deadline, and a real reboot that restored it. 2026-09-02 |
 | R12 | The language switcher without AppCompat's backport | tap *Polski*, `cmd locale get-app-locales`, force-stop, relaunch | **The framework holds it: `[pl]`, and a cold start comes up Polish.** 2026-09-01 |
 
 ### R3 — the cheap loop this phone refuses, and what took its place
@@ -1400,6 +1400,54 @@ rather than a gap in the reading.
 
 The phone was put back afterwards — `cmd locale set-app-locales … --locales ""`, confirmed empty, and
 the app relaunched in English.
+
+### R10 — the assertion is real on the emulators, and the phone is a ROM problem rather than a test problem
+
+**Green on both legs of the new matrix**, on PR #25's run: API 33 in 3m 05s and API 36 in 2m 43s,
+each of them installing the app and the instrumentation and running `ShadeWindowTest` against a live
+service. Before that they were green in 3 seconds with nothing to run, which is the failure `DOD.md`
+recorded rather than a pass.
+
+**A green test that has never been red proves nothing**, so it was mutated: deleting
+`FLAG_NOT_TOUCHABLE` from `SHADE_WINDOW_FLAGS` and re-running turned it red with the message it was
+written to print — *the shade would swallow every touch and the phone would look frozen* — and the
+flag went back. That is the reading; the green on its own is not.
+
+**The phone half is not taken, and the reason is the one `CLAUDE.md` already documents.** HyperOS
+refuses the *first* install of a brand-new package outright — `INSTALL_FAILED_USER_RESTRICTED`, with
+no dialog to miss — and `…gloam.debug.test` is a brand-new package. Neither `adb install -r -t` nor
+the split-APK workaround gets past it, because the workaround is for the *prompt*, and there is no
+prompt. It needs a hand on the device: enable USB installation in developer options, or push the APK
+to `/sdcard/Download/` and tap it in the file manager.
+
+**What that leaves unread is narrower than "the phone".** The window's flags on this phone were read
+directly, twice, in R1 and R6 — `fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS`
+off `dumpsys` after a real reboot and after an update. What is missing is the *automated* check on
+this device, not the fact it asserts.
+
+### R11 — the whole phase, on the API level it is allowed to be the worst on
+
+`minSdk` is 33, so the API-33 AVD is the floor: whatever works here works everywhere the app ships.
+The pass walked the phase's four behaviours end to end on `gloam-api33`, on the build that closes it.
+
+```
+$ adb -s emulator-5554 shell dumpsys window windows | grep -A1 'ty=APPLICATION_OVERLAY'
+ty=APPLICATION_OVERLAY fmt=TRANSLUCENT alpha=0.8 sbrt=0.026663352
+fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS HARDWARE_ACCELERATED
+```
+
+- **It launches and it dims.** A tap on *Start dimming* puts the shade up with all four flags and a
+  window brightness override on it — the emulator honours the override, as `DOD.md` recorded, and its
+  float still means nothing photometric because the image has no nits calibration at all.
+- **The deadline is on screen, not just in storage.** `Turns off at 8:26 AM`, two hours after the tap,
+  from `AutoOff.Default` without anyone choosing it.
+- **A real reboot restores it**, which is the one thing that could not be read from the phone without
+  another unlock: `GloamBoot: android.intent.action.BOOT_COMPLETED: shade restored,
+  deadline=1788330406044`, the same absolute instant as before the reboot, and the window back with
+  every flag and the same `sbrt`. The emulator has no vendor autostart to veto it, so this is what the
+  path does when the ROM stays out of the way — R1 and R2 are what it does when the ROM does not.
+
+**It is a floor check, not a light measurement.** The phone stays the only place a nit is read.
 
 ---
 
