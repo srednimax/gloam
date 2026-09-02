@@ -72,6 +72,12 @@
          do. It adds amber over an already-dark screen. -->
     <string name="dim_warmth_label">Warmth</string>
 
+    <!-- The compact controls (docs/phase-3.md §2, §10). The floating window shows the same sliders
+         and nothing else, so this is its one way to the rest of the app — without it the dialog is a
+         dead end with no Settings behind it. "Open Gloam" and not "Open the app": the user knows the
+         name, and it is the word on the icon they would otherwise have to go and find. -->
+    <string name="controls_open_app">Open Gloam</string>
+
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme_system">System</string>
