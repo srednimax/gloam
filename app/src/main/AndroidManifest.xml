@@ -112,6 +112,37 @@
         </activity>
 
         <!--
+            The compact controls (`docs/phase-3.md` §2). A second activity rather than a flag on
+            MainActivity, because the thing that makes a window float is the **manifest** theme,
+            which the platform reads before any of this app's code runs — one activity has one of
+            those, and the starting window is drawn from it either way.
+
+            `exported="false"`: the two doors that reach it, the shade's notification and 2b's tile,
+            are both this app's own. A PendingIntent carries the app's identity, so neither needs an
+            export, and nothing outside Gloam has business opening a dialog over the foreground app.
+
+            The four attributes below are all "this is a dialog, not a screen", and none of them is
+            load-bearing for safety — but `noHistory` is the one worth naming: without it somebody
+            who summons the controls from the notification and then leaves finds them again the next
+            time they switch to Gloam's task, on top of whatever they were doing. `taskAffinity=""`
+            keeps it out of the app's own task, `excludeFromRecents` keeps it out of the recents
+            list, and `singleTop` makes a second summon reuse the window rather than stack a second
+            one behind the first.
+
+            Because the task affinity is empty, the way *out* of here has to say so:
+            `openFullApp()` adds FLAG_ACTIVITY_NEW_TASK, or the full app would open inside this
+            dialog's task and inherit its exclusion from recents.
+        -->
+        <activity
+            android:name=".ControlsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.App.Controls"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:noHistory="true" />
+
+        <!--
             The shade. `exported="false"` because nothing outside this app has any business starting
             it — the notification's Stop action is a PendingIntent, which carries this app's own
             identity and needs no export.
