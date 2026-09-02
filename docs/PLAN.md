@@ -105,12 +105,16 @@ the app exists to prevent:
   wrong and the shade never comes on, or never goes off.
 - **Earlier-deadline-wins** (Phase 4). Resolving two deadlines against a clock, which the phase calls
   load-bearing because it is the exact failure being designed out.
+- **The panel's width** (Phase 3b). *Added 2026-09-02, when `phase-3.md` was detailed.* A touchable
+  window blocks every touch under it, so **its size is its safety rule** — the bound that stands in
+  for `FLAG_NOT_TOUCHABLE` on the one window that does not carry it. Unlike a flag, a size is
+  computed, which is what puts it in this list. `phase-3.md` §6 is the reasoning and §13 the sweep.
 
 So the rule has two clauses. **Device behaviour is proven by measurement; the pure functions that
 compute or bound safety values are proven by test, and the phase that introduces one introduces its
-test.** That is three tests across the whole remaining roadmap, not a testing culture — and it is
-three tests standing in front of the two constants `CLAUDE.md` calls load-bearing. The top of the
-ramp is not visible on a device until it strands somebody.
+test.** That is four tests across the whole remaining roadmap, not a testing culture — and it is four
+tests standing in front of the properties `CLAUDE.md` calls load-bearing. The top of the ramp is not
+visible on a device until it strands somebody.
 
 ### 4. Ask for nothing before the feature that needs it
 
