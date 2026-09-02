@@ -3,22 +3,16 @@ package app.gloam.ui.dim
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -29,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -39,7 +32,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
-import app.gloam.shade.AutoOff
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
 import app.gloam.shade.isDue
@@ -49,7 +41,6 @@ import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
-import app.gloam.ui.common.SectionHeader
 import app.gloam.work.AppChannel
 import app.gloam.work.NotificationPermissionOutcome
 import app.gloam.work.notificationRationaleAvailable
@@ -57,7 +48,6 @@ import app.gloam.work.notificationsAllowed
 import app.gloam.work.openAppNotificationSettings
 import app.gloam.work.openChannelNotificationSettings
 import app.gloam.work.rememberNotificationPermissionAsk
-import java.util.Date
 
 /**
  * **Which button the escape-hatch warning carries.** Whether it is shown at all is
@@ -299,78 +289,20 @@ fun DimScreen(
                 )
             }
 
-            // **Kept free of anything but state and callbacks**, deliberately and without being
-            // extracted yet. Phase 3a renders these same controls in a second host that is not an
-            // Activity, so nothing here may reach for a `Context`, start the service, or assume it
-            // sits inside a `Scaffold`'s insets — but pulling out a composable with one caller is
-            // guesswork about the second caller's shape, so the extraction waits for it.
-            SectionHeader(stringResource(R.string.dim_level_label))
-            Text(
-                text = stringResource(R.string.dim_level_value, state.dimLevel),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(horizontal = Spacing.base),
-            )
-            Slider(
-                value = state.dimLevel.toFloat(),
-                onValueChange = { viewModel.setDimLevel(it.toInt()) },
-                valueRange = 0f..100f,
-                modifier = Modifier.padding(horizontal = Spacing.base),
-            )
-
-            // Warmth is the second control, not a second ramp: the amber is a child of the same
-            // window and the applied tint is scaled by the headroom the dim level leaves, so this
-            // slider says what was asked for rather than what the composite ended up with. It starts
-            // at 0 — a colour cast nobody asked for is indistinguishable from a broken screen.
-            SectionHeader(stringResource(R.string.dim_warmth_label))
-            Slider(
-                value = state.warmth.toFloat(),
-                onValueChange = { viewModel.setWarmth(it.toInt()) },
-                valueRange = 0f..100f,
-                modifier = Modifier.padding(horizontal = Spacing.base),
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.base, vertical = Spacing.tight),
-            ) {
-                Text(
-                    text = stringResource(R.string.dim_backlight_label),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                // Visible and *disabled* rather than hidden when the device cannot honour it: a
-                // control that is simply absent leaves the user unable to tell Gloam from a Gloam
-                // that behaves differently on their phone than on someone else's.
-                Switch(
-                    checked = state.lowerBacklight,
-                    onCheckedChange = viewModel::setLowerBacklight,
-                    enabled = backlightAvailable,
-                )
-            }
-            // Supporting text, always present rather than a one-off dialog. The symptom it explains
-            // — a brightness slider that moves and does nothing — recurs every time the shade goes
-            // up, and a dismissed dialog is not there when it does. On a device that cannot do it at
-            // all the promise is replaced rather than left standing, which would be an explanation
-            // for a symptom that is not happening.
-            Text(
-                text =
-                    stringResource(
-                        if (backlightAvailable) {
-                            R.string.dim_backlight_hint
-                        } else {
-                            R.string.dim_backlight_unavailable
-                        },
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.base),
-            )
-
-            Button(
-                onClick = {
+            // **The second caller arrived, so the extraction happened** — `DimControls.kt` holds
+            // these, and what stays on this screen is everything a dialog is the wrong place for:
+            // the explainer above, the warning banner, the resume re-read, and the permission
+            // branch this button's callback goes through.
+            DimControls(
+                dimLevel = state.dimLevel,
+                warmth = state.warmth,
+                lowerBacklight = state.lowerBacklight,
+                backlightAvailable = backlightAvailable,
+                running = state.running,
+                onDimLevel = viewModel::setDimLevel,
+                onWarmth = viewModel::setWarmth,
+                onLowerBacklight = viewModel::setLowerBacklight,
+                onToggleRunning = {
                     when {
                         state.running -> {
                             viewModel.endShade()
@@ -384,94 +316,20 @@ fun DimScreen(
                         else -> askForNotifications()
                     }
                 },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.base, vertical = Spacing.section),
-            ) {
-                Text(stringResource(if (state.running) R.string.dim_stop else R.string.dim_start))
-            }
-
-            // **Under the button, and deliberately outside the block above.** Phase 3a renders the
-            // sliders in a second host; whether the deadline travels with them is that phase's call
-            // on twelve testers' evidence, so putting the chips beside the sliders now would be a
-            // guess dressed up as a decision.
-            SectionHeader(stringResource(R.string.dim_auto_off_label))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
-                modifier = Modifier.padding(horizontal = Spacing.base),
-            ) {
-                // `FlowRow` rather than `Row`: five chips reading "After 30 minutes" do not fit one
-                // line on a narrow screen in any language, and a clipped safety control is worse
-                // than a wrapped one.
-                for (choice in AutoOff.entries) {
-                    FilterChip(
-                        selected = state.autoOff == choice,
-                        onClick = { viewModel.setAutoOff(choice) },
-                        label = { Text(stringResource(choice.labelRes())) },
-                    )
-                }
-            }
-            Text(
-                text = stringResource(R.string.dim_auto_off_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
             )
 
-            // Only with a shade up and a deadline on it — `Never` has nothing to say here, and a
-            // stopped shade's deadline was cleared with the intent that owned it.
-            val offAt = state.offAtMillis
-            if (state.running && offAt != null) {
-                Text(
-                    text = stringResource(R.string.dim_auto_off_at, rememberTimeText(offAt)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = Spacing.base,
-                            vertical = Spacing.tight,
-                        ),
-                )
-            }
+            // A second composable rather than a block inside the first, so that whether the deadline
+            // travels to a floating host stays a one-line decision *per host* — the question Phase 2
+            // handed forward and the twelve answer.
+            AutoOffControls(
+                autoOff = state.autoOff,
+                offAtMillis = state.offAtMillis,
+                running = state.running,
+                onAutoOff = viewModel::setAutoOff,
+            )
         }
     }
 }
-
-/**
- * A clock time rather than a countdown, **and that is a saving rather than a compromise.**
- *
- * A countdown has to tick, which is a recomposition every minute for the length of a session, and it
- * has to be formatted into words that plural correctly in every locale. A time does neither: it is
- * one string with one argument, and it does not change, so nothing ticks.
- *
- * Its one weakness, recorded so nobody re-discovers it as a bug: four hours from 23:00 reads as
- * "03:00" with no date. At a four-hour ceiling that is unambiguous enough in context.
- *
- * `DateFormat.getTimeFormat` is the platform's, so 12- or 24-hour follows the phone's own setting
- * and the locale for free — never a hand-built format string (`translator-brief.md` §4).
- */
-@Composable
-private fun rememberTimeText(instant: Long): String {
-    val context = LocalContext.current
-    return remember(context, instant) {
-        android.text.format.DateFormat
-            .getTimeFormat(context)
-            .format(Date(instant))
-    }
-}
-
-/**
- * Kotlin note: an extension on the enum rather than a field in it. The resource ids belong to the UI
- * layer and `AutoOff` has no Android in it at all — which is what lets `AutoOffTest` run on the JVM.
- */
-private fun AutoOff.labelRes(): Int =
-    when (this) {
-        AutoOff.Never -> R.string.dim_auto_off_never
-        AutoOff.Minutes30 -> R.string.dim_auto_off_30m
-        AutoOff.Hour1 -> R.string.dim_auto_off_1h
-        AutoOff.Hours2 -> R.string.dim_auto_off_2h
-        AutoOff.Hours4 -> R.string.dim_auto_off_4h
-    }
 
 /**
  * The shade is up and the notification that stops it cannot appear.
