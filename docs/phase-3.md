@@ -3,9 +3,9 @@
 **Two phases, one file.** `PLAN.md` splits Phase 3 along cost — 3a is a theme and an activity, 3b is
 a hand-built Compose host in a raw window with a documented kill condition — and that split is right
 and stays. What is wrong is planning them apart: **they are the same composable in two hosts**, 3b's
-go/no-go is a reading that is cheapest to take while the phone is already set up for 3a, and the one
-fact that decides how much either host is worth is a fact about both. Splitting the file would mean
-writing that fact twice and then keeping two copies of it honest.
+go/no-go decides what three of 3a's own decisions are worth, and the one fact that decides how much
+either host is worth is a fact about both. Splitting the file would mean writing that fact twice and
+then keeping two copies of it honest.
 
 Sequence lives in [`PLAN.md`](PLAN.md); the live worklist lives in [`DOD.md`](DOD.md); the decision
 this phase closes out is
@@ -36,15 +36,15 @@ platform fact rather than a design choice, so it is worth being exact about wher
 The shade is a `TYPE_APPLICATION_OVERLAY` window. Every Activity in Android is below that type, ours
 included. Phase 1 measured the consequence from three directions and got the same answer each time:
 
-- **R8.** At maximum dim, `MainActivity` — with its *Stop dimming* button on it — is under the shade
-  at `MIN_BACKLIGHT` × `(1 − MAX_SHADE_ALPHA)` = **0.33 nits**, while SystemUI's notification row
-  above the shade stays at the full 6.64.
-- **R9.** An ordinary app window that sets its own `screenBrightness` is *not consulted* while ours
-  is up. MIUI's video player asked for `1.0` and then for `0.0078`; neither reached the panel.
-  **It is the topmost window's value that applies, not the lowest.**
-- **R5.** The system's own surfaces — notification shade, quick settings, volume dialog — read our
-  `0.01` back unchanged. They are legible because the *shade's alpha* is not over them, not because
-  they out-bid the override.
+- **Phase 1's R8.** At maximum dim, `MainActivity` — with its *Stop dimming* button on it — is under
+  the shade at `MIN_BACKLIGHT` × `(1 − MAX_SHADE_ALPHA)` = **0.33 nits**, while SystemUI's
+  notification row above the shade stays at the full 6.64.
+- **Phase 1's R9.** An ordinary app window that sets its own `screenBrightness` is *not consulted*
+  while ours is up. MIUI's video player asked for `1.0` and then for `0.0078`; neither reached the
+  panel. **It is the topmost window's value that applies, not the lowest.**
+- **Phase 1's R5.** The system's own surfaces — notification shade, quick settings, volume dialog —
+  read our `0.01` back unchanged. They are legible because the *shade's alpha* is not over them, not
+  because they out-bid the override.
 
 Put together: **a floating Activity cannot make itself legible under the shade.** It cannot raise the
 backlight, because it is below the topmost window that asked. It cannot escape the alpha, because the
@@ -76,8 +76,9 @@ compact controls as a floating host, with the three candidate shapes costed and 
 a reading; the routes into that host — the ongoing notification's content intent, the launcher behind
 a preference, and the hole 2b's tile fills; the `SCREEN_BRIGHTNESS` `ContentObserver` question, put
 to the twelve in its strongest form rather than its easiest one (rule 5); 3b's go/no-go taken as a
-measurement before any panel code exists; and, if it goes, the panel — a touchable overlay window
-with the opposite safety rule from the shade, and the dismissal that keeps it from being a trap.
+measurement **before any of this phase's code exists**; and, if it goes, the panel — a touchable
+overlay window with the opposite safety rule from the shade, and the dismissal that keeps it from
+being a trap.
 
 **Not in, and the phase that owns each:** ultra dark and the Quick Settings tile (2b — see §3), the
 schedule and the battery-optimisation ask (4), the mark, the tip and the rate-on-Play link (5). Also
@@ -106,22 +107,31 @@ remembered — and is a point at which the phase could stop without stranding an
 
 | | Checkpoint | Phase | Merges | Depends on |
 | --- | --- | --- | --- | --- |
-| **A** | `DimControls()` and `AutoOffControls()`, extracted | 3a | `refactor:` | nothing |
-| **B** | The compact host, and the reading that picks its shape | 3a | `feat:`, then the readings | A |
-| **C** | The routes in: notification, launcher preference, the tile's hole | 3a | `feat:` | B |
-| **D** | The brightness-slider question | 3a | `feat:` (the notification line) — the observer only if the twelve say so | B, and the twelve |
-| **E** | **The go/no-go** | 3b | `chore:` debug button, then no commit at all | B, phone attached |
-| **F** | The panel: window, host, controls, dismissal | 3b | `chore:` + `test:`, then `feat:` | **E's verdict** |
+| **A** | **The go/no-go** | 3b | `chore:` debug button, then no commit at all | phone attached |
+| **B** | `DimControls()` and `AutoOffControls()`, extracted | 3a | `refactor:` | nothing |
+| **C** | The compact host, and the reading that picks its shape | 3a | `feat:`, then the readings | B |
+| **D** | The routes in: notification, launcher preference, the tile's hole | 3a | `feat:` | C, and **A's verdict** |
+| **E** | The brightness-slider question | 3a | `feat:` (the notification line) — the observer only if the twelve say so | C, and the twelve |
+| **F** | The panel: window, host, controls, dismissal | 3b | `chore:` + `test:`, then `feat:` | **A's verdict** |
 | **G** | The documents | both | `docs:` | everything above |
 
-**E is a gate, not a task, and it is this phase's checkpoint B.** Phase 1 carried one that could veto
-the backlight half; this one can veto 3b outright. It is a reading taken against a *bare* second
-window — no Compose, no controls, no lifecycle — because the question is about window ordering and
-brightness ownership and nothing else, and every line of panel code written before the answer is a
-line written on a bet. If E says no, F is skipped, the phase closes with 3a alone and §5 records the
-cut here rather than leaving it to be argued about later.
+**A is a gate, not a task, and it runs before a line of this phase is written.** Phase 1 carried one
+that could veto the backlight half; this one can veto 3b outright. It is a reading taken against a
+*bare* second window — no Compose, no controls, no lifecycle — because the question is about window
+ordering and brightness ownership and nothing else, and every line of panel code written before the
+answer is a line written on a bet.
 
-**D is the other unusual one: it can close with no code at all.** `PLAN.md` rule 5 names the
+**It used to sit fifth, and the reason given for that does not survive being checked.** The argument
+was that the reading is cheapest to take while the phone is already set up for 3a. That is not a
+dependency: the apparatus is a 200 dp rectangle added to `WindowManager` from `DebugSettings.kt` over
+a live shade, and both halves of that ship today. What the delay bought instead was three decisions
+made blind — **D's notification target**, which is a different `PendingIntent` entirely depending on
+the verdict (§3); **E's weight**, which is the difference between a question worth spending the
+twelve's attention on and one to drop (§4); and **B's recommendation on the deadline**, which is a
+question about which surface actually gets used. If A says no, F is skipped, the phase closes with 3a
+alone and §5 records the cut here rather than leaving it to be argued about later.
+
+**E is the other unusual one: it can close with no code at all.** `PLAN.md` rule 5 names the
 `ContentObserver` as one of two questions the twelve answer, and the honest outcomes are *ship the
 observer*, *ship nothing*, and *ship the cheap half* — §4 recommends the third and builds the reading
 that makes the first cheap if they ask for it.
@@ -198,7 +208,7 @@ construction the surface reached while the shade is up, in the dark, without ope
 is exactly where *"turns off at 23:40"* is worth reading and *"give me two more hours"* is worth
 tapping — and the argument against it was that it costs surface in a small dialog, which is answered
 by the dialog having nothing else in it. The counter-argument that survives is about the five chips
-wrapping in a narrow floating window; that is a layout finding, and R4 is where it gets read rather
+wrapping in a narrow floating window; that is a layout finding, and R5 is where it gets read rather
 than guessed.
 
 ---
@@ -255,6 +265,27 @@ off to, and both can change while it is in the background. The compact host has 
 warning banner and no hand-off, so the honest thing for it to do when either is false is to be the
 full app instead of a dialog with a broken start button on it.
 
+**And the guard is what makes the forward's condition load-bearing rather than a detail.** Written
+naively the two activities forward into each other: `MainActivity` reads the preference and forwards
+to `ControlsActivity`, `ControlsActivity`'s *Open Gloam* button opens `MainActivity`, and the user
+lands back where they started. The guard above is the worse half of it, because no user is in the
+loop at all — revoke the overlay permission on the settings screen this app sent them to, tap the
+icon with the preference on, and `MainActivity` forwards, the guard fires, `openFullApp()` forwards
+again, and the two activities ping-pong unbounded.
+
+**So the forward tests how `MainActivity` was entered, not merely what the preference says:**
+
+```kotlin
+// MainActivity.onCreate, before setContent.
+if (launcherCompact && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) { openControls(); finish(); return }
+```
+
+A positive test for the one case the preference is actually about, rather than a suppression flag on
+the routes out. A launcher tap always carries the category and `ControlsActivity`'s `startActivity`
+never does, so neither the *Open Gloam* button nor the guard has to remember anything — and any later
+entry into `MainActivity`, a deep link or a settings shortcut, is correct by default instead of
+correct for as long as somebody remembers to opt out.
+
 **`escapeHatchLive()` gets its second caller here**, which `phase-2.md` §2 predicted would come from
 2b. It arrives from 3a instead and the predicate is unchanged, which is the point of having written
 it as a function in `shade/` rather than inline in the screen that first needed it.
@@ -308,34 +339,61 @@ why.
 
 Three doors, and only one of them is new machinery.
 
-**The notification's content intent moves from `MainActivity` to `ControlsActivity`.** It is one
-`PendingIntent` target in `ShadeService.buildNotification()`. Phase 1's R8 found that on HyperOS a
-plain tap on the notification row follows the content intent — the *Stop* action is behind a
-long-press and is not in the collapsed row at all — so today a plain tap lands on the full app under
-the shade. After this it lands on the compact host under the shade. **That is a reach improvement and
-not a legibility one** (§0), and R3 reads it end to end at maximum dim so the difference is on the
-record rather than assumed.
+**The notification's content intent stops pointing at `MainActivity`, and where it goes instead is
+A's verdict.** It is one `PendingIntent` target in `ShadeService.buildNotification()`. Phase 1's R8
+found that on HyperOS a plain tap on the notification row follows the content intent — the *Stop*
+action is behind a long-press and is not in the collapsed row at all — so today a plain tap lands on
+the full app under the shade.
+
+- **If A goes**, the tap summons the **panel**, and it launches no Activity at all:
+  `PendingIntent.getService` at `ShadeService` with a `SHOW_PANEL` action. **This is the one door in
+  this phase that is a legibility improvement rather than a reach one.** The panel is above the shade
+  at 6.64 nits (§0), there is no task switch, and the notification exists only while the service runs
+  — so the panel's one precondition, that there is a shade for it to belong to (§6, rule 2), holds by
+  construction on this route and needs no check.
+- **If A is a no-go**, it points at `ControlsActivity` — under the shade at 0.33 nits, **a reach
+  improvement and not a legibility one** (§0), which is the honest way to describe it.
+
+R4 reads the tap end to end at maximum dim either way, so which of those two it turned out to be is
+on the record rather than assumed.
+
+**The panel does not take the compact host's other doors.** The icon and 2b's tile both reach
+`ControlsActivity` whether or not the panel exists, because both can be tapped with no shade running
+— and a window that cannot exist without one can never be the surface that starts it. That is the
+division the two hosts settle into: **below the shade is where the shade gets started, above it is
+where a running shade gets adjusted.**
 
 **Kotlin/Android note on changing it.** `PendingIntent`s are cached by requesting identity, and two
 `Intent`s that are `filterEquals` — same action, data, type, component, categories — are the same
-pending intent regardless of their extras. Changing the *component* changes `filterEquals`, so this
-particular edit gets a fresh one for free. If a later change is extras-only, it needs
+pending intent regardless of their extras. Both candidate targets change that identity, and
+`getService` changes more than the component: it is a different *kind* of pending intent from
+`getActivity`, so there is nothing stale to inherit. If a later change is extras-only, it needs
 `FLAG_UPDATE_CURRENT` beside `FLAG_IMMUTABLE` or the old extras survive an app update, silently.
 
-**The launcher route** is shape iii from §2: `MainActivity.onCreate` reads the preference and
-forwards. It needs a value *before* the first frame, which is a `suspend` read, which the app already
-does once — `MainApplication` reads `themeModeNow()` before any Activity exists and hands it over as
-`startupThemeMode`. The compact preference joins it there. **One blocking read at startup, not two:**
-`store.data.first()` reads the file once and both values come off the same snapshot, the same
-argument `ShadeIntent` makes in `AppPreferences`.
+**The launcher route** is shape iii from §2, with the entry test the guard above adds:
+`MainActivity.onCreate` reads the preference and forwards only on a launcher tap. It needs the value
+*before* the first frame, which is a `suspend` read, which the app already does once —
+`MainApplication` reads `themeModeNow()` before any Activity exists and hands it over as
+`startupThemeMode`. **`launcherCompactNow()` joins it there**, a second one-shot accessor of exactly
+the same shape inside the same `runBlocking`.
+
+**And it is deliberately *not* modelled on `ShadeIntent`.** That type exists because `beginShade()`
+and `endShade()` write `running` and `offAtMillis` in one transaction, so a reader that could take
+them apart is a reader that can see a half-written intent. Nothing writes the theme mode and the
+launcher preference together and neither bears on the other, so there is no torn read to prevent —
+and no saving to chase either, because DataStore serves `store.data` from its in-memory cache after
+the first collection, so the second `first()` is not a second disk read. Borrowing the combined-read
+argument here would leave a later reader holding a rule that was never true.
 
 **The tile is 2b's and the hole is one line.** `PLAN.md` gives the compact controls two doors and
 this phase can only build one of them. A `TileService`'s click either sends the user to an activity
 or toggles the shade; 2b's tile is safety equipment and its primary job is stopping the shade, so the
 integration this phase asks for is small and stated here so 2b does not have to rediscover it:
 **2b's tile, whatever else it does, launches `ControlsActivity` for its long-press / "open app"
-route** rather than `MainActivity`. If 2b ships first, that is the line. If 3a ships first, 2b's
-default already points at `MainActivity` and moving it is a one-word edit.
+route** rather than `MainActivity` — and that is the same line whichever way A went, because a tile
+can be tapped with no shade running and the panel cannot answer that. If 2b ships first, that is the
+line. If 3a ships first, 2b's default already points at `MainActivity` and moving it is a one-word
+edit.
 
 ---
 
@@ -370,7 +428,8 @@ about and §5 records.
 
 **What is wrong with the strong form**, stated as plainly as its appeal:
 
-- It still needs manual mode, for R4's reason. Nothing fixes that; the setting is the same integer.
+- It still needs manual mode, for the reason Phase 1's R4 found. Nothing fixes that; the setting is
+  the same integer.
 - It makes a *system* control do something the system did not promise, on a screen where the user
   cannot see which app is responsible. A user who then stops the shade and finds their brightness
   somewhere they did not put it has been surprised by an app that was not on screen.
@@ -381,12 +440,36 @@ about and §5 records.
 **Recommendation: ship the cheap half in this phase, build the reading, ship the observer only if the
 twelve ask for it.**
 
-The cheap half is that the explanation moves to a surface that can be read. The ongoing
-notification's text is already updated by the service on every value change it collects, it is drawn
-above the shade, and it is where the user already looks. While the override is live it says so, in
-one line, in both locales. That fixes the *"my phone is broken"* reading of the symptom without
-reinterpreting anything, costs one string and one `notify()`, and is true on every device and in both
-brightness modes.
+The cheap half is that the explanation moves to a surface that can be read: the ongoing notification
+is drawn above the shade and it is where the user already looks. While the override is live it says
+so, in one line, in both locales. That fixes the *"my phone is broken"* reading of the symptom
+without reinterpreting anything, and it is true on every device and in both brightness modes.
+
+**It is not, however, free, and an earlier draft of this section said it was.** The claim was that
+the service already updates the notification's text on every value change it collects. It does not:
+`buildNotification()` is called exactly once, from `onStartCommand`, into `startForeground`; there is
+no `notify()` anywhere in `app/src/main/`; and the notification carries a `setContentTitle` with **no
+content text at all**. `applyShadeValues` writes the layers' `alpha` and the window's
+`screenBrightness` and never goes near the notification. So checkpoint E is three small things rather
+than one:
+
+1. `setContentText` on the builder, which is a line that does not exist today.
+2. A `NotificationManager.notify(NOTIFICATION_ID, buildNotification())` path, because
+   `startForeground` posts once and never again.
+3. **A trigger — and this is the part that is a decision rather than plumbing.** The line is only
+   *true* while the override is actually live: `lowerBacklight && dimLevel > 0 && backlightTop !=
+   null`, which is the condition `applyShadeValues` already branches on. `lowerBacklight` defaults to
+   `true`, so it usually holds — but not always, because the toggle can be off, and dim 0 with the
+   service running is a legitimate state rather than an off one (`CONTEXT.md`).
+
+**So the notification is re-posted on that boolean's transitions and on nothing else** — derive it in
+the collector that is already there, `distinctUntilChanged()`, and `notify()` once each way. The
+alternatives fail in both directions at once. `DimScreen`'s slider writes on every integer step, so
+the settings flow emits up to a hundred times per drag and Android throttles sustained notification
+updates: re-posting per value is a binder call per slider pixel *and* a good way for the update that
+matters to be the one dropped. Posting the line unconditionally instead is worse still — it would
+tell a user who turned the backlight toggle off that their brightness slider is paused, which is a
+false explanation on the one surface this section chose *because* it can be read.
 
 The reading is **R10**: how noisy is `SCREEN_BRIGHTNESS` under adaptive on this ROM, and does
 HyperOS's control-centre slider write it at all? Both halves are cheap while the phone is already
@@ -416,9 +499,9 @@ it exists to control, which is 3a's problem again with more machinery. **Read it
 windows`, which prints the stack in order.**
 
 **Question two: with the panel above and declining a brightness, who owns the override?**
-`BRIGHTNESS_OVERRIDE_NONE` is the `LayoutParams` default and means *not asking*, so by R5's and R9's
-rule the shade — the topmost window that *does* ask — should keep it. Three outcomes and only one of
-them is a cut:
+`BRIGHTNESS_OVERRIDE_NONE` is the `LayoutParams` default and means *not asking*, so by the rule Phase
+1's R5 and R9 found — the topmost window that *asks* owns it — the shade should keep it. Three
+outcomes and only one of them is a cut:
 
 | Outcome | What it means | Verdict |
 | --- | --- | --- |
@@ -434,7 +517,13 @@ button removes it. That is the whole apparatus. It is the same justification the
 the two-minute deadline button beside it already carry: only the app can do this to itself, and the
 seam exists so that developer-only surface never reaches a release build.
 
-**If it is a no-go, what the phase closes as.** 3a alone, with §0's paragraph promoted from an
+**And it needs nothing else in this phase, which is why it is checkpoint A.** `ShadeService` ships a
+live shade today and the debug seam already carries surface of exactly this kind, so the reading is
+takeable before the first line of 3a is written — and it has to be, because three of 3a's own
+decisions are answers to it.
+
+**If it is a no-go, what the phase closes as** — and, because this is checkpoint A, it is known
+before anything has been built on the other answer. 3a alone, with §0's paragraph promoted from an
 observation to the phase's result: Gloam's controls are reachable from three doors and legible from
 none of them once the dim level is high, the notification and the tile remain the way out, and the
 `ContentObserver` question in §4 stops being a nicety and becomes the only remaining route to
@@ -476,10 +565,20 @@ const val PANEL_WINDOW_FLAGS =
 comes from a flag; the panel's comes from its `LayoutParams`, which is a weaker kind of guarantee
 because a flag is a constant and a size is a computation.
 
-1. **Never `MATCH_PARENT`, in either axis.** `WRAP_CONTENT` width and height, bottom-anchored with
-   `Gravity.BOTTOM`, with a `Modifier.widthIn(max = …)` inside the composition so a long translated
-   chip label cannot grow the window to the full display. This is the one thing in the panel that a
-   JVM test can hold to account, and §13 writes it.
+1. **Never `MATCH_PARENT`, and the width is a number rather than a wish.** Bottom-anchored with
+   `Gravity.BOTTOM`; `WRAP_CONTENT` height, because a bounded height clips a control and an
+   unreachable close button is the trap the rest of this section exists to prevent; and an **explicit
+   pixel width** — `params.width = panelWidthPx(displayWidthPx)`, the display width less a margin,
+   capped at a maximum.
+   **`WRAP_CONTENT` width was the draft and it is the wrong guarantee.** The risk this rule names is
+   a long translated label growing the window to the full display, and `WRAP_CONTENT` is precisely
+   the value that hands that decision to the content: the bound would live in a
+   `Modifier.widthIn(max = …)` inside the composition, which no test can see and which the window
+   manager does not enforce. A width the window is *added with* cannot be exceeded by a translation
+   at all; it is a pure function of one integer, so it sweeps on the JVM the way the ramp does
+   (`PLAN.md` rule 3); and for a panel that is mostly sliders it is the better layout anyway, since
+   `WRAP_CONTENT` would size a slider to its intrinsic minimum. §13 writes the sweep, and the
+   instrumented test keeps the height half, where only a device has the real strings.
 2. **It cannot outlive the shade.** The panel is added and removed by `ShadeService`, which already
    owns the window manager and the scope; `removeShadeWindow()` gains a `removePanelWindow()` beside
    it, and `onDestroy` takes both down. There is no state in which the panel is up and the shade is
@@ -537,9 +636,21 @@ private class PanelHost(context: Context) : LifecycleOwner, SavedStateRegistryOw
     }
 
     fun show() { lifecycleRegistry.currentState = Lifecycle.State.RESUMED }
-    fun hide() { lifecycleRegistry.currentState = Lifecycle.State.DESTROYED }
+
+    /** Terminal — the next summon builds a new host. See below. */
+    fun destroy() { lifecycleRegistry.currentState = Lifecycle.State.DESTROYED }
 }
 ```
+
+**One host per summon, and that is not a tidiness preference.** `DESTROYED` is terminal:
+`LifecycleRegistry` has no upward event out of it and throws when asked to move up, and
+`SavedStateRegistryController.performRestore` runs once per controller, so the `init` block above
+cannot be re-run either. A `show()` / `hide()` pair on one long-lived host therefore works exactly
+once — and §8 gives the panel three ways to close, all of which the user then reopens from the
+notification, so the *second* summon is the ordinary case rather than an edge one. So `ShadeService`
+builds the host when it adds the window and drops the reference when it removes it, which is the same
+thing §9 says about storage: **the panel is summoned, not remembered**, and no state survives between
+summons to go stale.
 
 **`RESUMED` is not a formality.** The `Recomposer` that Compose installs for a window is tied to that
 lifecycle: below `STARTED` it stops applying recompositions. A host left at `CREATED` produces a
@@ -574,10 +685,19 @@ Three ways out, and the ordering is deliberate — each one is there because the
 1. **The close control**, drawn in the panel. The ordinary way, and the only one the user thinks
    about.
 2. **An inactivity timeout**, owned by the service. A `delay` on the service's scope, re-armed on
-   every value the panel writes, taking the panel down when it expires. It is the panel's version of
-   auto-off and it is here for the same reason: a control surface that only closes when you
-   successfully press a button on it is a control surface that traps you when the button does not
+   **every touch the panel receives**, taking the panel down when it expires. It is the panel's
+   version of auto-off and it is here for the same reason: a control surface that only closes when
+   you successfully press a button on it is a control surface that traps you when the button does not
    draw.
+   **Touches rather than values written, which is what the draft said and is the wrong trigger for
+   this window.** `PLAN.md` gives the panel one reason to exist — the slider moving the dim over real
+   content — and judging that means setting a value and then *looking*, which writes nothing. A user
+   who drags once and studies the result would lose the panel mid-judgement, and a user who taps the
+   switch and taps it back would not re-arm at all. The recovery property the timeout is actually for
+   survives the wider trigger untouched: a panel drawn off-screen by a layout bug receives no touches
+   either, so it still dies on schedule. The place to catch them is `dispatchTouchEvent` on the
+   host's `ComposeView`, which sees every touch including the ones a child consumes — a Compose
+   `pointerInput` would see those only on `PointerEventPass.Initial`.
 3. **The shade coming down**, by any of its routes — the notification's *Stop*, 2b's tile, the
    deadline, the ROM. The panel is a child of the shade's lifetime, not a peer of it.
 
@@ -613,9 +733,11 @@ compact host is always available from the notification and the tile, and this ke
 only. A name that implies a mode is a name a later phase reads as permission to branch on it.
 
 **Read as a `Flow` like everything else, and read once at startup like `themeMode`.** The `Flow` is
-what the Settings screen collects; the `suspend` one-shot is what `MainApplication` needs before any
+what the Settings screen collects; `launcherCompactNow()` is what `MainApplication` needs before any
 Activity exists, for the same reason `themeModeNow()` exists — a value that arrives after the first
 composition is a value that arrives a frame too late, and here that frame is a whole activity launch.
+Two one-shot accessors rather than one combined read, and §3 says why this is not the case
+`ShadeIntent` was written for.
 
 **Nothing else is stored.** The panel is summoned, not remembered: no "panel was open" flag, no last
 position, no size. A window that restores itself after a process death is a window that can come back
@@ -660,14 +782,27 @@ reaching the tile.
   this phase adds no ask, which is worth stating because it is the first phase since 0 that does not.
   **3a's paragraph is corrected in one place** — the launcher preference is inverted and the shape is
   iii rather than a re-themed `MainActivity` (§2). **3b's paragraph gains §5's two questions** in
-  place of its one, and its result, whichever way it goes.
-- **`CONTEXT.md`** — **one row**. The existing **Shade** and **Panel** rows are correct and stay; what
-  is missing is the third surface, and three things that can all be called "the controls" is exactly
-  the collision this file exists to prevent:
+  place of its one, and its result, whichever way it goes. **And rule 3's count goes from three tests
+  to four**, which is a change to a standing rule rather than a phase note: `panelWidthPx` is a pure
+  function bounding a safety value — the bound that stands in for `FLAG_NOT_TOUCHABLE` — so it falls
+  in exactly the category rule 3 reserves, and a fourth test arriving quietly would make the rule
+  untrue. That one edit is made *with* this plan rather than at G, because the rule is what justifies
+  the test.
+- **`CONTEXT.md`** — **one row, and it is written already** rather than owed, on the same footing as
+  the **Panel** row, which has described a window that does not exist yet since Phase 0. The existing
+  **Shade** and **Panel** rows are correct and stay; what was missing is the third surface, and three
+  things that can all be called "the controls" is exactly the collision that file exists to prevent.
 
-  | Term | Means | Not |
-  | --- | --- | --- |
-  | **Compact controls** | The small, dialog-shaped Activity carrying `DimControls()`. Reached from the notification, the tile, or the icon. **Below the shade, like every Activity** | Not the panel, which is an overlay window *above* the shade. Not "compact mode" — there is no mode |
+  **The axis the row names is position, not size**, and the draft of it got that wrong. The panel is
+  small too, carries the same controls and has no top bar either; calling one of them *compact*
+  implies the other is the big one. What separates them is which side of the shade each sits on, and
+  that difference is total — 0.33 nits against 6.64, touch-through against touch-catching. The term
+  itself stays, because the shipped copy says *the small controls* and `settings_launcher_compact` is
+  already named for it, and because "host" is a developer's word by the same test §10 applies to "the
+  launcher". What the row *asserts* is what changed. It also records that **both surfaces are called
+  *the controls* on screen**: `CONTEXT.md`'s own rule for a domain word and a user-facing word that
+  differ is that both are written down with the difference stated, and until now that fact lived only
+  in §10 of this file, where nobody looking up "the controls" would find it.
 
 - **ADR-0010 — a fourth dated amendment.** Its *Consequences* left one question open for Phase 3 —
   *"when a second window appears above the shade, whose override applies?"* — and its third amendment
@@ -704,7 +839,10 @@ reaching the tile.
 
 Rule 3: device behaviour is proven by measurement, with the command that read it. Everything here
 needs the phone plugged in — `adb devices` first. **R-numbers restart at R1 for this phase**; Phase
-1's are in `phase-1.md`, Phase 2's in `phase-2.md`.
+1's are in `phase-1.md`, Phase 2's in `phase-2.md`. **A bare R-number in this file is always this
+file's own**, and an earlier phase's is written *"Phase 1's R8"* every time — `phase-2.md`'s
+convention, and it earns its keep here because three of Phase 1's numbers collide with three of
+these.
 
 **Read with the screen held awake wherever brightness is involved.** `settings put system
 screen_off_timeout 600000` first, and put it back after. Four of Phase 1's readings were first taken
@@ -713,23 +851,24 @@ did nothing* — the correction is on ADR-0010's third amendment and it cost a w
 
 | # | Reading | Decides |
 | --- | --- | --- |
-| **R1** | The floating host's shape: does §2's theme produce a floating, correctly-sized window, and does shape iii's forward flash | **checkpoint B's shape**, and whether the fallback is needed |
-| **R2** | **The compact host's legibility at dim 100**, under a live shade, dark room | §0's claim, re-read against the new host rather than inherited from R8's `MainActivity` |
-| **R3** | The notification's **plain tap** on HyperOS, at maximum dim, end to end | §3 — whether the route change is a reach improvement, honestly stated |
-| **R4** | The compact host in both locales, and the five auto-off chips in a narrow floating window | §1's recommendation on whether the deadline travels, and whether Polish wraps it |
-| **R5** | **The go/no-go, both questions** (§5): is our bare second window above the shade in `dumpsys window windows`, and does `mWindowManagerBrightnessOverride` still read the shade's `0.01` | **checkpoint E's verdict.** F does not start until this has a result |
+| **R1** | **The go/no-go, both questions** (§5): is our bare second window above the shade in `dumpsys window windows`, and does `mWindowManagerBrightnessOverride` still read the shade's `0.01` | **checkpoint A's verdict.** Nothing else in this phase starts until this has a result |
+| **R2** | The floating host's shape: does §2's theme produce a floating, correctly-sized window, and does shape iii's forward flash | **checkpoint C's shape**, and whether the fallback is needed |
+| **R3** | **The compact host's legibility at dim 100**, under a live shade, dark room | §0's claim, re-read against the new host rather than inherited from Phase 1's R8 on `MainActivity` |
+| **R4** | The notification's **plain tap** on HyperOS, at maximum dim, end to end | §3 — where the route now lands, and whether that is a reach improvement or a legibility one |
+| **R5** | The compact host in both locales, and the five auto-off chips in a narrow floating window | §1's recommendation on whether the deadline travels, and whether Polish wraps it |
 | **R6** | The panel drawn at dim 100: its own nits, the content's nits, and its palette against the app's | that the panel is the legible surface §0 says it is — the whole case for 3b |
 | **R7** | The panel catches touches **and the shade still passes them**: a slider moving under a finger inside the panel, a tap landing in the app outside it | §6, and §7's `RESUMED` trap, which is invisible any other way |
 | **R8** | The panel across a rotation and a locale change | §7's configuration note, and the size bound under a re-measure |
-| **R9** | The panel's inactivity dismissal, and that stopping the shade takes it down | §8's three routes out |
+| **R9** | The panel's inactivity dismissal on a **touch**-idle timer, and that stopping the shade takes it down | §8's three routes out |
 | **R10** | **`SCREEN_BRIGHTNESS` noise under adaptive**, and whether HyperOS's control-centre slider writes it | §4 — whether the strong form is even available on this ROM |
 | **R11** | **API-33 AVD end-of-phase pass** (ADR-0008): launches, compact host appears, shade appears, panel appears if 3b went | the phase's own closing gate |
 
-**R5 is the only reading in this file that another reading cannot be substituted for.** Everything
-else here is confirmation of something already argued; R5 decides whether half the phase exists. It
-comes before F and it is taken against the debug button in §5, not against panel code.
+**R1 is the only reading in this file that another reading cannot be substituted for**, and it is
+numbered first because it is now taken first. Everything else here confirms something already argued;
+R1 decides whether half the phase exists. It is taken against the debug button in §5, not against
+panel code.
 
-**R2 and R6 are the same reading twice and that is the point.** One control surface under the shade,
+**R3 and R6 are the same reading twice and that is the point.** One control surface under the shade,
 one above it, same dim level, same room. The pair is the phase's result in two numbers, and if they
 come back the same something is wrong with the second window rather than with the argument.
 
@@ -758,16 +897,25 @@ nothing photometric is read there, and the phone stays the only place light is m
 
 ## 13. Tests
 
-`PLAN.md` rule 3 promises three tests across the whole remaining roadmap and both remaining ones
+`PLAN.md` rule 3 promised three tests across the whole remaining roadmap and both remaining ones
 belong to Phase 4 — the schedule window crossing midnight, and earlier-deadline-wins. **Phase 3
-spends neither**, and what it adds instead is small and should be described as such.
+spends neither of those, and adds one the rule did not know about** (§6, rule 1), which is why §11
+amends the rule rather than letting a fourth test appear quietly. The rest of what it adds is small
+and should be described as such.
 
 - **`PanelWindowFlagsTest`** (JVM, no Android). The mirror of `ShadeWindowFlagsTest`, and it asserts a
   *difference* rather than a property: `PANEL_WINDOW_FLAGS` carries `FLAG_NOT_FOCUSABLE` and **does
-  not** carry `FLAG_NOT_TOUCHABLE`, and the panel's `LayoutParams` are `WRAP_CONTENT` in both axes —
-  never `MATCH_PARENT`. The same `const val` inlining trick is what lets it run on the JVM without
-  `android.jar` throwing. **It is the only mechanical guard on §6's rule**, and it is worth having
-  precisely because a size is a weaker guarantee than a flag.
+  not** carry `FLAG_NOT_TOUCHABLE`. The same `const val` inlining trick is what lets it run on the JVM
+  without `android.jar` throwing.
+- **`PanelWidthTest`** (JVM, no Android), and **this is the one that costs `PLAN.md` rule 3 a fourth
+  test** rather than being free. `panelWidthPx(displayWidthPx)` is swept the way `ShadeRampTest`
+  sweeps the ramp: across every plausible display width the answer is strictly narrower than the
+  display, never narrower than a usable slider, and never `MATCH_PARENT`'s sentinel. That bound is
+  what stands in for `FLAG_NOT_TOUCHABLE` on a window that catches touches, which is exactly the
+  shape rule 3 reserves a test for — a pure function that fails in the direction the app exists to
+  prevent. **An assertion that the params say `WRAP_CONTENT` would not have been that**: `WRAP_CONTENT`
+  is the permissive value, and such a test passes identically whether the real bound is present or
+  missing.
 - **`PanelWindowTest`** (instrumented, beside `ShadeWindowTest`). The panel window reaches the window
   manager as `TYPE_APPLICATION_OVERLAY`, above the shade, at a size smaller than the display. The
   ordering half is the one only a device can answer, and it is the same assertion R5 takes by hand —
@@ -791,22 +939,23 @@ below rather than taste.
 
 | Checkpoint | Commits |
 | --- | --- |
-| **A** | `refactor: pull the dim controls out of the screen that owned them` — `DimControls()` and `AutoOffControls()`, `DimScreen` rewritten to call them. No behaviour change, nothing a release note would mention |
-| **B** | `feat: add the compact controls` — `ControlsActivity`, `Theme.App.Controls`, the manifest entry, the permission/hatch guard and the *Open Gloam* way out. Then **the readings**, which are not a commit |
-| **C** | `feat: open the compact controls from the notification and the icon` — the content intent's new target, `launcher_compact` and its Settings row, `MainApplication`'s second startup read, `MainActivity`'s forward |
-| **D** | `feat: say in the notification that the brightness slider is paused` — one string, one `notify()`. The observer is a separate `feat:` **only if the twelve ask for it**, and it does not land in this phase without them |
-| **E** | `chore: add a second overlay window to the debug section` — the bare rectangle R5 is read against. Then no commit at all: the verdict is a reading |
-| **F** | `chore: add the panel window and its host` + `test: bound the panel window` — the window, `PanelHost`, the flags and the size bound, wired to nothing. Then `feat: put the controls in a window above the shade` — the composition, the service's ownership, the close control and the inactivity timeout, which land **together** because a panel that appears before it can be dismissed is the trap this phase exists to avoid shipping |
+| **A** | `chore: add a second overlay window to the debug section` — the bare rectangle R1 is read against. Then no commit at all: the verdict is a reading |
+| **B** | `refactor: pull the dim controls out of the screen that owned them` — `DimControls()` and `AutoOffControls()`, `DimScreen` rewritten to call them. No behaviour change, nothing a release note would mention |
+| **C** | `feat: add the compact controls` — `ControlsActivity`, `Theme.App.Controls`, the manifest entry, the permission/hatch guard and the *Open Gloam* way out. Then **the readings**, which are not a commit |
+| **D** | `feat: open the compact controls from the notification and the icon` — the content intent's new target, which A's verdict decides between the panel and the activity; `launcher_compact` and its Settings row; `MainApplication`'s second startup read; and `MainActivity`'s launcher-only forward |
+| **E** | `feat: say in the notification that the brightness slider is paused` — the content text, the `notify()` path and the derived `distinctUntilChanged` boolean that triggers it (§4). The observer is a separate `feat:` **only if the twelve ask for it**, and it does not land in this phase without them |
+| **F** | `chore: add the panel window and its host` + `test: bound the panel window` — the window, `PanelHost`, the flags and `panelWidthPx`, wired to nothing. Then `feat: put the controls in a window above the shade` — the composition, the service's ownership, the close control and the inactivity timeout, which land **together** because a panel that appears before it can be dismissed is the trap this phase exists to avoid shipping |
 | **G** | `docs: ...` — §11's edits, ADR-0010's fourth amendment, the panel ADR if there is one, and this file's readings block filled in |
 
 **The ramp precedent holds twice here.** F's `chore:` lands the window and its bound wired to nothing
 — the cheapest possible place to get a size rule wrong — and the `feat:` is the commit that puts a
-user in front of it. And E lands its measuring apparatus as a `chore:` under the debug seam, the same
+user in front of it. And A lands its measuring apparatus as a `chore:` under the debug seam, the same
 way Phase 1's backlight sweep and Phase 2's two-minute deadline button did, because in all three cases
 only the app can do the thing to itself.
 
-**If E is a no-go, the sequence ends at D and G**, and G's `docs:` commit is the one that records the
-cut. That is a phase closing narrower, not a phase failing.
+**If A is a no-go, the sequence is B through E and then G**, with D's content intent pointing at
+`ControlsActivity`, and G's `docs:` commit is the one that records the cut. That is a phase closing
+narrower, not a phase failing.
 
 ---
 
@@ -827,6 +976,15 @@ cut. That is a phase closing narrower, not a phase failing.
 - **`SavedStateRegistryController.performRestore(null)` must run before the lifecycle passes
   `CREATED`.** There is nothing to restore; the registry insists on being told so, and the exception
   it throws otherwise names neither the panel nor the reason.
+- **`Lifecycle.State.DESTROYED` is terminal, not "hidden".** `LifecycleRegistry` has no upward event
+  out of it and throws when asked for one, and `SavedStateRegistryController.performRestore` runs once
+  per controller. A lifecycle host is therefore a **one-shot object**, which is why §7 builds one per
+  summon instead of keeping one and toggling it. The JS instinct — an object with `show()` and
+  `hide()` you call as often as you like — is exactly what does not survive here.
+- **An `Intent`'s categories say how an Activity was entered.** A launcher tap carries
+  `CATEGORY_LAUNCHER`; a `startActivity` from inside the app carries none. §2's forward tests for it
+  rather than passing a "don't bounce me" extra, and the difference is between a rule that is correct
+  by default for every future caller and one that is correct for as long as each of them remembers.
 - **`FLAG_NOT_TOUCHABLE` and `FLAG_NOT_FOCUSABLE` are two properties, not one emphatic one.** Touchable
   is whether touches land on the window; focusable is whether key events and the IME do. The shade
   wants neither, the panel wants touches and not focus, and a window that confuses them either
@@ -859,15 +1017,15 @@ right". Derivations are in §12 and are arithmetic, not observations.
 
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
-| R1 | The floating host's shape | launch it, `dumpsys window windows` for its bounds | — |
-| R2 | The compact host at dim 100 | shade live at 100, open the host, `screencap` + `dumpsys display` | — |
-| R3 | Notification plain tap, at maximum dim | tap the row by hand, then `dumpsys activity activities` | — |
-| R4 | Both locales in a narrow floating window | `cmd locale set-app-locales`, screenshot both | — |
-| R5 | **Go/no-go: order and override** | debug second window, `dumpsys window windows` + `dumpsys display` | — |
+| R1 | **Go/no-go: order and override** | debug second window, `dumpsys window windows` + `dumpsys display` | — |
+| R2 | The floating host's shape | launch it, `dumpsys window windows` for its bounds | — |
+| R3 | The compact host at dim 100 | shade live at 100, open the host, `screencap` + `dumpsys display` | — |
+| R4 | Notification plain tap, at maximum dim | tap the row by hand, then `dumpsys activity activities` | — |
+| R5 | Both locales in a narrow floating window | `cmd locale set-app-locales`, screenshot both | — |
 | R6 | The panel at dim 100, and its palette | `screencap` with the panel open, both themes | — |
 | R7 | Touches: in the panel, and through beside it | drag the panel's slider; tap the app underneath | — |
 | R8 | Rotation and locale change with the panel up | `settings put system user_rotation 1`, `cmd locale …` | — |
-| R9 | Inactivity dismissal, and death with the shade | open the panel, wait; then stop the shade | — |
+| R9 | Inactivity dismissal, and death with the shade | open the panel, leave it untouched; then stop the shade | — |
 | R10 | `SCREEN_BRIGHTNESS` under adaptive, and the control-centre slider | observe the setting while the room changes and while dragging | — |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
 
@@ -883,11 +1041,15 @@ right". Derivations are in §12 and are arithmetic, not observations.
 - The notification says, on a surface that can actually be read at 6.64 nits, that the user's own
   brightness slider is paused — and the `ContentObserver` question is with the twelve rather than
   with one person in a room.
-- §0's ceiling is a measured pair of numbers rather than an argument: R2 and R6, same dim level, same
+- §0's ceiling is a measured pair of numbers rather than an argument: R3 and R6, same dim level, same
   room, one surface under the shade and one above it.
+- Tapping *Open Gloam* in the compact host reaches the full app and stays there, and a revoked overlay
+  permission sends the user to the full app **once** rather than bouncing them between two
+  activities (§2).
 - The readings block above has no dashes left in it.
 - **And either:** the panel is up, catching its own touches and passing every other one through, dying
-  on its close control, on its timeout and with the shade, with `PanelWindowFlagsTest` holding its
-  size bound and an ADR saying why a touchable overlay is allowed to exist at all —
-- **or:** R5 vetoed it, F was skipped, `PLAN.md`'s Phase 3b is struck through with the reading that
-  struck it, and this file says so here rather than leaving it to be argued about later.
+  on its close control, on its touch-idle timeout and with the shade, with `PanelWidthTest` holding
+  its size bound and an ADR saying why a touchable overlay is allowed to exist at all —
+- **or:** R1 vetoed it before anything had been built on the bet, F was skipped, `PLAN.md`'s Phase 3b
+  is struck through with the reading that struck it, and this file says so here rather than leaving it
+  to be argued about later.
