@@ -32,9 +32,13 @@ look likely — the panel was in its own inactivity dimming, not at the user's s
 The one item below that the phase still owns — starting the tester recruitment — stays here, because
 it is what the door is waiting on.
 
-**Phase 2 is planned, and its detail is [`phase-2.md`](phase-2.md)** — seven checkpoints, and two
-non-code items in front of them. Read that file for what to build; the boxes below are still the
-worklist.
+**Phase 2's code is done, and its record is [`phase-2.md`](phase-2.md)** — seven checkpoints,
+**A-G, all shipped between 2026-09-01 and 2026-09-02**: the shade comes down on its own after a
+deadline it re-reads from the wall clock rather than from a timer, comes back after a restart, says
+what Xiaomi's autostart costs if it is denied, and has a Help and feedback screen to be complained
+to. The scaffolding the door was waiting on is resolved and the emulator matrix has a real test in
+it. **What is left of the phase is not code**: the tester recruitment and the listing, both below,
+and both calendar rather than effort.
 
 ## The standing schema gate — parked, because there is no database
 
@@ -178,13 +182,13 @@ one step with an external queue is behind you.
 
 Cheap now, expensive or impossible once a build sits on twelve strangers' phones.
 
-- [ ] **Resolve three pieces of scaffolding that describe features the app does not have.** A future
-      reader cannot tell an unused defence from a live one:
-      `work/BatteryExemption.kt` (uncalled — Phase 4),
-      **`onboardingDone` in `AppPreferences`** (read by nothing — use it in Phase 2's first-run flow
-      or delete the key; it is a *stored* key, so this is the last phase in which the choice is
-      free), and `scripts/project.py` still reporting `DATABASE_FILE gloam.db` after ADR-0007
-      removed the database.
+- [x] **Resolve three pieces of scaffolding that describe features the app does not have.** Done —
+      Phase 2 checkpoints A and E, and looking for the three found two more (`phase-2.md` §7).
+      `onboardingDone` is deleted, `project.py` no longer reports a `DATABASE_FILE`, and
+      `work/BatteryExemption.kt` was **split rather than deleted**: the half the Settings row calls
+      is now `work/Autostart.kt`, and what stays behind the old name is unambiguously Phase 4's.
+      The two it found — AppCompat's below-13 locale backport and WorkManager itself — are the ticks
+      below and ADR-0003's second amendment.
 - [x] **Ask for `POST_NOTIFICATIONS`.** Done — Phase 1 checkpoint A. `DimScreen` fires the ask from
       the start button, **before the first `startShade()` and never after**, so it is only ever raised
       with no shade on screen: the system refuses touches on non-system overlay windows while a
@@ -206,6 +210,11 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       the plan, it is calendar time rather than effort, and it depends on other people replying.
       **Recruit more than twelve.** The window wants twelve opted in *continuously*; one person
       uninstalling partway through is the failure this rule is shaped to produce.
+- [ ] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
+      it is the longest value that is still obviously not "the next day", which is the failure
+      auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
+      The twelve are the room. Recorded here rather than in `phase-2.md` so the question outlives
+      the phase that raised it; the answer is a one-line change to `AutoOff.Default` or nothing.
 - [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
       `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
       the thing most likely to block a first upload, and it is discovered late.
@@ -229,12 +238,13 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
             rather than skipping the locale, which is harmless by hand and not harmless once the
             publish workflow runs.
       - [ ] Real screenshots off a real mark, and the `[SCENES]` rewrite behind them.
-- [ ] **The three emulator CI legs are vacuously green.** `app/src/androidTest` contains **zero
-      tests**, so *Instrumented tests (API 26 / 34 / 36)* pass by having nothing to run, and the API
-      26 leg could not install this app even if it did — `minSdk` is 33. That is ~15 minutes of CI
-      per PR buying a checkmark with nothing behind it, and worse, a green tick that would keep
-      showing green if a real instrumented test were added and then broke the install. Phase 2 either
-      gives the matrix real tests or cuts it; recorded now so the next reader does not trust it.
+- [x] **The three emulator CI legs are vacuously green.** Closed — Phase 2 checkpoint F, both ways
+      at once. The API 26 leg is cut (it could never have installed a `minSdk` 33 app), leaving
+      33 + 36 on `aosp_atd`; and `app/src/androidTest` has its first test. `ShadeWindowTest` starts
+      the real service and reads the real window out of `dumpsys window windows`, which is the only
+      place the *effective* flags exist — a JVM test can only assert the constant we pass in.
+      **Proven non-vacuous by mutation**: dropping `FLAG_NOT_TOUCHABLE` turns it red with the
+      message it was written to print. Both legs green on PR #25.
 - [x] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). Done 2026-08-31:
       `gloam-api33`, `system-images;android-33;google_apis;x86_64` on a Pixel 6 profile, created and
       booted headless entirely from the CLI — no Android Studio. R10 passed on it: the app launches,
@@ -245,10 +255,11 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       photometric and **the phone stays the only place light is measured**. The readings block
       carries the numbers. Recreate with
       `emulator -avd gloam-api33 -no-window -gpu swiftshader_indirect`.
-- [ ] **Re-read ADR-0004 now `minSdk` is 33.** The below-13 locale backport — the disabled
-      `AppLocalesMetadataHolderService` manifest entry — exists only for devices the app no longer
-      ships to. Removing it is ADR-0004's decision to amend, not a tidy-up. AppCompat itself stays
-      regardless: ADR-0006 needs `setDefaultNightMode`.
+- [x] **Re-read ADR-0004 now `minSdk` is 33.** Done — Phase 2 checkpoint E, with the dated
+      amendment on ADR-0004 rather than as a tidy-up. The `AppLocalesMetadataHolderService` entry is
+      gone; AppCompat stays, because ADR-0006 needs `setDefaultNightMode` and the switcher is still
+      `setApplicationLocales`. R12 read the phone afterwards: the framework holds `[pl]` across a
+      force-stop, so nothing was propping the switcher up.
 - [x] **Replace the placeholder domain.** Done: the `Item` domain and the database are gone
       entirely (ADR-0007), and `ui/dim/` is the app's one screen over `AppPreferences`.
 - [x] **Choose the palette.** Done: dusk amber, warm taupe, twilight violet and warm grey, seeded in

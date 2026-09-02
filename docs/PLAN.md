@@ -125,7 +125,7 @@ ask owns its hand-off, its re-read, and what the user sees when the answer is no
 | --- | --- | --- |
 | `SYSTEM_ALERT_WINDOW` | First run — there is no app without it | Phase 0 |
 | `POST_NOTIFICATIONS` | Immediately after, **before the first `startShade()`** | Phase 1 |
-| Xiaomi autostart | When reboot restore first matters | Phase 2 — **re-read**, not re-asked, in Phase 4 |
+| Xiaomi autostart | When reboot restore first matters | Phase 2 — and Phase 4's **re-read** is a host-side scrape, not the app. See below |
 | Battery-optimisation exemption | Only when the user enables scheduled-on | Phase 4 |
 
 **The third clause is the one that was missing, and it is the one that generates support mail.**
@@ -133,6 +133,13 @@ Three of these four fail *silently*: a denied notification permission leaves the
 no Stop action, a denied autostart leaves reboot restore never firing, a denied battery exemption
 leaves scheduled-on never firing. In each case the app knows and the user does not. A re-read tells
 the app; nothing tells the person holding the phone.
+
+**Autostart is the one where even the re-read is out of reach**, discovered building Phase 2. It is
+not an appop and there is no API for it, so no code of ours can tell a granted state from a denied
+one — only `scripts/device-gate.py`, over `adb`, run by a developer. The third clause survives that:
+the phase still owns the hand-off and still owns saying what a denial costs, and Phase 2 says it in
+Settings without claiming to know the answer. What changes is only who can check. Read Phase 4's
+"re-read" as that scrape (ADR-0003's second amendment).
 
 **The same logic applies to side effects, not only to permissions.** Phase 1's backlight override
 makes the user's own brightness slider go inert (ADR-0010) — a system control that appears broken,

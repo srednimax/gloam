@@ -66,3 +66,24 @@ Amendment, 2026-08-29: superseded in practice by ADR-0007. Gloam schedules nothi
 remains a dependency for future use, but no worker, no alarm and no SCHEDULE_EXACT_ALARM permission
 survive. The reasoning above is kept intact rather than rewritten, because it is still correct for
 the app it was written about, and it is what comes back if a Gloam feature ever calls for it.
+
+Amendment, 2026-09-02 (second). **WorkManager is gone**, and the "kept for future use" above no
+longer names anything: Phase 4's schedule is designed around `setAndAllowWhileIdle` plus the
+battery-optimisation exemption, and `PLAN.md`'s *Not in this plan* forecloses everything else that
+would have wanted a worker. What it was costing was not nothing — the manifest merger was adding
+three permissions to the built artifact that the source never declared (`WAKE_LOCK`,
+`ACCESS_NETWORK_STATE` and `RECEIVE_BOOT_COMPLETED`), and `ACCESS_NETWORK_STATE` on an app that
+declares no `INTERNET` and answered Play's data-safety questionnaire *nothing collected, nothing
+shared* is a line a reviewer can ask about with no better answer than "a dependency we do not use".
+The runtime dependency, `work-testing`, the `Configuration.Provider` on `MainApplication` and the
+`androidx.startup` manifest surgery all left together. `RECEIVE_BOOT_COMPLETED` is now declared in
+the source by the boot receiver that actually needs it, which is why the order mattered: it was
+declared before the merge that had been supplying it was removed.
+
+The same amendment corrects the last consequence above. **The autostart grant has no in-app read.**
+It is not an appop and there is no API for it, so nothing in the app can tell a granted one from a
+denied one — only `scripts/device-gate.py`, run by a developer on a host with `adb`. That is a
+sharper statement than "requires reading the autostart state first": the app cannot warn about a
+denial, so what it does instead is say what a denial costs and hand the user to the screen. Read
+`PLAN.md` rule 4's "re-read, not re-asked, in Phase 4" as that host-side scrape rather than as
+anything the app performs.

@@ -13,6 +13,11 @@ proof of concept: it dims the screen. A slider sets a dim level, a foreground se
 over every other app, and it survives you leaving Gloam — which is the whole point, since the apps
 being dimmed are the ones you are reading.
 
+A shade you start by hand **comes down on its own** after a while — thirty minutes to four hours, or
+never, and two hours unless you say otherwise — and one that was up when the phone went down **comes
+back after a restart**. Both exist because a dimmer you forget about is a dimmer that follows you
+into the next morning.
+
 The template's data layer is gone ([ADR-0007](docs/adr/0007-gloam-stores-settings-not-records-so-it-has-no-database.md)):
 Gloam stores settings, not records, so there is no database. The release pipeline and quality gates
 are real. Nothing is on Play yet, the mark is still a placeholder, and the feature set beyond
@@ -29,7 +34,7 @@ accepted — see [LICENSE](LICENSE).
 ./gradlew assembleDebug          # build
 ./gradlew installDebug           # build + install on the connected phone
 ./gradlew test                   # JVM unit tests
-./gradlew connectedAndroidTest   # instrumented Room/DAO tests — needs a device
+./gradlew connectedAndroidTest   # instrumented tests — needs a device
 ./gradlew spotlessApply          # format (the CI gate is spotlessCheck)
 python3 scripts/project.py       # what the toolchain thinks this app is called
 ```

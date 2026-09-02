@@ -59,3 +59,16 @@ gate does not.
   `fetch-depth: 0`.
 - Language names in the switcher are **endonyms** — each language named in its own language, in every
   locale — so someone who has landed somewhere they cannot read finds their way out.
+
+Amendment, 2026-09-02: **the below-13 half of persistence is removed.** `minSdk` is 33 (ADR-0008),
+so the disabled `AppLocalesMetadataHolderService` manifest entry — AppCompat's store for devices
+with no per-app locale of their own — existed only for devices this app never ships to. On 13+ the
+framework persists the choice and the entry was ignored, which means removing it changes nothing a
+user can observe; it is amended here rather than tidied away because the *Persistence* bullet in the
+Context above is what it was answering.
+
+**AppCompat itself stays**, and for two reasons rather than one: ADR-0006 needs
+`setDefaultNightMode`, and the switcher is still `AppCompatDelegate.setApplicationLocales` — which
+on 13+ is a thin pass-through to the framework's `LocaleManager`. Confirmed on the phone rather than
+argued (`phase-2.md` R12): tapping *Polski* leaves `cmd locale get-app-locales` reporting `[pl]`,
+and a force-stopped app comes back up Polish. Everything else in this decision is unchanged.
