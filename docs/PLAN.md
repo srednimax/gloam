@@ -301,6 +301,10 @@ rather than in front of it.
 
 ## Phase 3a — The controls, from the launcher
 
+**Detail: [`phase-3.md`](phase-3.md)** — 3a and 3b share one file. The split along cost stands; what
+does not survive planning them apart is that they are the same composable in two hosts, and that one
+measured fact decides how much either host is worth.
+
 Decided in the brainstorm: the compact screen and the floating panel are **one `DimControls()`
 composable rendered in two hosts**. True of the composable — and the reason 3a and 3b are separate
 phases is that it is false of the hosts, where all the cost lives.
@@ -320,6 +324,8 @@ with a `ContentObserver`, reinterpreting a change as "I want more light" — or 
 clever.
 
 ## Phase 3b — The panel
+
+**Detail: [`phase-3.md`](phase-3.md)**, with 3a.
 
 **The one item in this roadmap with a documented kill condition**, because it is the one item the
 platform can kill rather than you.
