@@ -29,4 +29,41 @@
         <item name="android:statusBarColor">@color/system_bar_scrim</item>
         <item name="android:navigationBarColor">@color/system_bar_scrim</item>
     </style>
+
+    <!--
+        The compact controls' window (`docs/phase-3.md` §2). Everything that makes this a dialog
+        rather than a screen is here, because a floating window is not a property code sets — the
+        platform reads these attributes when the window is created, before ControlsActivity runs a
+        line.
+
+        The parent is the same hard requirement as above and not a style preference:
+        AppCompatActivity throws on a theme that does not descend from Theme.AppCompat, and the
+        compact host has to be an AppCompatActivity for the language switcher (ADR-0004) and the
+        night mode (ADR-0006). A Theme.MaterialComponents.*.Dialog parent would pull in a second
+        widget library that renders nothing here.
+
+        `backgroundDimEnabled` is false on purpose, and it is the one item with a safety argument
+        behind it. The platform's dialog dim is a scrim the *system* draws over everything behind the
+        window — a third dimming mechanism, on top of the shade's two, and outside every bound
+        ShadeRampTest asserts. CLAUDE.md's composite rule can only see the two layers this app draws;
+        it cannot see a system scrim, so there must not be one.
+
+        `windowNoTitle` appears twice, once with the `android:` prefix and once without, and the
+        phone is what found that out (R2). The prefixed one is the platform's; the bare one is
+        AppCompat's own attribute, and it is the one `AppCompatDelegate` reads when it builds the
+        sub-decor. A dialog theme shows a title by default, so with only the platform attribute set
+        the window came up with a grey bar reading "Gloam debug" across the top of it. `phase-3.md`
+        §2's block lists only the prefixed one; this is the correction.
+
+        No edge-to-edge items: a floating window does not draw the system bars, and the activity
+        behind it keeps owning them.
+    -->
+    <style name="Theme.App.Controls" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+    </style>
 </resources>
