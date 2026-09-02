@@ -3,6 +3,7 @@ package app.gloam.ui.settings
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.util.Log
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import app.gloam.ControlsActivity
 import app.gloam.MainApplication
 import app.gloam.shade.readBacklight
 import app.gloam.shade.startShade
@@ -65,6 +67,18 @@ import kotlinx.coroutines.launch
  *
  * So the same justification the sweep above carries applies here: **only the app can do this to
  * itself**, which is why the button is in the app and behind the seam rather than in a script.
+ *
+ * ## Opening the compact controls — Phase 3, checkpoint C
+ *
+ * `ControlsActivity` is `exported="false"`, because the only things that legitimately open it are
+ * this app's own notification and 2b's tile, and a dialog any installed app could raise over the
+ * foreground app is a different thing entirely. That is also why `adb shell am start -n` cannot
+ * reach it — it runs as uid 2000 and the activity manager refuses with `not exported from uid …`,
+ * which `docs/phase-3.md` §12 did not allow for when it wrote that command down.
+ *
+ * So the same justification the two above carry applies a third time: **only the app can do this to
+ * itself**. R2, R3 and R5 are all taken through this button until checkpoint D builds the routes a
+ * user will actually use.
  *
  * None of this reaches a release binary, and none of its strings reach the translation gate — which
  * is why the text here is hardcoded English rather than a string resource.
@@ -167,6 +181,25 @@ fun DebugSettings() {
                 },
             ) {
                 Text("Arm 2-minute deadline")
+            }
+        }
+
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            // `FLAG_ACTIVITY_NEW_TASK` so this reproduces the route checkpoint D will build rather
+            // than a convenient one: the notification's `PendingIntent` starts the activity from
+            // outside any task of ours, and `ControlsActivity` declares an empty `taskAffinity`, so
+            // the window under measurement is the one that lands in its own task. Without the flag
+            // it would open inside Settings' task instead, which is a different window ordering
+            // from the one R2 is reading.
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(context, ControlsActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                },
+            ) {
+                Text("Open compact controls")
             }
         }
     }
