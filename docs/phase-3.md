@@ -115,6 +115,10 @@ remembered — and is a point at which the phase could stop without stranding an
 | **F** | The panel: window, host, controls, dismissal | 3b | `chore:` + `test:`, then `feat:` | **A's verdict** |
 | **G** | The documents | both | `docs:` | everything above |
 
+**A is taken, and it went: 2026-09-02, R1, outcome one — the panel sits above the shade and the
+shade keeps its override.** F is in. What follows is written as planned rather than as a cut; §5
+carries the numbers and the one thing the reading found that it was not looking for.
+
 **A is a gate, not a task, and it runs before a line of this phase is written.** Phase 1 carried one
 that could veto the backlight half; this one can veto 3b outright. It is a reading taken against a
 *bare* second window — no Compose, no controls, no lifecycle — because the question is about window
@@ -516,6 +520,35 @@ outcomes and only one of them is a cut:
 button removes it. That is the whole apparatus. It is the same justification the backlight sweep and
 the two-minute deadline button beside it already carry: only the app can do this to itself, and the
 seam exists so that developer-only surface never reaches a release build.
+
+**A's verdict, read on the phone 2026-09-02: go, and it is outcome one — nothing to build.** Taken
+with the shade live at dim 100, `MIN_BACKLIGHT` applied, screen held awake:
+
+- **Order.** `dumpsys window windows` prints the stack top-first, and the two come back adjacent and
+  the right way round: `Window #8` is the 600 px square — `ty=APPLICATION_OVERLAY`, `gr=CENTER`, no
+  `sbrt=` — and `Window #9` is the shade, `fillxfill` with `sbrt=0.01`. The later `addView` is on
+  top, which is what insertion order predicted and what nothing documents.
+- **The override.** With the square above it and asking for no brightness of its own,
+  `mWindowManagerBrightnessOverride=0.01` and the tag still `io.github.srednimax.gloam.debug`.
+  Removing the square changed neither; stopping the shade released it to `NaN` and the panel went
+  back to the user's own brightness.
+
+So the rule Phase 1's R5 and R9 measured against other apps holds between two windows of ours as
+well: **the topmost window that *asks* owns the override, and one that declines is not consulted.**
+The panel therefore keeps `BRIGHTNESS_OVERRIDE_NONE`, and §6's field-copy fallback is not built — it
+stays written down as the thing to reach for if a future ROM disagrees.
+
+**One thing R1 found that it was not looking for, and it is not settled.** Both of Gloam's overlay
+windows print `alpha=0.8` in `mAttrs` — a `LayoutParams` field **this app never sets**, on the
+shade's window as much as on the debug square. It is applied rather than merely printed: in the
+`screencap` the square comes back `(205, 1, 205)` where magenta is `(255, 0, 255)`, which is 0.8 of
+it, while every sample outside the square is under `18/255`. That is the eyes-on half of the
+ordering answer — the square is plainly not dimmed by the shade — and it opens a question this
+reading cannot close: what an 0.8 window alpha does to the **shade's own** composite, which
+ADR-0010's cap computes on the assumption that the layer alphas we set are the layer alphas that
+land. **R6 owns it**, panel and shade in one frame. Nothing here shows a cap exceeded, and the error
+would run *lighter* than computed rather than darker — the safe direction for the bound that keeps
+the way out visible, and the unwelcome one for the thing the app is for.
 
 **And it needs nothing else in this phase, which is why it is checkpoint A.** `ShadeService` ships a
 live shade today and the debug seam already carries surface of exactly this kind, so the reading is
@@ -1017,7 +1050,7 @@ right". Derivations are in §12 and are arithmetic, not observations.
 
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
-| R1 | **Go/no-go: order and override** | debug second window, `dumpsys window windows` + `dumpsys display` | — |
+| R1 | **Go/no-go: order and override** | debug second window over a live shade at dim 100; `dumpsys window windows`, `dumpsys display`, `screencap` | **Go, outcome one** (2026-09-02). Square is `Window #8`, shade `Window #9`, printed top-first — the second window is above. `mWindowManagerBrightnessOverride=0.01`, `…OverrideTag=io.github.srednimax.gloam.debug`, unchanged with the square up and declining a brightness; `NaN` once the shade stopped. `screencap` centre `(205, 1, 205)`, everything outside it under `18/255`. **Both our windows report an `alpha=0.8` the app never set** — §5, and R6 owns it |
 | R2 | The floating host's shape | launch it, `dumpsys window windows` for its bounds | — |
 | R3 | The compact host at dim 100 | shade live at 100, open the host, `screencap` + `dumpsys display` | — |
 | R4 | Notification plain tap, at maximum dim | tap the row by hand, then `dumpsys activity activities` | — |
