@@ -1085,7 +1085,7 @@ and put it back after.
 | R8a | Auto-off across a kill that restarts | `run-as ... kill -9`, then watch the restart | **There was no restart.** See below. 2026-09-01 |
 | R8b | Auto-off across a kill that does not | `am force-stop`, then open the app | **Cleared on the next foreground**, read off the stored file. 2026-09-01 |
 | R9 | `mailto:` subject survives | tap *Report a problem*, read the compose screen, send it | **It arrives, and so does the mail.** `Gloam #bug` prefilled; delivered and forwarded on. 2026-09-01 |
-| R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | **Both emulator legs green, and red under mutation. The phone is still out of reach.** See below. 2026-09-02 |
+| R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | **Green on both emulator legs and on the phone, and red under mutation.** See below. 2026-09-02 |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The phase's four behaviours, on the floor** — launch, shade, deadline, and a real reboot that restored it. 2026-09-02 |
 | R12 | The language switcher without AppCompat's backport | tap *Polski*, `cmd locale get-app-locales`, force-stop, relaunch | **The framework holds it: `[pl]`, and a cold start comes up Polish.** 2026-09-01 |
 
@@ -1401,7 +1401,7 @@ rather than a gap in the reading.
 The phone was put back afterwards — `cmd locale set-app-locales … --locales ""`, confirmed empty, and
 the app relaunched in English.
 
-### R10 — the assertion is real on the emulators, and the phone is a ROM problem rather than a test problem
+### R10 — the assertion is real, and the ROM's refusal was not permanent
 
 **Green on both legs of the new matrix**, on PR #25's run: API 33 in 3m 05s and API 36 in 2m 43s,
 each of them installing the app and the instrumentation and running `ShadeWindowTest` against a live
@@ -1413,17 +1413,32 @@ recorded rather than a pass.
 written to print — *the shade would swallow every touch and the phone would look frozen* — and the
 flag went back. That is the reading; the green on its own is not.
 
-**The phone half is not taken, and the reason is the one `CLAUDE.md` already documents.** HyperOS
-refuses the *first* install of a brand-new package outright — `INSTALL_FAILED_USER_RESTRICTED`, with
-no dialog to miss — and `…gloam.debug.test` is a brand-new package. Neither `adb install -r -t` nor
-the split-APK workaround gets past it, because the workaround is for the *prompt*, and there is no
-prompt. It needs a hand on the device: enable USB installation in developer options, or push the APK
-to `/sdcard/Download/` and tap it in the file manager.
+**The phone took two attempts a day apart, and the second needed no workaround.** On 2026-09-01 the
+first install of `…gloam.debug.test` was refused with `INSTALL_FAILED_USER_RESTRICTED` and no dialog
+to miss — the brand-new-package case `CLAUDE.md` documents, which is why the leg was left unread. On
+2026-09-02 the identical command succeeded:
 
-**What that leaves unread is narrower than "the phone".** The window's flags on this phone were read
-directly, twice, in R1 and R6 — `fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS`
-off `dumpsys` after a real reboot and after an update. What is missing is the *automated* check on
-this device, not the fact it asserts.
+```
+$ adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+Performing Streamed Install
+Success
+$ adb shell am instrument -w io.github.srednimax.gloam.debug.test/androidx.test.runner.AndroidJUnitRunner
+app.gloam.shade.ShadeWindowTest:.
+Time: 0.478
+OK (1 test)
+```
+
+**What changed between the two is not established**, and that is worth writing down rather than
+smoothing over: HyperOS's install restriction is a state the user can move (USB installation in
+developer options) and one the ROM also relaxes on its own, so a single success does not retire
+`CLAUDE.md`'s note. Treat the workaround as still needed on a fresh package until a refusal fails to
+reproduce twice.
+
+**The device was put back**, and mostly by not being disturbed: the overlay appop was already
+`allow`, so the test's restore had nothing to undo, and afterwards there is no overlay window and no
+`ShadeService`. The flags on this phone had already been read directly in R1 and R6 —
+`fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS` off `dumpsys` after a real reboot
+and after an update. What this adds is the *automated* check on the one device that ships.
 
 ### R11 — the whole phase, on the API level it is allowed to be the worst on
 

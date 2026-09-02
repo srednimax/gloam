@@ -244,7 +244,8 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       the real service and reads the real window out of `dumpsys window windows`, which is the only
       place the *effective* flags exist — a JVM test can only assert the constant we pass in.
       **Proven non-vacuous by mutation**: dropping `FLAG_NOT_TOUCHABLE` turns it red with the
-      message it was written to print. Both legs green on PR #25.
+      message it was written to print. Both legs green on PR #25, and green on the phone too
+      (R10) once HyperOS let the instrumentation package install at all.
 - [x] **Create the API-33 AVD** and run the end-of-phase pass on it (ADR-0008). Done 2026-08-31:
       `gloam-api33`, `system-images;android-33;google_apis;x86_64` on a Pixel 6 profile, created and
       booted headless entirely from the CLI — no Android Studio. R10 passed on it: the app launches,
