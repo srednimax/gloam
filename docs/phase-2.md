@@ -748,7 +748,14 @@ everything else that would want one. What it costs today is not nothing:
 
 **Recommendation: remove it**, as a second dated amendment on ADR-0003, and re-run
 `scripts/aab-permissions.py` on the resulting bundle to watch the permission list actually shrink —
-which is the artifact check earning its keep rather than passing. It is ADR-0003's decision to amend,
+which is the artifact check earning its keep rather than passing.
+
+**Done, and it shrank.** On the 2026-09-02 bundle the artifact declares **six** permissions where it
+declared eight: `WAKE_LOCK` and `ACCESS_NETWORK_STATE` are gone, and `RECEIVE_BOOT_COMPLETED` is
+still there but now because `shade/BootReceiver.kt` asks for it rather than because a dependency
+merged it — the same string arriving for a reason the source can account for, which is the whole
+distinction the check exists to draw. `aab-reflection.py` reads the removal from the other side:
+three `androidx.startup` initializers and no `tools:node="remove"` holding a fourth back. It is ADR-0003's decision to amend,
 and the order matters: §4 declares `RECEIVE_BOOT_COMPLETED` **before** this removes the merge that had
 been supplying it.
 

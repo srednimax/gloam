@@ -300,9 +300,16 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
 - [ ] **Every release: run the artifact checks on the built AAB**, not on the source.
       `aab-permissions.py` is the one that finds what a *dependency* merged into your manifest —
       a permission you never declared, or a `uses-feature` that quietly filters the app off devices.
-      All four pass on the 2026-08-30 bundle. **Three of Gloam's eight permissions are merged rather
-      than written** — `WAKE_LOCK`, `ACCESS_NETWORK_STATE` and `RECEIVE_BOOT_COMPLETED`, all
-      WorkManager's — which is exactly the reading the source cannot give you.
+      **All four pass on the 2026-09-02 bundle** — `versionCode` 84, `versionName` 0.4.0 — and this
+      is the run that proved WorkManager's removal on the artifact rather than in the diff.
+      **Six permissions now, and nothing is merged**: `WAKE_LOCK` and `ACCESS_NETWORK_STATE` left
+      with WorkManager, and `RECEIVE_BOOT_COMPLETED` stayed but is now declared in the source by
+      `shade/BootReceiver.kt` instead of inherited. The one entry that is not ours is AndroidX's
+      signature-level `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. `aab-reflection.py` shows the same
+      removal from the other side: three `androidx.startup` initializers, WorkManager's gone along
+      with the `tools:node="remove"` surgery that used to hold it back.
+      **The hazard is not gone with it, only this instance of it** — which is why the check is a
+      standing one.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
       **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
       2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the
