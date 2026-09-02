@@ -4,22 +4,22 @@
 Play Console raises edge-to-edge against every app targeting SDK 35+, and the notice is generic
 advice rather than a detected defect. `MainActivity` already calls `enableEdgeToEdge()` and the
 shell's `Scaffold` owns the insets, so the mechanism is in place; what is owed is *evidence*, and
-evidence for four configurations across twenty-odd screens is not something anyone captures by hand
-twice.
+evidence for four configurations across every screen the app has is not something anyone captures by
+hand twice.
 
 So this drives it. For each cell of the matrix it sets the rotation and the navigation mode, walks
 the app to each scene, saves a screenshot, and — the part that makes the screenshots reviewable —
 asks `uiautomator` where every text, icon and control actually landed, then intersects those
 rectangles with the system-bar and display-cutout rectangles `dumpsys` reports for that same
 configuration. A control inside the navigation bar's rectangle is the defect the checkpoint is
-looking for, found by arithmetic instead of by squinting at 80 PNGs.
+looking for, found by arithmetic instead of by squinting at three dozen PNGs.
 
 The screenshots are still the deliverable: this narrows which ones a human has to open.
 
 Usage:
     scripts/edge-to-edge.py --out /path/to/dir            # the whole matrix
     scripts/edge-to-edge.py --out DIR --config landscape-threebutton
-    scripts/edge-to-edge.py --out DIR --scene home,weight-chart
+    scripts/edge-to-edge.py --out DIR --scene dim,settings
     scripts/edge-to-edge.py --out DIR --locale pl         # the same walk, in Polish
     scripts/edge-to-edge.py --out DIR --assert-clean       # exit 1 on a defect, for CI
     scripts/edge-to-edge.py --out DIR --retry-unreached 2  # re-walk a scene the driver missed
@@ -1137,17 +1137,21 @@ class Scene:
     family: str
     steps: list[tuple[str, str]] = field(default_factory=list)
     note: str = ""
-    # "full" runs against seeded sample data; "empty" runs against a wiped install, which is the
-    # only way to see the first-run wizard and the only honest way to see an empty list.
+    # "full" runs against a granted install; "empty" runs against a wiped and denied one, which is
+    # the only way to see the permission explainer a first user actually meets.
     suite: str = "full"
-    # The sample data seeds a watch that has already run out, so 4d's expiry prompt is waiting on
-    # top of every launch until someone answers it — and answering it is permanent. So the prompt
-    # is captured in all four configurations first and dismissed out of the way everywhere else.
+    # **Inert in Gloam, and kept rather than deleted.** In the app this engine came from, the seeded
+    # data raised a prompt on top of every launch that had to be captured before it was dismissed,
+    # and this is the flag that said so. Gloam raises nothing over its own screens, so no scene sets
+    # it and it is always False — which makes the engine's ordering, dismissal and retry branches
+    # below dead code today. They are the cheapest thing to keep and the most expensive thing to
+    # rediscover, so they stay until a scene needs them.
     keeps_watch_prompt: bool = False
-    # The seed this scene needs, "" being the plain sample data. Anything else is a variant name the
-    # debug build's SeedVariantReceiver knows, added *on top of* the sample data — the default seed
-    # is never edited, because 61 scenes and the listing screenshots rest on it. Scenes are grouped
-    # by this, so a variant costs one reseed per cell rather than one per scene.
+    # **Inert in Gloam**, for the same reason as above and more completely: Gloam has no sample data
+    # to seed, no debug receiver to seed it with, and one screen over DataStore rather than a list.
+    # Every scene runs on the plain install, so this is always "" and the reseeding machinery it
+    # drives never fires. It comes back with the first feature that stores rows a user created —
+    # which the house rules say is a deliberate act with a migration story attached, not a Tuesday.
     seed: str = ""
 
 
@@ -1521,7 +1525,7 @@ def main() -> int:
         "--suite",
         default="full",
         choices=["full", "empty"],
-        help="'full' needs the debug sample data seeded; 'empty' WIPES the app to reach the wizard",
+        help="'full' walks the app's screens; 'empty' WIPES it to reach the permission explainer",
     )
     parser.add_argument(
         "--locale",

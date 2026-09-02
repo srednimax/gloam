@@ -914,6 +914,7 @@ need somebody at the phone, which is why R3 exists.
 | **R9** | The `mailto:` hand-off on this phone: does the **subject** arrive? | the Gmail `EXTRA_SUBJECT` trap, re-measured rather than inherited |
 | **R10** | The instrumented window-flags test on both emulator legs **and** on the phone | §8's assertion, and whether the split-APK workaround still works |
 | **R11** | **API-33 AVD end-of-phase pass** (ADR-0008): launches, window appears, permission flow, boot restore via R3, auto-off fires | the phase's own closing gate |
+| **R13** | **The rewritten edge-to-edge matrix on the phone**, all four configurations — added after §8 landed, because the AVD is where the harness's hardware-tuned timings are least honest | whether §8's scenes describe this app on the device it ships to |
 
 **R7, R8a and R8b need a deadline shorter than thirty minutes, and nothing in the shipped app can
 make one.** `AutoOff`'s smallest value is `Minutes30`. A debug-only entry in that enum is out: it
@@ -1088,6 +1089,7 @@ and put it back after.
 | R10 | Window-flags test, both emulator legs and the phone | `connectedDebugAndroidTest`; on the phone, the split-APK workaround in `CLAUDE.md` | **Green on both emulator legs and on the phone, and red under mutation.** See below. 2026-09-02 |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The phase's four behaviours, on the floor** — launch, shade, deadline, and a real reboot that restored it. 2026-09-02 |
 | R12 | The language switcher without AppCompat's backport | tap *Polski*, `cmd locale get-app-locales`, force-stop, relaunch | **The framework holds it: `[pl]`, and a cold start comes up Polish.** 2026-09-01 |
+| R13 | The rewritten edge-to-edge matrix, on the phone rather than an emulator | `edge-to-edge.py --out DIR`, all four configurations | **Nothing drawn under a system bar in any cell.** Four touch findings, all one unlabelled container. See below. 2026-09-02 |
 
 ### R3 — the cheap loop this phone refuses, and what took its place
 
@@ -1463,6 +1465,40 @@ fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS HARDWARE_ACCELE
   path does when the ROM stays out of the way — R1 and R2 are what it does when the ROM does not.
 
 **It is a floor check, not a light measurement.** The phone stays the only place a nit is read.
+
+### R13 — the rewritten scenes, on hardware, and what the four touch findings actually are
+
+§8's rewrite was verified on the API-33 AVD, which is the weaker half of the claim: the harness's
+`settle()` timings are tuned to real hardware, and the emulator is where they go flaky rather than
+where they are honest. So the whole matrix was walked on the phone — four configurations × eight
+scenes, **3m 27s per configuration**, about fourteen minutes end to end.
+
+**`drawn=0` in all thirty-two cells.** No text, icon or control is painted under a status bar,
+navigation bar or display cutout anywhere in the app, in either orientation, in either navigation
+mode. That is the assertion the checkpoint exists for and it passes outright.
+
+**Four `touch=1` findings, and all four are the same object**: one anonymous `clickable` `View` —
+the licence list's scroll container — whose rectangle runs 72 px under a bottom navigation bar.
+
+```
+portrait-threebutton  licences         touch  label='View'  bounds=[0,322,1220,2642]  overlap=[0,2570,1220,2642]
+landscape-gesture     licences-bottom  touch  label='View'  bounds=[130,250,2712,1220] overlap=[130,1172,2712,1220]
+```
+
+**A list that scrolls under the navigation bar is the intended shape**, not the defect. What would be
+a defect is a licence *row* stranded under the bar where it cannot be tapped — and the assertion
+reports every text, icon and control it finds, so a stranded row would appear as its own finding
+carrying its own label. None does, in either the scrolled-to-top scene or `licences-bottom`, which is
+the same list scrolled to its end. The container extends; the rows stay clear of the bar.
+
+**The two clean cells explain the two dirty ones and confirm the reading.** The container's bottom
+edge is at 2642 in portrait. A three-button bar starts at 2570 and is caught; a gesture bar starts at
+2664 and is not. In landscape the three-button bar is on the *right* edge and nothing reaches it at
+all. The finding tracks the height of the bottom bar rather than anything about the licence screen,
+which is what a container-under-a-bar looks like and not what a mislaid control looks like.
+
+**It reproduces the AVD's reading and sharpens it.** The same two scenes were the only findings on
+`gloam-api33`; four configurations on hardware say the same thing with the config axis to explain it.
 
 ---
 
