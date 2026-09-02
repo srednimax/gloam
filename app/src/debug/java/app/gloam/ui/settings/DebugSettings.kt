@@ -3,7 +3,10 @@ package app.gloam.ui.settings
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.PixelFormat
 import android.util.Log
+import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -83,6 +87,11 @@ fun DebugSettings() {
 
     var applied by remember { mutableFloatStateOf(RELEASED) }
     var sweepRun by remember { mutableIntStateOf(0) }
+
+    // Read from [SecondWindow] rather than owned here, because the window deliberately outlives this
+    // composition: the whole point is to leave the app with it up. `remember` seeds the label from
+    // the real state on re-entry; the buttons keep it in step after that.
+    var secondWindowUp by remember { mutableStateOf(SecondWindow.isUp) }
 
     LaunchedEffect(reading) { Log.i(TAG, "reading: $reading") }
 
@@ -169,7 +178,113 @@ fun DebugSettings() {
                 Text("Arm 2-minute deadline")
             }
         }
+
+        Text(
+            text = "second window: " + if (secondWindowUp) "up" else "down",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+        )
+
+        Row(modifier = Modifier.padding(top = Spacing.tight, bottom = Spacing.base)) {
+            Button(
+                onClick = {
+                    SecondWindow.add(context)
+                    secondWindowUp = SecondWindow.isUp
+                },
+                enabled = !secondWindowUp,
+                modifier = Modifier.padding(end = Spacing.tight),
+            ) {
+                Text("Add second window")
+            }
+            OutlinedButton(
+                onClick = {
+                    SecondWindow.remove(context)
+                    secondWindowUp = SecondWindow.isUp
+                },
+                enabled = secondWindowUp,
+            ) {
+                Text("Remove second window")
+            }
+        }
     }
+}
+
+/**
+ * R1's whole apparatus — Phase 3, checkpoint A.
+ *
+ * A second `TYPE_APPLICATION_OVERLAY` window of our own, put up over the live shade so that
+ * `dumpsys` can be asked the two questions the panel is a bet on (`docs/phase-3.md` §5):
+ *
+ * - **Does it sit above the shade?** Both windows are the same type from the same uid, and ordering
+ *   within a type is the window manager's business — the expectation is insertion order, which is an
+ *   expectation rather than a documented guarantee. `dumpsys window windows` prints the stack in
+ *   order, and the rectangle is a loud colour so a `screencap` says the same thing a second way: at
+ *   dim 100 a magenta square *above* the shade stays magenta, and one below it is nearly black.
+ * - **Who owns the backlight override?** This window sets no `screenBrightness` at all, so it leaves
+ *   the field at `BRIGHTNESS_OVERRIDE_NONE` — *not asking*, rather than asking for nothing. By the
+ *   rule Phase 1's R5 and R9 measured, the shade underneath should keep its `0.01`.
+ *   `dumpsys display` is where that is read rather than assumed.
+ *
+ * **Bare on purpose.** No Compose, no lifecycle, no controls, nothing that could be blamed if the
+ * answer is surprising. Every line the panel needs beyond this is a line written on the bet this
+ * window is here to settle, which is why checkpoint A runs before any of them exist.
+ *
+ * **It carries `FLAG_NOT_TOUCHABLE`, which the real panel will not.** Touch is R7's question against
+ * the real thing, not R1's, and a touchable rectangle dropped over an unknown screen is the trap
+ * `docs/phase-3.md` §6 exists to bound — a debug button must not need its own way out. The flag
+ * should not reach the answer either way: what a window asks for is a `LayoutParams` field, and
+ * whether it can be touched is not one of the terms. R1 reads the result rather than trusting that.
+ *
+ * **A file-scoped object rather than composition state**, because the reading is taken with the app
+ * in the background: `DisposableEffect` would take the window down at exactly the moment the phone
+ * became worth looking at. The window dies with the process, which is the only cleanup a debug
+ * surface owes.
+ */
+private object SecondWindow {
+    private var view: View? = null
+
+    val isUp: Boolean get() = view != null
+
+    fun add(context: Context) {
+        if (view != null) return
+        val square = View(context).apply { setBackgroundColor(android.graphics.Color.MAGENTA) }
+        val side = (SIDE_DP * context.resources.displayMetrics.density).toInt()
+        val params =
+            WindowManager
+                .LayoutParams(
+                    side,
+                    side,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    PixelFormat.OPAQUE,
+                ).apply {
+                    // Centred, so the square lands over neither the status bar's pull-down nor the
+                    // gesture bar. The phone stays drivable with it up, which is what lets the
+                    // reading be taken from other apps rather than from Gloam's own Settings screen.
+                    gravity = Gravity.CENTER
+                }
+        runCatching { context.windowManager().addView(square, params) }
+            .onSuccess {
+                view = square
+                Log.i(TAG, "second window added: ${side}px square, no screenBrightness set")
+            }.onFailure { Log.w(TAG, "second window refused", it) }
+    }
+
+    fun remove(context: Context) {
+        val square = view ?: return
+        runCatching { context.windowManager().removeView(square) }
+        view = null
+        Log.i(TAG, "second window removed")
+    }
+
+    /**
+     * The **application**'s window manager, not the Activity's. An Activity's carries that
+     * activity's window token, and a window added with it is torn down with the activity — which is
+     * the one thing this window must not do.
+     */
+    private fun Context.windowManager(): WindowManager = applicationContext.getSystemService(WindowManager::class.java)
 }
 
 /** The computed number beside every ingredient that went into it, so a wrong one is visible. */
@@ -252,3 +367,6 @@ private const val STEP_MILLIS = 2500L
  * `delay` that happened to be shorter than the cap.
  */
 private const val ARM_MILLIS = 120_000L
+
+/** Big enough to see and to land a `screencap` on, small enough to obscure nothing that matters. */
+private const val SIDE_DP = 200
