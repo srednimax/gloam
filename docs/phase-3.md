@@ -67,6 +67,24 @@ the less any Activity-hosted control is worth, and only the panel gets that back
 wait for 3b — its own gate is the escape hatch, which is about *stopping* — but the two decisions are
 coupled and this paragraph is where that is written down.
 
+**Amended by checkpoint C's readings, 2026-09-02. Every argument above survives; two of its numbers
+do not.** R3 measured the shade's transmission at dim 100 rather than deriving it, and it comes back
+**0.2393**, not the `1 − MAX_SHADE_ALPHA` = 0.05 this section computes from. The cause is R1's
+`alpha=0.8`, now quantified: `1 − 0.8 × MAX_SHADE_ALPHA` = 0.24, which is the measurement to three
+decimal places. So on this ROM:
+
+- **The compact host under the shade is at ≈1.59 nits, not 0.33** — 6.64 × 0.2393, where the first
+  bullet above expects 6.64 × 0.05. Phase 1's R8 read 0.33 by arithmetic and this reads the composite.
+- **D1's 20× becomes ≈4.2×** — `1 / (1 − 0.8 × MAX_SHADE_ALPHA)`. The panel is still the only surface
+  that stays at the full 6.64, so 3b's case holds; it is four times better than what is under the
+  shade rather than twenty, and §12's D1 is arithmetic that R6 must now re-derive rather than confirm.
+
+**Which way this cuts is worth saying plainly.** ADR-0010's two bounds are *over*-satisfied — the
+screen is lighter than computed, so nothing about the escape hatch's visibility is at risk. What is
+at risk is the thing the app is for: at maximum dim Gloam is letting through nearly five times the
+light it believes it is. That is ADR-0010's business and R6's reading, not this checkpoint's, and it
+is recorded here because §0 is the section whose numbers it changes.
+
 ---
 
 ## What is in, and what is deliberately not
@@ -327,6 +345,53 @@ None of those four is load-bearing for safety — they are all "this is a dialog
 `noHistory` is the one worth naming, because without it a user who summons the controls from the
 notification and then leaves finds them again the next time they switch to Gloam's task, over
 whatever they were doing.
+
+### What the phone said — R2, R3 and R5, 2026-09-02
+
+Taken through a debug-only *Open compact controls* button rather than through `adb`, and the reason
+is the first correction below. Screen held awake at `screen_off_timeout=600000` for the shaded half,
+restored after.
+
+**The theme floats it, and the shape is the one this section wanted.** `mAttrs` comes back
+`(wrapxwrap) ty=BASE_APPLICATION fmt=TRANSLUCENT`, `Requested w=960 h=2440` — **320 × 813 dp** on a
+407 × 904 dp display — in its own task (`taskId` 11553 against `MainActivity`'s 11552, which is
+`taskAffinity=""` and `FLAG_ACTIVITY_NEW_TASK` doing what they were asked). Nothing behind it is
+scrimmed: the Settings screen under the dialog reads at its own brightness, which is
+`backgroundDimEnabled=false` holding.
+
+**Two corrections to this file, both found by the phone rather than by review.**
+
+- **§2's theme block is incomplete, and the missing item is visible.** With only
+  `android:windowNoTitle` set, the window came up with a grey bar reading *"Gloam debug"* across the
+  top of it. `AppCompatDelegate` reads AppCompat's own **unprefixed** `windowNoTitle` when it builds
+  the sub-decor; the platform attribute is not the one it consults. `Theme.App.Controls` now carries
+  both, plus `windowActionBar=false`, and the bar is gone.
+- **§12's `am start -n …/app.gloam.ControlsActivity` cannot work**, and should not be made to. The
+  activity is `exported="false"` — the only things that legitimately open it are this app's own
+  notification and 2b's tile — so `am` refuses it with `Permission Denial: … not exported from uid
+  10524`, because `adb` is uid 2000. The way in is a debug-only button, which is the same
+  only-the-app-can-do-this-to-itself argument the backlight sweep and the two-minute deadline already
+  carry. **Exporting the activity to make a command line work would be a real change**: a dialog any
+  installed app could raise over the foreground app is a different thing from a dialog Gloam raises
+  over its own shade.
+
+**The window is at its ceiling in both locales, and R5 is what shows it.** 2440 px is exactly the
+space between the status and navigation bars, so the dialog is floating but not short: English fits
+with *Open Gloam* just visible at the bottom, and **Polish overflows by about one line** — the
+backlight hint runs to six lines against English's five — so *Otwórz Gloam* sits below the fold until
+the content is scrolled. It scrolls, nothing is clipped, and `FlowRow` wraps the five auto-off chips
+to three rows in both languages with no truncation in either. **The way out being below the fold on
+open is the finding**, and it is a layout question for this section rather than one for the twelve:
+the deadline travelling is not what costs the room, the two explanatory hints are.
+
+**R3, and it is the reading that matters.** Shade started *from the compact host* at dim 100, warmth
+0, backlight on: the button flipped to *Stop dimming* and the deadline line appeared inside the
+dialog, so the host's own start/stop and `AutoOffControls` are wired correctly. The panel went to
+`nits= 6.642711` with `reason=override(io.github.srednimax.gloam.debug)` — `MIN_BACKLIGHT`, as
+computed. What the shade then did to the dialog under it was measured rather than eyeballed: the same
+window captured shaded and unshaded, 17 640 bright-pixel samples, **median transmission 0.2393**
+(p10–p90 0.2362–0.2417) where `1 − MAX_SHADE_ALPHA` = 0.05 was expected and `1 − 0.8 ×
+MAX_SHADE_ALPHA` = 0.24 was not. §0 carries the consequence; R6 still owns the constant.
 
 **What this host is not:** an escape hatch. It fails clause 2 of `phase-2.md` §2's definition —
 reaching it needs sight of Gloam's own UI, and §0 is why that is not fixable. `EscapeHatch.kt`'s
@@ -1018,10 +1083,10 @@ right". Derivations are in §12 and are arithmetic, not observations.
 | # | Reading | Command | Result |
 | --- | --- | --- | --- |
 | R1 | **Go/no-go: order and override** | debug second window, `dumpsys window windows` + `dumpsys display` | — |
-| R2 | The floating host's shape | launch it, `dumpsys window windows` for its bounds | — |
-| R3 | The compact host at dim 100 | shade live at 100, open the host, `screencap` + `dumpsys display` | — |
+| R2 | The floating host's shape | debug button, then `dumpsys window windows` for its bounds | **Floats, 960 × 2440 px = 320 × 813 dp** (2026-09-02), `(wrapxwrap)`, own task, nothing scrimmed behind it. Two corrections: AppCompat needs the **unprefixed** `windowNoTitle` or the window wears a *"Gloam debug"* title bar, and `am start -n` cannot reach an `exported="false"` activity — §2 |
+| R3 | The compact host at dim 100 | shade live at 100 from the host itself; `screencap` shaded vs unshaded, `dumpsys display` | Panel `nits= 6.642711`, `reason=override(…gloam.debug)`. **Measured transmission 0.2393** (median of 17 640 bright-pixel samples, p10–p90 0.2362–0.2417) against a computed 0.05 — so the host is at **≈1.59 nits, not D2's 0.33**. `1 − 0.8 × MAX_SHADE_ALPHA` = 0.24 is R1's `alpha=0.8`, quantified. §0 |
 | R4 | Notification plain tap, at maximum dim | tap the row by hand, then `dumpsys activity activities` | — |
-| R5 | Both locales in a narrow floating window | `cmd locale set-app-locales`, screenshot both | — |
+| R5 | Both locales in a narrow floating window | `cmd locale set-app-locales`, screenshot both | **Chips wrap to three rows in both, clipped in neither** (2026-09-02) — `FlowRow` holds at 320 dp. The window is at its 2440 px ceiling in both: English fits with *Open Gloam* visible, **Polish overflows by ≈one line** and puts *Otwórz Gloam* below the fold until scrolled. §2 |
 | R6 | The panel at dim 100, and its palette | `screencap` with the panel open, both themes | — |
 | R7 | Touches: in the panel, and through beside it | drag the panel's slider; tap the app underneath | — |
 | R8 | Rotation and locale change with the panel up | `settings put system user_rotation 1`, `cmd locale …` | — |
