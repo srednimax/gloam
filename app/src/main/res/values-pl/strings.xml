@@ -44,6 +44,7 @@
     <string name="dim_warmth_label">Ciepło barwy</string>
 
     <string name="controls_open_app">Otwórz Gloam</string>
+    <string name="panel_close">Zamknij sterowanie</string>
 
     <string name="settings_appearance">Wygląd</string>
     <string name="settings_theme_system">Systemowy</string>

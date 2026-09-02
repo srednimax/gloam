@@ -77,6 +77,7 @@
          dead end with no Settings behind it. "Open Gloam" and not "Open the app": the user knows the
          name, and it is the word on the icon they would otherwise have to go and find. -->
     <string name="controls_open_app">Open Gloam</string>
+    <string name="panel_close">Close controls</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>

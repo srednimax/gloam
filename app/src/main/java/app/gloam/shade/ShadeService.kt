@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
@@ -21,16 +22,24 @@ import app.gloam.work.AppChannel
 import app.gloam.work.ensureNotificationChannels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,6 +48,13 @@ import kotlin.math.min
 
 /** The notification's Stop action, delivered straight to the service so it needs no Activity. */
 private const val ACTION_STOP = "app.gloam.shade.STOP"
+
+/**
+ * Summon the panel, delivered to the service for the same reason [ACTION_STOP] is — and for one
+ * more: the panel is a window this service owns, so there is no Activity in the route at all. A tap
+ * that would otherwise be a task switch to a screen under the shade becomes a card drawn above it.
+ */
+private const val ACTION_SHOW_PANEL = "app.gloam.shade.SHOW_PANEL"
 
 private const val NOTIFICATION_ID = 1
 
@@ -194,6 +210,44 @@ class ShadeService : Service() {
      */
     private var backlightTop: Float? = null
 
+    /** The panel's root view while it is up, and the thing [removePanelWindow] takes down. */
+    private var panelView: View? = null
+
+    /**
+     * The lifecycle and saved-state owners the panel's composition is hanging from.
+     *
+     * **One per summon, and that is not tidiness.** `DESTROYED` is terminal — `LifecycleRegistry`
+     * throws when asked to move up out of it, and a `SavedStateRegistryController` restores once —
+     * so a `show()` / `hide()` pair on one long-lived host works exactly once. The panel has three
+     * ways to close and one to reopen, which makes the second summon the ordinary case.
+     */
+    private var panelHost: PanelHost? = null
+
+    /** What the panel draws, updated while it is up by [trackPanel]. */
+    private var panelState: MutableStateFlow<PanelState>? = null
+
+    /** The state collectors and the idle timer, cancelled together when the panel comes down. */
+    private var panelJob: Job? = null
+
+    /**
+     * Every touch the panel receives, whether or not a control consumed it.
+     *
+     * **Touches rather than values written**, which is the trigger the panel actually needs: its one
+     * reason to exist is the dim level moving over real content, and judging that means setting a
+     * value and then *looking*, which writes nothing. A user who drags once and studies the result
+     * would lose the panel mid-judgement on a value-written timer. The recovery property survives
+     * the wider trigger untouched — a panel drawn off-screen by a layout bug receives no touches
+     * either, so it still dies on schedule.
+     *
+     * `DROP_OLDEST` over a buffer of one: this is a re-arm signal, so the only interesting question
+     * is whether a touch happened recently, and `tryEmit` from the main thread must never suspend.
+     */
+    private val panelTouches =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -272,21 +326,38 @@ class ShadeService : Service() {
         startId: Int,
     ): Int {
         if (intent?.action == ACTION_STOP) {
-            // Record that the user turned it off *before* stopping. Without this the stored intent
-            // still says "running", and the next launch — or a system restart of a START_STICKY
-            // service — would helpfully put the shade back over a user who just dismissed it.
-            scope.launch {
-                preferences.endShade()
-                stopSelf()
-            }
+            stopFromWithin()
             return START_NOT_STICKY
         }
+        // Unconditionally, and before the panel branch below: `startForegroundService` carries a
+        // hard contract — call `startForeground` within a few seconds or Android kills the process
+        // — and a summon delivered to a service the ROM had killed and restarted arrives here too.
+        // Calling it again on an already-foreground service costs nothing.
         startForeground(NOTIFICATION_ID, buildNotification())
+        if (intent?.action == ACTION_SHOW_PANEL) showPanel()
         return START_STICKY
+    }
+
+    /**
+     * The shade comes down, by the notification's Stop action or by the panel's own button.
+     *
+     * Records that the user turned it off *before* stopping. Without this the stored intent still
+     * says "running", and the next launch — or a system restart of a `START_STICKY` service — would
+     * helpfully put the shade back over a user who just dismissed it.
+     */
+    private fun stopFromWithin() {
+        scope.launch {
+            preferences.endShade()
+            stopSelf()
+        }
     }
 
     override fun onDestroy() {
         scope.cancel()
+        // Before the shade, because the panel is a child of the shade's lifetime rather than a peer
+        // of it: there is no state in which the panel is up and the shade is not. This is the third
+        // of the panel's three ways out, and the only one the user does not ask for.
+        removePanelWindow()
         removeShadeWindow()
         super.onDestroy()
     }
@@ -376,6 +447,201 @@ class ShadeService : Service() {
     }
 
     /**
+     * Summon the panel, or do nothing.
+     *
+     * **`shadeView == null` is `docs/phase-3.md` §6's rule 2, enforced rather than assumed**: the
+     * panel cannot outlive the shade, and it may not precede it either — a window that cannot exist
+     * without a shade can never be the surface that starts one. On the notification route that
+     * precondition holds by construction, because the notification only exists while this service
+     * does; the check is what keeps a stale `PendingIntent` or a future caller from finding out
+     * otherwise.
+     *
+     * The read is `suspend`, so the window is added from a coroutine rather than from here. That is
+     * the whole reason [panelStateNow] exists: a `Flow` collected inside the composition would
+     * arrive after the first frame, and the first frame is the one with the user's dim level on it.
+     */
+    private fun showPanel() {
+        if (shadeView == null || panelView != null) return
+        scope.launch { addPanelWindow(panelStateNow()) }
+    }
+
+    /**
+     * Everything the panel draws, read once, before there is a window to draw it in.
+     *
+     * Six `first()` calls rather than one combined read, and it is not six disk reads: DataStore
+     * serves `store.data` from its in-memory cache once anything has collected it, and this service
+     * has been collecting since `onCreate`. There is also nothing to tear here — unlike
+     * [AppPreferences.shadeIntent], no two of these are written in one transaction, so a reader that
+     * takes them apart cannot see a half-written anything.
+     */
+    private suspend fun panelStateNow(): PanelState =
+        PanelState(
+            dimLevel = preferences.dimLevel.first(),
+            warmth = preferences.warmth.first(),
+            lowerBacklight = preferences.lowerBacklight.first(),
+            running = preferences.shadeIntent.first().running,
+            themeMode = preferences.themeMode.first(),
+            materialYou = preferences.materialYou.first(),
+        )
+
+    /**
+     * Add the panel's window above the shade, with the controls in it.
+     *
+     * ## The size is the safety bound
+     *
+     * A touchable window blocks every touch under it, so where the shade is safe because of a flag,
+     * the panel is safe because of its `LayoutParams` — a weaker kind of guarantee, because a flag
+     * is a constant and a size is a computation. [panelWidthPx] is that computation and
+     * `PanelWidthTest` sweeps it. The height is `WRAP_CONTENT` on purpose: a bounded height clips a
+     * control, and an unreachable close button is the trap this whole design is shaped to avoid.
+     *
+     * ## Why it is bottom-anchored and offset
+     *
+     * `Gravity.BOTTOM` puts the controls under the thumb rather than over the middle of whatever the
+     * user is reading. `FLAG_LAYOUT_IN_SCREEN` measures that from the display's own bottom edge, so
+     * the gesture bar or the navigation buttons would sit on top of the close control; the offset is
+     * read from the real window insets rather than guessed at a dp, because the two navigation modes
+     * differ by about 24 dp and only one of them is on this phone.
+     *
+     * ## No brightness of its own
+     *
+     * `screenBrightness` is left at `BRIGHTNESS_OVERRIDE_NONE`, which means *not asking* rather than
+     * *asking for nothing* — and R1 measured that the shade underneath keeps its override when this
+     * window declines. One dim level, one ramp, in a fixed order (ADR-0010): a second window deriving
+     * a second brightness would be a second ramp wearing a window's clothes.
+     */
+    private fun addPanelWindow(initial: PanelState) {
+        if (panelView != null) return
+        val manager = windowManager ?: return
+        // Guarded like `addShadeWindow`: the permission can be revoked while the service is alive,
+        // and `addView` throws rather than returning a failure.
+        if (!canDrawShade()) return
+
+        val state = MutableStateFlow(initial)
+        val host = PanelHost(this) { panelTouches.tryEmit(Unit) }
+        // Read once per summon rather than collected: whether this device honours a window
+        // brightness override at all is a property of the device, not a preference.
+        val backlightAvailable = readBacklightTop(this) != null
+
+        host.setContent {
+            PanelContent(
+                state = state,
+                backlightAvailable = backlightAvailable,
+                onDimLevel = { level -> scope.launch { preferences.setDimLevel(level) } },
+                onWarmth = { warmth -> scope.launch { preferences.setWarmth(warmth) } },
+                onLowerBacklight = { on -> scope.launch { preferences.setLowerBacklight(on) } },
+                onToggleRunning = ::togglePanelRunning,
+                onClose = ::removePanelWindow,
+            )
+        }
+
+        val metrics = manager.currentWindowMetrics
+        val params =
+            WindowManager
+                .LayoutParams(
+                    panelWidthPx(metrics.bounds.width()),
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    PANEL_WINDOW_FLAGS,
+                    PixelFormat.TRANSLUCENT,
+                ).apply {
+                    gravity = Gravity.BOTTOM
+                    val navigationBar =
+                        metrics.windowInsets
+                            .getInsets(WindowInsets.Type.navigationBars())
+                            .bottom
+                    y = navigationBar + (PANEL_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
+                }
+
+        runCatching { manager.addView(host.view, params) }
+            .onSuccess {
+                panelView = host.view
+                panelHost = host
+                panelState = state
+                // **`RESUMED` is not a formality.** Below `STARTED` the `Recomposer` stops applying
+                // recompositions, and the window draws its first frame correctly and then never
+                // changes again — a slider that will not move under a finger, with nothing in
+                // logcat to say why.
+                host.show()
+                panelJob = scope.launch { trackPanel(state) }
+            }.onFailure { host.destroy() }
+    }
+
+    /**
+     * Take the panel down, from any of its three routes: the close control, the idle timeout, or
+     * `onDestroy` when the shade goes.
+     *
+     * **It must not take the shade with it.** The panel closing is not the user saying they are done
+     * reading; the two lifetimes point one way only.
+     */
+    private fun removePanelWindow() {
+        panelJob?.cancel()
+        panelJob = null
+        val view = panelView ?: return
+        runCatching { windowManager?.removeView(view) }
+        panelHost?.destroy()
+        panelView = null
+        panelHost = null
+        panelState = null
+    }
+
+    /**
+     * Keep [PanelState] current, and take the panel down when it has been left alone.
+     *
+     * One collector per preference rather than one `combine` over six, because each writes its own
+     * field with `copy()` and none of them needs to know about the others — and `coroutineScope`
+     * makes the whole set one cancellable unit, which is what [removePanelWindow] cancels.
+     *
+     * **The timeout is `collectLatest`, which is `switchMap` and not `forEach`**: a new touch cancels
+     * the wait still running for the previous one, which is what re-arms it. `onStart` emits once so
+     * the clock is running from the moment the panel appears rather than from the first touch — a
+     * panel drawn where nobody can touch it is exactly the case the timeout exists for.
+     *
+     * Calling [removePanelWindow] from inside this block cancels the job the block is running in.
+     * That is safe here and would not be in general: cancellation is only observed at a suspension
+     * point, and there is none after the call, so the removal completes before the coroutine dies.
+     * `ShadeService`'s deadline loop is the same hazard with the opposite answer — there the write
+     * suspends, which is what `NonCancellable` is for in [awaitDeadline].
+     */
+    private suspend fun trackPanel(state: MutableStateFlow<PanelState>) =
+        coroutineScope {
+            preferences.dimLevel.onEach { v -> state.update { it.copy(dimLevel = v) } }.launchIn(this)
+            preferences.warmth.onEach { v -> state.update { it.copy(warmth = v) } }.launchIn(this)
+            preferences.lowerBacklight.onEach { v -> state.update { it.copy(lowerBacklight = v) } }.launchIn(this)
+            preferences.shadeIntent.onEach { v -> state.update { it.copy(running = v.running) } }.launchIn(this)
+            preferences.themeMode.onEach { v -> state.update { it.copy(themeMode = v) } }.launchIn(this)
+            preferences.materialYou.onEach { v -> state.update { it.copy(materialYou = v) } }.launchIn(this)
+
+            launch {
+                panelTouches.onStart { emit(Unit) }.collectLatest {
+                    delay(PANEL_IDLE_TIMEOUT_MS)
+                    Log.i(TAG, "panel idle for ${PANEL_IDLE_TIMEOUT_MS}ms, taking it down")
+                    removePanelWindow()
+                }
+            }
+        }
+
+    /**
+     * The panel's start/stop button.
+     *
+     * **In practice this only ever stops**, because the panel cannot be up without the shade — but
+     * the button says what [PanelState.running] tells it to say, and a button that lies is worse
+     * than a branch that rarely runs. The stop half is deliberately the same call the notification's
+     * Stop action makes, so the two cannot drift; the start half is `DimViewModel`'s pair, because
+     * a deadline is never written without the flag beside it.
+     */
+    private fun togglePanelRunning() {
+        if (panelState?.value?.running == false) {
+            scope.launch {
+                val choice = preferences.autoOff.first()
+                preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
+            }
+        } else {
+            stopFromWithin()
+        }
+    }
+
+    /**
      * One dim level in, a backlight and an alpha out — the arithmetic itself is [shadeValuesFor],
      * which has no Android under it and is proven by `ShadeRampTest` rather than by looking at a
      * screen. What is left here is the part that genuinely needs a device: deciding *when* the
@@ -460,4 +726,16 @@ fun Context.startShade() {
 /** Stop the shade and take the window down. */
 fun Context.stopShade() {
     stopService(Intent(this, ShadeService::class.java))
+}
+
+/**
+ * Summon the panel over a shade that is already up.
+ *
+ * `startForegroundService` rather than `startService` for the same contract [startShade] carries:
+ * the target may not be running — a ROM kill between the caller reading the notification and tapping
+ * it is exactly the case — and a background `startService` on a dead service throws. The service
+ * calls `startForeground` on its first statement either way.
+ */
+fun Context.showShadePanel() {
+    startForegroundService(Intent(this, ShadeService::class.java).setAction(ACTION_SHOW_PANEL))
 }

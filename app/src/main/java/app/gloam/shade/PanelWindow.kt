@@ -5,16 +5,35 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import app.gloam.R
+import app.gloam.data.ThemeMode
+import app.gloam.theme.AppTheme
+import app.gloam.theme.Spacing
+import app.gloam.ui.dim.DimControls
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The flags the **panel**'s window is added with — and the one that is missing is the point.
@@ -64,6 +83,16 @@ const val PANEL_MAX_WIDTH_PX = 1200
 
 /** Taken off each side. A fraction, so *never the whole display* holds at every display size. */
 private const val PANEL_SIDE_INSET = 0.05f
+
+/**
+ * How far above the navigation bar the panel floats.
+ *
+ * Small: the panel is bottom-anchored so the controls land under the thumb, and pushing it further
+ * up only moves it over more of what the user is reading. The navigation bar's own height is *not*
+ * in here — it is read from the live window insets, because gesture and three-button navigation
+ * differ by about 24 dp and a constant would be wrong on one of them.
+ */
+internal const val PANEL_BOTTOM_MARGIN_DP = 12
 
 /**
  * How wide to add the panel's window, given the display it is going over.
@@ -205,5 +234,105 @@ private class TouchReportingLayout(
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         onTouch()
         return super.dispatchTouchEvent(ev)
+    }
+}
+
+/**
+ * Everything the panel draws, as one immutable value.
+ *
+ * **Hoisted into `ShadeService` rather than collected in the composition**, because the service is
+ * already collecting most of it for the shade and because a `Flow` collected inside a composition
+ * arrives *after* the first frame — which here would be a slider visibly jumping from its default to
+ * the user's real dim level the instant the panel appears. The service reads a snapshot before it
+ * adds the window, so the first frame is already right, and keeps this updated afterwards so a
+ * change made anywhere else still moves the panel.
+ *
+ * **Kotlin note for a JS reader:** `copy()` is object spread — `state.copy(warmth = 40)` is
+ * `{...state, warmth: 40}`. It is how each of the service's little collectors writes its one field
+ * back without any of them needing to know about the others.
+ *
+ * There is deliberately no auto-off here. The panel gets [DimControls] and nothing else: every
+ * widget added to it has to stay legible at 6.64 nits, fit a window that must never be
+ * `MATCH_PARENT`, and be dismissible by somebody who cannot see the rest of the screen.
+ */
+data class PanelState(
+    val dimLevel: Int,
+    val warmth: Int,
+    val lowerBacklight: Boolean,
+    val running: Boolean,
+    val themeMode: ThemeMode,
+    val materialYou: Boolean,
+)
+
+/**
+ * What the panel's window draws: the same controls the app has, over whatever the user is reading.
+ *
+ * **The one control surface in Gloam that stays legible at maximum dim.** It is a second
+ * `TYPE_APPLICATION_OVERLAY` window, so it is drawn *above* the shade rather than under it, at the
+ * full backlight the shade left the panel at — where every Activity-hosted control of ours sits
+ * beneath the shade's own alpha and cannot escape it by any flag, theme or `LayoutParams` field.
+ *
+ * `AppTheme` needs no Activity — it is a function over `MaterialTheme`, and the one piece of it that
+ * does want a window checks for it and returns. The palette therefore comes out of the same generated
+ * scheme the app uses, from values read out of `AppPreferences` rather than from the configuration,
+ * so the panel cannot disagree with the screen the user just left.
+ *
+ * The `Surface` is drawn on a shape rather than filling the window because the window is translucent
+ * and sized to this content: what the user sees is a rounded card floating above their own app, not
+ * a bar welded to the bottom of the display.
+ */
+@Composable
+internal fun PanelContent(
+    state: StateFlow<PanelState>,
+    backlightAvailable: Boolean,
+    onDimLevel: (Int) -> Unit,
+    onWarmth: (Int) -> Unit,
+    onLowerBacklight: (Boolean) -> Unit,
+    onToggleRunning: () -> Unit,
+    onClose: () -> Unit,
+) {
+    // Collected here rather than passed as a value, so that a preference written from anywhere —
+    // the full app under the shade, the compact controls, this panel's own sliders — moves it. The
+    // lifecycle this reads comes from `PanelHost`, which is the whole reason that class exists.
+    val current by state.collectAsStateWithLifecycle()
+
+    AppTheme(themeMode = current.themeMode, dynamicColor = current.materialYou) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = Spacing.hair,
+        ) {
+            Column(modifier = Modifier.padding(vertical = Spacing.base)) {
+                DimControls(
+                    dimLevel = current.dimLevel,
+                    warmth = current.warmth,
+                    lowerBacklight = current.lowerBacklight,
+                    backlightAvailable = backlightAvailable,
+                    running = current.running,
+                    onDimLevel = onDimLevel,
+                    onWarmth = onWarmth,
+                    onLowerBacklight = onLowerBacklight,
+                    onToggleRunning = onToggleRunning,
+                )
+
+                // **Not optional.** With `FLAG_NOT_FOCUSABLE` the Back key never reaches this
+                // window, so there is no system gesture that closes it — this button and the
+                // service's idle timeout are the only two ways out that do not also take the shade
+                // down. A text button rather than an icon so the way out is readable rather than
+                // recognised, and so the label is its own accessibility name.
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.tight),
+                ) {
+                    TextButton(onClick = onClose) {
+                        Text(stringResource(R.string.panel_close))
+                    }
+                }
+            }
+        }
     }
 }

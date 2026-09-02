@@ -1,0 +1,173 @@
+package app.gloam.shade
+
+import android.os.ParcelFileDescriptor
+import android.provider.Settings
+import android.view.WindowManager
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * The panel's window, read off a real window manager — the half of `docs/phase-3.md` §6 that no
+ * constant can answer.
+ *
+ * **Two properties, and only a device has either.**
+ *
+ * - **It is above the shade.** Both windows are `TYPE_APPLICATION_OVERLAY` from the same uid, and
+ *   ordering within a type is the window manager's business: the expectation is insertion order,
+ *   which is an expectation rather than a documented guarantee. It is the whole case for the panel
+ *   — a panel *below* the shade is a panel dimmed by the thing it exists to control — so a ROM
+ *   update turning it over should show up as a red leg rather than as a support mail. R1 took this
+ *   reading by hand against a bare rectangle; this is the same assertion, kept.
+ * - **It is smaller than the display.** A touchable window blocks every touch under it, so its size
+ *   is what stands in for the `FLAG_NOT_TOUCHABLE` the shade has and the panel deliberately drops.
+ *   `PanelWidthTest` proves the arithmetic; this proves the window was actually built from it.
+ *
+ * **The cost, stated honestly** — as in `ShadeWindowTest`: `dumpsys window windows` is
+ * version-shaped text, and this is the layer that will need attention when a platform changes its
+ * output. That is exactly why the flags and the width are *also* asserted on the JVM.
+ */
+@RunWith(AndroidJUnit4::class)
+class PanelWindowTest {
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
+    private val packageName: String = context.packageName
+
+    private var overlayWasGranted = false
+
+    @Before
+    fun grantWhatThePanelNeeds() {
+        overlayWasGranted = Settings.canDrawOverlays(context)
+        if (!overlayWasGranted) {
+            shell("appops set $packageName SYSTEM_ALERT_WINDOW allow")
+        }
+        shell("pm grant $packageName android.permission.POST_NOTIFICATIONS")
+        assertTrue(
+            "The overlay grant did not take, so no window below could be read. Verified with " +
+                "canDrawOverlays() rather than by reading the appop back, which reports last-use.",
+            Settings.canDrawOverlays(context),
+        )
+    }
+
+    @After
+    fun putTheDeviceBack() {
+        // One call takes both windows down: the panel cannot outlive the shade.
+        context.stopShade()
+        if (!overlayWasGranted) {
+            shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
+        }
+    }
+
+    @Test
+    fun thePanelSitsAboveTheShadeAndDoesNotCoverIt() {
+        context.startShade()
+        assertNotNull(
+            "No shade window appeared within ${TIMEOUT_MS}ms of startShade(); nothing below could " +
+                "be read.",
+            awaitWindow { it.isShade },
+        )
+
+        context.showShadePanel()
+        val panel =
+            awaitWindow { it.isPanel }
+                ?: throw AssertionError(
+                    "No wrap-height APPLICATION_OVERLAY window for $packageName appeared within " +
+                        "${TIMEOUT_MS}ms of showShadePanel(). The service never added the panel, " +
+                        "or dumpsys no longer prints windows the way this test reads them.",
+                )
+
+        val windows = ourOverlayWindows()
+        val panelIndex = windows.indexOfFirst { it.isPanel }
+        val shadeIndex = windows.indexOfFirst { it.isShade }
+        assertTrue("The shade is not in the window list beside the panel", shadeIndex >= 0)
+        // `dumpsys window windows` prints the stack top-first, so a smaller index is higher up.
+        assertTrue(
+            "The panel is below the shade, so it is dimmed by the thing it exists to control. " +
+                "Windows, top first:\n" + windows.joinToString("\n\n") { it.text },
+            panelIndex < shadeIndex,
+        )
+
+        val displayWidth =
+            context
+                .getSystemService(WindowManager::class.java)
+                .currentWindowMetrics.bounds
+                .width()
+        val requested =
+            REQUESTED_WIDTH
+                .find(panel.text)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt()
+                ?: throw AssertionError(
+                    "dumpsys did not print a requested width for the panel; this test reads " +
+                        "'Requested w=…'. Window was:\n${panel.text}",
+                )
+        assertTrue(
+            "The panel was added $requested px wide over a $displayWidth px display — a touchable " +
+                "window that spans the display blocks every touch under it",
+            requested < displayWidth,
+        )
+        assertEquals(
+            "The panel's width did not come from panelWidthPx(), so the swept bound is not the " +
+                "one the window manager got",
+            panelWidthPx(displayWidth),
+            requested,
+        )
+    }
+
+    /** One `Window #N` block of `dumpsys window windows`, with the two questions it can answer. */
+    private class OverlayWindow(
+        val text: String,
+    ) {
+        /** `MATCH_PARENT` x `MATCH_PARENT` prints as `fill`, which only the shade asks for. */
+        val isShade: Boolean get() = "fillxfill" in text
+
+        /** `WRAP_CONTENT` height over an explicit pixel width, which only the panel asks for. */
+        val isPanel: Boolean get() = "xwrap)" in text
+    }
+
+    /**
+     * Poll until a window matching [predicate] shows up.
+     *
+     * Polling rather than one sleep, for `ShadeWindowTest`'s reason: adding a window is
+     * asynchronous, and the wait it needs is a few hundred milliseconds on a phone and considerably
+     * more on a cold emulator leg.
+     */
+    private fun awaitWindow(predicate: (OverlayWindow) -> Boolean): OverlayWindow? {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            ourOverlayWindows().firstOrNull(predicate)?.let { return it }
+            Thread.sleep(POLL_MS)
+        }
+        return ourOverlayWindows().firstOrNull(predicate)
+    }
+
+    /**
+     * Every `TYPE_APPLICATION_OVERLAY` window of ours, in the order `dumpsys` printed them.
+     *
+     * Identified by the package name *and* the type together, because the app's own activities have
+     * windows in this dump too and matching one of those would prove nothing.
+     */
+    private fun ourOverlayWindows(): List<OverlayWindow> =
+        shell("dumpsys window windows")
+            .split("Window #")
+            .filter { packageName in it && "ty=APPLICATION_OVERLAY" in it }
+            .map { OverlayWindow(it) }
+
+    private fun shell(command: String): String =
+        ParcelFileDescriptor
+            .AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command))
+            .use { it.readBytes().decodeToString() }
+
+    private companion object {
+        const val TIMEOUT_MS = 15_000L
+        const val POLL_MS = 250L
+        val REQUESTED_WIDTH = Regex("""Requested w=(\d+)""")
+    }
+}
