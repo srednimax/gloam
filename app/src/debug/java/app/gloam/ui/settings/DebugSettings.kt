@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import app.gloam.ControlsActivity
 import app.gloam.MainApplication
 import app.gloam.shade.readBacklight
+import app.gloam.shade.showShadePanel
 import app.gloam.shade.startShade
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SectionHeader
@@ -83,6 +84,17 @@ import kotlinx.coroutines.launch
  * So the same justification the two above carry applies a third time: **only the app can do this to
  * itself**. R2, R3 and R5 are all taken through this button until checkpoint D builds the routes a
  * user will actually use.
+ *
+ * ## Summoning the panel — Phase 3, checkpoint F
+ *
+ * The panel's one door is the notification's content intent, and **that is checkpoint D**. Until it
+ * lands there is no way for a user — or for `adb` — to put the panel on screen: it is a window
+ * `ShadeService` owns, summoned by an action delivered to the service, and a service action is not
+ * something the shell can send to an app that did not export it.
+ *
+ * So the same argument a fourth time, and R6 through R9 are all read through this button. It calls
+ * the same `showShadePanel()` the notification will, so what is measured here is the route rather
+ * than an approximation of it.
  *
  * None of this reaches a release binary, and none of its strings reach the translation gate — which
  * is why the text here is hardcoded English rather than a string resource.
@@ -237,6 +249,16 @@ fun DebugSettings() {
                 },
             ) {
                 Text("Open compact controls")
+            }
+        }
+
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            // Summon only. The panel refuses to appear without a shade under it
+            // (`docs/phase-3.md` §6, rule 2), and that precondition is the thing being measured —
+            // a button that quietly started one first would hide it. Start the shade from the dim
+            // screen the way a user does, then tap this.
+            Button(onClick = { context.showShadePanel() }) {
+                Text("Summon panel")
             }
         }
     }
