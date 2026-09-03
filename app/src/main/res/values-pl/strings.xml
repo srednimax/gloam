@@ -81,5 +81,6 @@
     <string name="channel_shade_description">Widoczne, gdy ekran jest przyciemniony, aby zasłonę można było wyłączyć z dowolnego miejsca.</string>
     <string name="shade_notification_title">Ekran przyciemniony</string>
     <string name="shade_notification_stop">Zatrzymaj</string>
+    <string name="shade_notification_text_backlight">Suwak jasności telefonu nic nie zmienia, gdy Gloam przyciemnia</string>
 
 </resources>

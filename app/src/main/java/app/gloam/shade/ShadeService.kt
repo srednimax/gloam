@@ -1,6 +1,7 @@
 package app.gloam.shade
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
@@ -220,6 +221,19 @@ class ShadeService : Service() {
      * re-reading on the next emission is right in both: nothing is live to be disturbed.
      */
     private var backlightTop: Float? = null
+
+    /**
+     * Whether the notification on screen right now carries the line about the paused brightness
+     * slider.
+     *
+     * Remembered rather than recomputed at the post site, because it is the *transition* that is
+     * worth a `notify()` and there is no flow operator that can see this one: it depends on
+     * [shadeParams] and on what [readBacklightTop] agreed to give us, neither of which is a
+     * preference. `DimScreen`'s slider writes on every integer step, so re-posting per value would
+     * be a binder call per slider pixel — and Android throttles sustained notification updates, so
+     * the update that matters would be a good candidate for the one it drops.
+     */
+    private var backlightAnnounced = false
 
     /** The panel's root view while it is up, and the thing [removePanelWindow] takes down. */
     private var panelView: View? = null
@@ -750,6 +764,44 @@ class ShadeService : Service() {
         dimLayer?.alpha = values.shadeAlpha
         warmthLayer?.alpha = values.warmthAlpha
         applyBacklight(values.backlight)
+        // After the backlight, never before: [backlightOverrideLive] reads what was just written.
+        syncNotificationText()
+    }
+
+    /**
+     * Is the backlight override actually on the window, right now?
+     *
+     * Read off [shadeParams] rather than recomputed from the preferences, and that is the whole
+     * point of the function. The level and the toggle say what we *want*; two further things can
+     * still make it untrue, and neither is a preference. [readBacklightTop] can decline to give us
+     * a number on a device that does not report one, and the shade window can be missing entirely —
+     * a revoked overlay permission, or a summon that arrived at a dead service, leaves this service
+     * alive with its notification up and nothing on screen to override anything. The params are
+     * nulled with the window, so this reads false in every one of those states.
+     *
+     * That matters more than it looks: the line is being put on the notification *because* it is
+     * the one surface a user can read at 6.64 nits, and a false explanation there is worse than no
+     * explanation in the app underneath.
+     */
+    private fun backlightOverrideLive(): Boolean {
+        val brightness = shadeParams?.screenBrightness ?: return false
+        return brightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+    }
+
+    /**
+     * Re-post the notification when [backlightOverrideLive] flips, and on nothing else.
+     *
+     * `notify` rather than a second `startForeground`: this notification is already the foreground
+     * one, and posting under the same id replaces it in place rather than adding a second row.
+     * There is no transition to catch on the way down through [removeShadeWindow] — it runs from
+     * `onDestroy`, where the notification is going away with the service.
+     */
+    private fun syncNotificationText() {
+        val live = backlightOverrideLive()
+        if (live == backlightAnnounced) return
+        backlightAnnounced = live
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        manager.notify(NOTIFICATION_ID, buildNotification())
     }
 
     /**
@@ -801,16 +853,25 @@ class ShadeService : Service() {
                 Intent(this, ShadeService::class.java).setAction(ACTION_STOP),
                 PendingIntent.FLAG_IMMUTABLE,
             )
-        return NotificationCompat
-            .Builder(this, AppChannel.Shade.id)
-            .setContentTitle(getString(R.string.shade_notification_title))
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(open)
-            .addAction(0, getString(R.string.shade_notification_stop), stop)
-            // Not dismissible: this notification is the way back out of a very dark screen.
-            .setOngoing(true)
-            .setSilent(true)
-            .build()
+        val builder =
+            NotificationCompat
+                .Builder(this, AppChannel.Shade.id)
+                .setContentTitle(getString(R.string.shade_notification_title))
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentIntent(open)
+                .addAction(0, getString(R.string.shade_notification_stop), stop)
+                // Not dismissible: this notification is the way back out of a very dark screen.
+                .setOngoing(true)
+                .setSilent(true)
+        // Phase 1 ships this explanation as `dim_backlight_hint`, in the app, which at maximum dim
+        // sits under the shade at ~1.6 nits: the person who most needs it is the one who cannot read
+        // it. Here it is on a surface drawn above the shade. Conditional rather than always present
+        // because it would otherwise tell a user who turned the backlight toggle off that their
+        // brightness slider is paused, which is false.
+        if (backlightOverrideLive()) {
+            builder.setContentText(getString(R.string.shade_notification_text_backlight))
+        }
+        return builder.build()
     }
 }
 
