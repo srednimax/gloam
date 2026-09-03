@@ -102,8 +102,18 @@
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.App">
+        <!--
+            `singleTop` exists for one case and it is a platform fact rather than a preference:
+            a launcher tap on a task that already exists is a `moveTaskToFront`, and `onCreate` is
+            never called. Without this, `MainActivity.onNewIntent` is never called either, and the
+            compact-controls forward (`docs/phase-3.md` §3) would work on a cold start and be
+            silently inert for as long as the app's task survived. It also means a second launch of
+            this Activity can never stack a second copy of it on the task — which is correct anyway
+            for an app whose whole UI is one Activity and a Nav3 back stack.
+        -->
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
