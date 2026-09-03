@@ -175,6 +175,18 @@ class ShadeService : Service() {
 
     private var windowManager: WindowManager? = null
 
+    /**
+     * The last values the preference collector produced, kept so a window added *after* it started
+     * can still be painted.
+     *
+     * The collector is `distinctUntilChanged`, which is what stops an unrelated preference write
+     * re-laying-out the window — and also means it will not re-emit for the benefit of a latecomer.
+     * [addShadeWindow] no longer runs in `onCreate`, so it is now exactly such a latecomer: without
+     * this it would add a window whose two children sit at the alpha 0 they are born with, and the
+     * shade would be up and perfectly transparent.
+     */
+    private var lastSettings: DimSettings? = null
+
     /** The window's root: the `FrameLayout` that `WindowManager` holds, not either layer. */
     private var shadeView: View? = null
 
@@ -254,7 +266,15 @@ class ShadeService : Service() {
         ensureNotificationChannels()
 
         windowManager = getSystemService(WindowManager::class.java)
-        addShadeWindow()
+
+        // **The shade is not raised here.** `onCreate` runs for every reason the service starts,
+        // and one of those reasons is a summon (`ACTION_SHOW_PANEL`) arriving at a service that is
+        // not running — from the debug button, or from a `PendingIntent` that outlived the process
+        // it was built in. Raising the shade here meant the summon turned the shade *on* over a
+        // user who had turned it off, and left `shadeIntent` saying "stopped" while the screen was
+        // dimmed: a button reading *Start dimming* over an already-dark screen. Measured on the
+        // phone, not reasoned about. `onStartCommand` decides now, because it is the half of
+        // starting that knows *why*.
 
         // The one source of truth for how dark it is. Collected rather than passed in the Intent so
         // that dragging the slider updates the live window without restarting anything.
@@ -271,8 +291,10 @@ class ShadeService : Service() {
         ) { level, warmth, lower ->
             DimSettings(dimLevel = level, warmth = warmth, lowerBacklight = lower)
         }.distinctUntilChanged()
-            .onEach { settings -> applyShadeValues(settings) }
-            .launchIn(scope)
+            .onEach { settings ->
+                lastSettings = settings
+                applyShadeValues(settings)
+            }.launchIn(scope)
 
         // Auto-off. `collectLatest` is `switchMap` rather than `forEach`: a new deadline cancels the
         // wait still running for the old one, which is what re-arms the loop when the user taps a
@@ -333,7 +355,11 @@ class ShadeService : Service() {
         // — and a summon delivered to a service the ROM had killed and restarted arrives here too.
         // Calling it again on an already-foreground service costs nothing.
         startForeground(NOTIFICATION_ID, buildNotification())
-        if (intent?.action == ACTION_SHOW_PANEL) showPanel()
+        // A summon raises the panel and nothing else; every other reason to be started — the app's
+        // own Start, the boot receiver, and Android's `START_STICKY` restart with a null intent —
+        // raises the shade. The `else` is the load-bearing half: it is what keeps a summon that
+        // arrives at a dead service from putting the shade up as a side effect of creating one.
+        if (intent?.action == ACTION_SHOW_PANEL) showPanel() else addShadeWindow()
         return START_STICKY
     }
 
@@ -419,6 +445,10 @@ class ShadeService : Service() {
                 dimLayer = dim
                 warmthLayer = warmth
                 shadeParams = params
+                // The children are born transparent and the collector that would darken them is
+                // `distinctUntilChanged`, so on every path where it has already emitted, this is
+                // the only thing that paints them. See [lastSettings].
+                lastSettings?.let { applyShadeValues(it) }
             }
     }
 
@@ -460,8 +490,27 @@ class ShadeService : Service() {
      * arrive after the first frame, and the first frame is the one with the user's dim level on it.
      */
     private fun showPanel() {
-        if (shadeView == null || panelView != null) return
-        scope.launch { addPanelWindow(panelStateNow()) }
+        if (panelView != null) return
+        scope.launch {
+            val state = panelStateNow()
+            // **The stored intent decides, not the window field.** The guard used to read
+            // `shadeView == null`, meaning "only over a live shade" — but on the path that matters
+            // it could never fail, because the summon that created the service had just filled that
+            // field in `onCreate`. What the user asked for is in DataStore; a summon arriving after
+            // they stopped the shade has nothing to open over, and the service it started has no
+            // reason to stay alive.
+            if (!state.running) {
+                Log.i(TAG, "summoned with the shade stopped; nothing to open over")
+                stopSelf()
+                return@launch
+            }
+            // A no-op whenever the shade is already up, which is the ordinary case. It does the
+            // work only when the ROM killed the service while the stored intent still said running
+            // — the summon then restores the shade first and opens the panel over it, rather than
+            // opening a panel with nothing underneath.
+            addShadeWindow()
+            addPanelWindow(state)
+        }
     }
 
     /**
@@ -497,10 +546,11 @@ class ShadeService : Service() {
      * ## Why it is bottom-anchored and offset
      *
      * `Gravity.BOTTOM` puts the controls under the thumb rather than over the middle of whatever the
-     * user is reading. `FLAG_LAYOUT_IN_SCREEN` measures that from the display's own bottom edge, so
-     * the gesture bar or the navigation buttons would sit on top of the close control; the offset is
-     * read from the real window insets rather than guessed at a dp, because the two navigation modes
-     * differ by about 24 dp and only one of them is on this phone.
+     * user is reading, and the offset above that edge is the flat [PANEL_BOTTOM_MARGIN_DP]. The
+     * navigation bar is deliberately *not* added to it: the panel carries no `FLAG_LAYOUT_NO_LIMITS`
+     * — which the shade does — so the window manager lays it out inside a display frame that already
+     * stops above the bar, whichever navigation mode the phone is in. R6 read that off the phone,
+     * after a first attempt added the inset by hand and floated the panel five times too high.
      *
      * ## No brightness of its own
      *

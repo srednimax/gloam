@@ -5,6 +5,8 @@ import android.provider.Settings
 import android.view.WindowManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.gloam.MainApplication
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -39,6 +41,8 @@ class PanelWindowTest {
     private val context = instrumentation.targetContext
     private val packageName: String = context.packageName
 
+    private val preferences get() = (context.applicationContext as MainApplication).preferences
+
     private var overlayWasGranted = false
 
     @Before
@@ -57,7 +61,10 @@ class PanelWindowTest {
 
     @After
     fun putTheDeviceBack() {
-        // One call takes both windows down: the panel cannot outlive the shade.
+        // One call takes both windows down: the panel cannot outlive the shade. The write goes with
+        // it so a test leg cannot leave the next one — or the phone — believing the user asked for
+        // a shade that is not there.
+        runBlocking { preferences.endShade() }
         context.stopShade()
         if (!overlayWasGranted) {
             shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
@@ -66,6 +73,11 @@ class PanelWindowTest {
 
     @Test
     fun thePanelSitsAboveTheShadeAndDoesNotCoverIt() {
+        // The write as well as the start, for the reason `DimScreen` does both: `startShade()` puts
+        // a window on screen, and the write is what records that the user asked for it. The panel
+        // reads the stored intent to decide whether it has anything to open over, so a start
+        // without the write is a shade the summon is right to refuse.
+        runBlocking { preferences.beginShade(offAtMillis = null) }
         context.startShade()
         assertNotNull(
             "No shade window appeared within ${TIMEOUT_MS}ms of startShade(); nothing below could " +
@@ -121,6 +133,58 @@ class PanelWindowTest {
         )
     }
 
+    /**
+     * A summon that arrives with the shade stopped must raise nothing at all.
+     *
+     * **This is a regression test for a bug the phone found, not a hypothetical.** `showShadePanel()`
+     * is a `startForegroundService`, so on a stopped app it does not "ask the service" anything — it
+     * *creates* the service. The shade used to go up in `onCreate`, which meant a summon put the
+     * shade on screen over a user who had turned it off, took the backlight override with it, and
+     * left `shadeIntent` still saying "stopped" — so the controls read *Start dimming* over an
+     * already-dark screen. It matters more for the notification than for the button that found it:
+     * a `PendingIntent` outlives the process that built it, so a stale tap takes this path.
+     *
+     * Asserting on the shade rather than on the panel, because the panel not appearing was never
+     * the bug.
+     */
+    @Test
+    fun aSummonWithTheShadeStoppedRaisesNothing() {
+        // Both halves, because they answer different questions and `DimScreen` does both: the write
+        // is the user changing their mind, `stopShade()` is the window coming down. A test that
+        // only stopped the service would leave the stored intent saying "running", and the summon
+        // would then be right to restore the shade — which is the other branch, not this one.
+        runBlocking { preferences.endShade() }
+        context.stopShade()
+        assertTrue(
+            "A window of ours was still up ${TIMEOUT_MS}ms after stopShade(), so this test could " +
+                "not have told a leftover shade from one the summon raised.",
+            awaitNoWindows(),
+        )
+
+        context.showShadePanel()
+        // A settle rather than a wait-for-something: the assertion is about an absence, and an
+        // absence is only ever as strong as the time given to contradict it. The buggy build put
+        // the shade up inside a second of the summon; this allows five. On a slow enough machine
+        // the failure mode is a false pass, which is the harmless direction.
+        Thread.sleep(SETTLE_MS)
+        assertEquals(
+            "Summoning the panel with the shade stopped raised a window. Windows, top first:\n" +
+                ourOverlayWindows().joinToString("\n\n") { it.text },
+            emptyList<String>(),
+            ourOverlayWindows().map { it.text },
+        )
+    }
+
+    /** Poll until we have no overlay window left, the mirror of [awaitWindow]. */
+    private fun awaitNoWindows(): Boolean {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (ourOverlayWindows().isEmpty()) return true
+            Thread.sleep(POLL_MS)
+        }
+        return ourOverlayWindows().isEmpty()
+    }
+
     /** One `Window #N` block of `dumpsys window windows`, with the two questions it can answer. */
     private class OverlayWindow(
         val text: String,
@@ -168,6 +232,7 @@ class PanelWindowTest {
     private companion object {
         const val TIMEOUT_MS = 15_000L
         const val POLL_MS = 250L
+        const val SETTLE_MS = 5_000L
         val REQUESTED_WIDTH = Regex("""Requested w=(\d+)""")
     }
 }
