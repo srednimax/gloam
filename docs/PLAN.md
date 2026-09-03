@@ -19,10 +19,15 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 - [x] **Phase 1** — The mechanism is complete
 - [ ] **Phase 2** — Safe to hand over ← **the door: closed testing opens here**
 - [ ] **Phase 2b** — As dark as it goes
-- [ ] **Phase 3a** — The controls, from the launcher
-- [ ] **Phase 3b** — The panel *(carries a go/no-go — see the phase)*
+- [x] **Phase 3a** — The controls, from the launcher
+- [x] **Phase 3b** — The panel *(the go/no-go went: `phase-3.md` R1)*
 - [ ] **Phase 4** — It turns itself on and off
 - [ ] **Phase 5** — Ship shape
+
+**Two boxes below an unticked one are ticked, and that is the real state rather than a slip.** Phase
+2's code has been done since 2026-09-02; what its box waits on is twelve testers opted in for
+fourteen days, which is calendar time and other people's replies (`DOD.md`). Phase 3 needed none of
+that, so it ran while the door waits. 2b is the one genuine dependency and it is unstarted.
 
 **Every phase in this list is split along cost or along kind.** That is not a stylistic tic: each of
 Phases 2, 3, 4 and 5 originally bundled a cheap item with an expensive one, or a feature with the
@@ -317,6 +322,15 @@ phases is that it is false of the hosts, where all the cost lives.
 that expands it to the full app. A theme, an activity flag and a preference: cheap, boring, known to
 work.
 
+**Two of those words did not survive being built** (`phase-3.md` §2, shipped 2026-09-03). The host is
+**its own Activity** — `ControlsActivity`, beside `MainActivity` rather than instead of it — because
+what makes a window float is the *manifest* theme, which the platform reads before any of this app's
+code runs, and one activity has one of those. And **the preference is inverted**: the launcher entry
+stays on the full app and the setting moves where a tap on the icon *lands*, rather than the compact
+host being the default with a setting that expands it. An `<activity-alias>` the app enables and
+disables was the alternative, and on many launchers it takes the icon off the home screen and does
+not put it back.
+
 **Summoned from the ongoing notification**, with the Quick Settings tile from Phase 2b as a second
 door — both already living in the one surface the shade cannot dim. **No always-visible floating
 handle in v1**: a dark-adapted eye does not want a bright dot in it, and it lands in every screenshot.
@@ -356,6 +370,25 @@ controls cannot snap the screen back to full brightness.
 **Go/no-go, decided on Phase 1's measurement, not when this phase opens.** If a window above the
 shade seizes the backlight override and cannot be made to match it, live preview is broken by
 construction and this phase is cut rather than attempted.
+
+**It turned out to be two questions and not one**, which is what detailing the phase found: *does our
+second window sit above the shade at all* — ordering within one window type is the window manager's
+business and insertion order is an expectation rather than a documented guarantee — and *with the
+panel above and declining a brightness, who owns the override*. A panel **below** the shade is a
+panel dimmed by the thing it exists to control, which is 3a again with more machinery.
+
+**Both went, on 2026-09-02, and the phase is not cut** (`phase-3.md` §5, R1; ADR-0010's fourth
+amendment). The later `addView` is on top, and the shade keeps `mWindowManagerBrightnessOverride=0.01`
+with our own window above it asking for nothing — so the rule is the one Phase 1 measured against
+other apps: the topmost window that *asks* owns the override. The `screenBrightness` field copy this
+paragraph asks for above is therefore **not built**; the panel declines a brightness and there is
+nothing to keep in step. The reading was taken against a bare 200 dp square under the debug seam,
+before a line of the panel existed, because every line written before it would have been written on a
+bet.
+
+**And the panel's size is its safety rule** — [ADR-0011](adr/0011-the-panel-is-touchable-and-what-keeps-it-from-trapping-the-user.md),
+which is where "never `MATCH_PARENT`" above stopped being a note and became a decision with a test in
+front of it.
 
 ## Phase 4 — It turns itself on and off
 

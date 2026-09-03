@@ -1217,6 +1217,32 @@ SCENES = [
         "detail",
         [("tap", "Settings"), ("tap", "Open-source licences"), ("tap", "Apache License 2.0")],
     ),
+
+    # --- the compact controls: a floating window, where the matrix's question is a different one --
+    # A family of its own, because it shares chrome with nothing in the table: a dialog-shaped window
+    # in its own task, no top bar, no bottom bar, and no system-bar inset of its own to get wrong.
+    # What a screenshot has to show here is the other half — that a **gesture-navigation bar does not
+    # clip it**. The window is bottom-weighted and sized to its content, which is exactly the shape
+    # that gets clipped, and R5 already caught the Polish leg overflowing its height on the phone.
+    #
+    # **Reached through the debug section rather than through the launcher icon**, and both halves of
+    # that are forced. `ControlsActivity` is `exported="false"`, so `am start -n` cannot reach it at
+    # all (`phase-3.md` R2); and the icon route needs `CATEGORY_LAUNCHER` on the intent, which
+    # [relaunch]'s explicit-component start deliberately does not carry — which is also what keeps
+    # the launcher preference from leaking into every scene after this one.
+    #
+    # The button's label is a Kotlin literal in `DebugSettings.kt` rather than a string resource, so
+    # [resolve_needles] finds no match and passes it through unchanged. That is the licence name's
+    # case again and it is correct for the same reason: the debug section is English on every leg.
+    #
+    # **The panel is not in this harness and cannot be.** It is a `WindowManager` window with no
+    # Activity under it, and this driver walks activities; its size bound is held by `PanelWidthTest`
+    # on the JVM instead, which is the trade ADR-0011 makes explicit.
+    Scene(
+        "compact-controls",
+        "floating",
+        [("tap", "Settings"), ("swipe_end", ""), ("tap", "Open compact controls")],
+    ),
 ]
 
 

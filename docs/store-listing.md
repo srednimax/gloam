@@ -266,3 +266,39 @@ Zasłona wraca też po ponownym uruchomieniu telefonu, a Ustawienia wyjaśniają
 
 Nowość: Pomoc i opinie — wersja i model telefonu uzupełniają się same.
 ```
+
+### 0.5.0 — the controls, and the panel
+
+Phase 3's five features, and the note leads with the one that changes where the app *is*: until now
+every control Gloam had was inside the app, and the app is under the shade. The panel is the first
+surface that is not.
+
+**Two numbers are deliberately not in the note.** The panel's 30-second idle timeout is described as
+*"leave it alone and it closes itself"*, because a number invites a complaint about the number and
+what a reader needs to know is that the panel does not linger over their book. And nothing here
+mentions nits: 6.64 against 1.59 is the reason the panel exists and is meaningless to anybody who has
+not read `phase-3.md`.
+
+**The refactor and the debug summons are invisible from outside**, so they are not in it —
+`DimControls()` moving out of `DimScreen` changed no pixel, and the debug section never reaches a
+release build at all.
+
+**English** — 474/500:
+
+```
+The controls come to you now. Tap Gloam's ongoing notification and a small panel opens over whatever you are reading — it stays readable at the darkest settings, and its slider dims the screen you are actually looking at. Leave it alone and it closes itself.
+
+You can also point the launcher icon at a compact version of the controls, in Settings.
+
+And the notification now says when your phone's own brightness slider is paused, which it is for as long as Gloam is dimming.
+```
+
+**Polish** — 479/500:
+
+```
+Sterowanie przychodzi teraz do Ciebie. Dotknij stałego powiadomienia Gloam, a nad tym, co czytasz, otworzy się mały panel — czytelny nawet przy najciemniejszych ustawieniach, a jego suwak przyciemnia ekran, na który właśnie patrzysz. Zostawiony w spokoju zamyka się sam.
+
+Ikonę aplikacji możesz też skierować na kompaktową wersję sterowania — w Ustawieniach.
+
+Powiadomienie mówi teraz również, kiedy suwak jasności telefonu jest wstrzymany, a jest przez cały czas przyciemniania.
+```

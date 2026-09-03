@@ -18,6 +18,12 @@ never, and two hours unless you say otherwise — and one that was up when the p
 back after a restart**. Both exist because a dimmer you forget about is a dimmer that follows you
 into the next morning.
 
+**The controls come to where you are.** Tapping the ongoing notification raises a small panel over
+whatever you are reading — the one surface in Gloam that stays readable at full dim, because it sits
+*above* the shade instead of under it, so the slider moves the dim over the real content rather than
+over Gloam's own screen. The launcher icon can be pointed at a compact version of the same controls,
+in Settings.
+
 The template's data layer is gone ([ADR-0007](docs/adr/0007-gloam-stores-settings-not-records-so-it-has-no-database.md)):
 Gloam stores settings, not records, so there is no database. The release pipeline and quality gates
 are real. Nothing is on Play yet, the mark is still a placeholder, and the feature set beyond

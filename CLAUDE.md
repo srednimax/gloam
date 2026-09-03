@@ -65,6 +65,12 @@ let us do otherwise".
   below fully opaque. Without the flags the phone appears frozen; without the cap the way out is
   behind the thing you need to get out of. The foreground notification is `ongoing` for the same
   reason — it is the escape hatch, not a courtesy.
+  **There are two overlay windows now, and the second one carries the opposite rule.** The **panel**
+  (Phase 3b) drops `FLAG_NOT_TOUCHABLE` on purpose — a control the user cannot touch is a picture of
+  a control — so what stands in for the flag is the window's *size*, which is computed rather than
+  constant and therefore has a test in front of it. Never reason about the panel from the shade's
+  rule: [ADR-0011](docs/adr/0011-the-panel-is-touchable-and-what-keeps-it-from-trapping-the-user.md),
+  and a `MATCH_PARENT` in its `LayoutParams` is a bug rather than a simplification.
   **The cap belongs to the composite, not to a `View`.** From Phase 1 the shade is a `FrameLayout`
   with two children, black at the dim level and amber at the warmth, and bounding each child alone
   does not bound the result: black at `MAX_SHADE_ALPHA` still leaves content visible, and a heavy
@@ -122,19 +128,26 @@ adb devices                                     # confirm the phone is attached
 
 ```
 app/src/main/java/<namespace>/
-  MainActivity.kt, MainApplication.kt, AppContainer.kt, Navigation.kt, NavigationKeys.kt
+  MainActivity.kt, ControlsActivity.kt, MainApplication.kt, AppContainer.kt, Navigation.kt,
+  NavigationKeys.kt
                the app shell and Nav3 wiring stay at the package root, not under ui/ — they describe
-               how the app hangs together rather than any one screen
+               how the app hangs together rather than any one screen. ControlsActivity is the
+               compact controls' host: a second host for the same shell, which is why it is here
   data/        AppPreferences.kt — the DataStore keys and their defaults. No database
   shade/       ShadeService.kt, the overlay window and the foreground service that owns it;
+               PanelWindow.kt, the *second* window — its flags, its size bound and the Compose host
+               it needs because there is no Activity under it;
                OverlayPermission.kt, the SYSTEM_ALERT_WINDOW read and the settings hand-off
   theme/       generated palette, type scale, spacing, the night-mode window half
   ui/          Compose screens + ViewModels, one package per area — dim/ is the app's home screen,
-               with settings/, support/ and the shared pieces in common/
+               with settings/, support/ and the shared pieces in common/. dim/DimControls.kt is the
+               controls themselves, hosted three times: the full screen, the compact activity and
+               the panel
   work/        notification channels, the notification-permission ask, Xiaomi battery/autostart
 
-app/src/debug/    the developer-only build: Settings' debug section — the backlight sweep and the
-                  two-minute deadline button, neither of which anything outside the app can do
+app/src/debug/    the developer-only build: Settings' debug section — the backlight sweep, the
+                  two-minute deadline, a second overlay window, and summons for the compact
+                  controls and the panel. None of it is reachable from outside the app
 app/src/release/  only the no-op half of that seam, so main/ can call it unconditionally
 scripts/          the Python toolchain. project.py is the one place the app's identity lives
 art/             mark.py is the identity; both generators derive from it
