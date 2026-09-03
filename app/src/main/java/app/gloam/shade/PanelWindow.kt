@@ -88,9 +88,11 @@ private const val PANEL_SIDE_INSET = 0.05f
  * How far above the navigation bar the panel floats.
  *
  * Small: the panel is bottom-anchored so the controls land under the thumb, and pushing it further
- * up only moves it over more of what the user is reading. The navigation bar's own height is *not*
- * in here — it is read from the live window insets, because gesture and three-button navigation
- * differ by about 24 dp and a constant would be wrong on one of them.
+ * up only moves it over more of what the user is reading. **The navigation bar is not in this
+ * number and must not be added to it** — the panel carries no `FLAG_LAYOUT_NO_LIMITS`, so the window
+ * manager lays it out inside a display frame that already stops above the bar, whichever navigation
+ * mode the phone is in. R6 read that off the phone after a first attempt added the inset by hand and
+ * floated the panel five times too high.
  */
 internal const val PANEL_BOTTOM_MARGIN_DP = 12
 
