@@ -137,4 +137,9 @@
     <string name="channel_shade_description">Shown while the screen is dimmed, so the shade can be turned off from anywhere.</string>
     <string name="shade_notification_title">Screen dimmed</string>
     <string name="shade_notification_stop">Stop</string>
+    <!-- Carried only while the backlight override is actually live. It is the one line of copy in
+         this app that gets read on a screen at 6.64 nits, because the notification is drawn above
+         the shade and dim_backlight_hint is in the app underneath it - so it is short, and it names
+         the symptom before the cause. -->
+    <string name="shade_notification_text_backlight">Your brightness slider is paused while Gloam is dimming</string>
 </resources>
