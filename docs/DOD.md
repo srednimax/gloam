@@ -26,8 +26,9 @@ look likely — the panel was in its own inactivity dimming, not at the user's s
 - **3b.** The brightness belongs to the **topmost window that asks for one**, measured from both
   sides: system surfaces and a video player in swipe-to-dim both failed to move ours, while the
   keyguard and any runtime permission dialog release it by hiding our window rather than by
-  out-ranking it. What that leaves 3b is narrower than the original go/no-go but not answered — see
-  ADR-0010's third amendment.
+  out-ranking it. **Read out and closed by Phase 3's checkpoint A** (2026-09-02): the rule holds
+  between two windows of Gloam's own as well, so the panel declines a brightness and the shade keeps
+  the override. ADR-0010's fourth amendment.
 
 The one item below that the phase still owns — starting the tester recruitment — stays here, because
 it is what the door is waiting on.
@@ -39,6 +40,16 @@ what Xiaomi's autostart costs if it is denied, and has a Help and feedback scree
 to. The scaffolding the door was waiting on is resolved and the emulator matrix has a real test in
 it. **What is left of the phase is not code**: the tester recruitment and the listing, both below,
 and both calendar rather than effort.
+
+**Phase 3's code is done, and its record is [`phase-3.md`](phase-3.md)** — seven checkpoints,
+**A–G, shipped between 2026-09-02 and 2026-09-03**. The go/no-go went first and it went: a second
+overlay window of ours sits *above* the shade and the shade keeps its backlight override, which is
+what made 3b buildable rather than a bet. The controls came out of the screen that owned them and now
+have three hosts — the full screen, a **compact activity** reached from the notification or from the
+icon when the preference says so, and the **panel**, a touchable window above the shade and the only
+control surface in Gloam that is legible at maximum dim (1.59 nits under it against 6.64 above,
+measured both ways). The notification now says when the user's own brightness slider is paused.
+**What is left of the phase is not code**: the two rule-5 questions below, which outlive it.
 
 ## The standing schema gate — parked, because there is no database
 
@@ -215,6 +226,26 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
       The twelve are the room. Recorded here rather than in `phase-2.md` so the question outlives
       the phase that raised it; the answer is a one-line change to `AutoOff.Default` or nothing.
+- [ ] **Ultra dark has a ceiling the platform holds, and 2b has to price it before it starts.**
+      *Found by Phase 3's R13, 2026-09-03.* An app overlay that **passes touches** may not obscure
+      more than `maximum_obscuring_opacity_for_touch` — unset on the phone and on the API-33
+      emulator, so both sit at the framework default of **0.8**, which the window manager writes
+      straight into the shade's window alpha. Moving the global to `0.5` brings the shade back at
+      `alpha=0.5`, so it is the platform's number and not ours. **2b is defined as going past
+      `MAX_SHADE_ALPHA`**, and past a point more alpha buys nothing: the composite is multiplied by
+      0.8 whatever the children do, which is why R3 and R6 measured 24% transmission where the
+      invariants compute 5%. The shade cannot drop the flag to escape it — a touch-catching
+      full-screen overlay is the trap the app exists not to be — so 2b's honest options are the
+      backlight (already at `MIN_BACKLIGHT` there), or accepting the ceiling and saying so in the
+      copy. Read `phase-3.md`'s R13 and ADR-0010's fourth amendment before designing the feature.
+- [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). The icon opens
+      the **full app** unless the user says otherwise, and the compact controls are the setting. The
+      draft had it the other way round — compact by default, with a setting that expands — and the
+      inversion is an argument rather than a reading: a first launcher tap that lands on a dialog
+      over another app is a bad first meeting with an app nobody has used yet, and the compact host
+      already has two doors that do not involve the icon. The twelve are the room, because the
+      argument is about the *second week* of use rather than the first. The answer is a one-line
+      change to `AppPreferences.launcherCompact`'s default or nothing.
 - [ ] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
       Should the phone's own brightness slider mean *"give me more light"* while Gloam is dimming?
       Phase 3 ships the cheap half — the ongoing notification now says the slider is paused, on the one

@@ -137,6 +137,13 @@ remembered — and is a point at which the phase could stop without stranding an
 shade keeps its override.** F is in. What follows is written as planned rather than as a cut; §5
 carries the numbers and the one thing the reading found that it was not looking for.
 
+**All seven are in, 2026-09-02 to 2026-09-03, and none of them was cut.** A went on the 2nd; B, C and
+F's two commits followed the same day; D, E and F's `feat:` on the 3rd, with three bugs found by
+reading rather than by using — F1, F2 and the double navigation-bar inset — each fixed in its own
+`fix:` and written into the readings block below. G is this file's own close-out and §15 lists what
+it landed. **The phase ships five `feat:` commits, which is release 0.5.0**, and the two questions it
+could not answer alone are in `DOD.md` with the twelve, not here.
+
 **A is a gate, not a task, and it runs before a line of this phase is written.** Phase 1 carried one
 that could veto the backlight half; this one can veto 3b outright. It is a reading taken against a
 *bare* second window — no Compose, no controls, no lifecycle — because the question is about window
@@ -1080,6 +1087,51 @@ narrower, not a phase failing.
 
 ---
 
+## 15. What G landed, and where it differs from §11
+
+§11 said what the phase owed the documents before any of it was written. This says what was written,
+because the two differ in three places and a plan nobody checks against the result is a wish.
+
+- **`PLAN.md`** — the *Detail* lines were already there. G made §11's two corrections: 3a's paragraph
+  now says the host is its own Activity and the launcher preference is inverted, with the
+  `<activity-alias>` alternative and why it lost; 3b's carries **both** go/no-go questions, the
+  verdict, and the field copy that is therefore not built. Rule 3's fourth test landed with the plan
+  rather than here, as §11 said it would. **Status: 3a and 3b ticked.**
+- **`CONTEXT.md`** — nothing owed. The *Compact controls* row was written when the phase was planned,
+  on the axis §11 argued for: position, not size.
+- **ADR-0010, fourth amendment** — the open question from *Consequences* is closed: the topmost
+  window that asks owns the override, between two windows of ours as well. It also carries R13, which
+  §11 could not have predicted because R1 had not been taken.
+- **ADR-0011** — written, because §5 said go. *The panel is touchable, and its size is what keeps it
+  from trapping the user.* The alternatives section is the one that matters: `WRAP_CONTENT` with a
+  `widthIn(max)` inside the composition is the draft it replaces, and the reason it lost is that no
+  test can see it.
+- **`CLAUDE.md`** — the shade's house rule gains the second window and a link rather than a
+  restatement; the layout block gains `ControlsActivity.kt`, `shade/PanelWindow.kt` and
+  `ui/dim/DimControls.kt`. **One thing §11 did not list**: the debug-seam line said *the backlight
+  sweep and the two-minute deadline button* and there are five buttons now — a stale line in the file
+  every session reads is worth more than its size.
+- **`DOD.md`** — Phase 3's record paragraph, the launcher-preference default opened as a rule-5
+  question for the twelve, Phase 1's 3b bullet marked answered, and **one item §11 did not predict**:
+  R13's ceiling on ultra dark, against Phase 2b, which is the one place in this phase's findings that
+  changes what a later phase can promise.
+- **`README.md`** — one paragraph, and it says *the controls come to where you are*, which is the
+  phase in one line.
+- **`docs/store-listing.md`** — 0.5.0's note in both locales, at 474 and 479 of 500. `notes-gate.py`
+  now reports it written and waiting ahead of `versionName`, which is the state it is designed to
+  pass.
+- **`scripts/edge-to-edge.py`** — one scene, `compact-controls`, in a family of its own. It is
+  reached **through the debug section** rather than through the icon, and both halves of that are
+  forced by the platform: `ControlsActivity` is `exported="false"` so `am start -n` cannot touch it,
+  and the icon route needs `CATEGORY_LAUNCHER`, which the driver's explicit-component relaunch does
+  not carry — which is also what stops the launcher preference leaking into every later scene. The
+  panel is not in that harness and cannot be; `PanelWidthTest` is the trade.
+
+**What G did not do.** The scene above is written but not walked — the matrix is an emulator job and
+this phase's device work went to R11, which is a different question about the same build. The first
+nightly that runs it is the one that proves the route, and a scene that cannot be reached fails
+loudly rather than silently.
+
 ## Kotlin and Android notes for this phase
 
 - **A theme is read by the OS before any of this app's code runs.** `windowIsFloating` is not a
@@ -1145,13 +1197,129 @@ right". Derivations are in §12 and are arithmetic, not observations.
 | R5 | Both locales in a narrow floating window | `cmd locale set-app-locales`, screenshot both | **Chips wrap to three rows in both, clipped in neither** (2026-09-02) — `FlowRow` holds at 320 dp. The window is at its 2440 px ceiling in both: English fits with *Open Gloam* visible, **Polish overflows by ≈one line** and puts *Otwórz Gloam* below the fold until scrolled. §2 |
 | R6 | The panel at dim 100, and its palette | `screencap` with the panel open, both themes | **Measured transmission 0.2411** (2026-09-03, median of 112 786 bright-channel samples, p10–p90 0.2378–0.2417) — R3 read 0.2393 on the surface *under* the shade, so the pair agrees, and both land on `1 − 0.8 × MAX_SHADE_ALPHA` = 0.24. **The panel is not dimmed by the shade above which it sits**: its primary reads `#FDB978` in dark and `#86531C` in light, byte-identical to `Color.kt`, where a shaded copy would read ≈`#3D2D1D`. 1098 × 1620 px in both themes. Light theme puts a near-white card on a maximally dim screen — safe only because the backlight override holds the panel at ≈6 nits. §0 |
 | F1 | **A summon against a stopped app raised the shade** | tap the debug summon with the shade off; `dumpsys window windows`, `dumpsys display` | **Bug, found and fixed** (2026-09-03). From no service and no windows, one summon produced *two* overlay windows — the panel and the shade — and took the backlight override to 0.01, with `shadeIntent` still saying stopped, so the controls read *Start dimming* over an already-dark screen. `startForegroundService` creates the service rather than asking it, `onCreate` raised the shade unconditionally, and `showPanel`'s `shadeView == null` guard could never fail because `onCreate` had just filled that field. The stored intent decides now. Checkpoint D inherits this: a `PendingIntent` outlives its process, so a stale notification tap takes the same path |
-| R7 | Touches: in the panel, and through beside it | drag the panel's slider; tap the app underneath | **Both** (2026-09-03). Dragging the panel's dim slider took it 100% → 33% and the panel repainted the new figure — §7's `RESUMED` trap is not tripped. A swipe *above* the panel scrolled the app underneath (14.0% of the region above the panel changed, bbox `(48,0)–(996,570)`), so the shade beside the panel still passes touch through. **The brightness override does not move with the dim level**: it stayed `0.01` across the drag, because `lowerBacklight` pins the backlight to `MIN_BACKLIGHT` rather than following the ramp |
+| R7 | Touches: in the panel, and through beside it | drag the panel's slider; tap the app underneath | **Both** (2026-09-03). Dragging the panel's dim slider took it 100% → 33% and the panel repainted the new figure — §7's `RESUMED` trap is not tripped. A swipe *above* the panel scrolled the app underneath (14.0% of the region above the panel changed, bbox `(48,0)–(996,570)`), so the shade beside the panel still passes touch through. **The brightness override did not move with the dim level**: it stayed `0.01` across the drag. The observation stands; the explanation first written beside it does not — see the correction under this table |
 | R8 | Rotation and locale change with the panel up | `settings put system user_rotation 1`, `cmd locale …` | **The panel survives both, and the rotation needed a fix** (2026-09-03). `settings put system user_rotation` does nothing on HyperOS; `wm user-rotation lock 1` is the one that turns the display. A window laid out from explicit pixels keeps them across a rotation, so the panel wore the width of whichever orientation it was summoned in: landscape gives 1200 px (the cap biting, correctly) and rotating to portrait left 1200 px on a 1220 px display — 10 px of screen either side of a *touchable* window. `onConfigurationChanged` re-measures now, and it reads 1098 → 1200 → 1098 across both turns. **The locale is not re-read**: switched to English under an open panel, the panel stayed Polish. Left alone — it is stale for at most the 30 s idle timeout and the next summon is correct, where the rotation case was a safety property. Polish fits the panel in both orientations, nothing clipped |
 | R9 | Inactivity dismissal, and death with the shade | open the panel, leave it untouched; then stop the shade | **Both** (2026-09-03). Untouched, the panel lived **30.1 s** (poll granularity 2 s) and logged `panel idle for 30000ms, taking it down`; the shade survived it, `mWindowManagerBrightnessOverride` still `0.01`. The panel's own *Stop dimming* took both windows down and released the override to `NaN` (§8, third route). So does a process kill: `am force-stop` with both up went 2 overlay windows → 0 with nothing orphaned — the Xiaomi case. HyperOS never renders the notification's *Stop* action into the shade, so that route is unread |
 | F2 | **A launcher tap on an existing task never calls `onCreate`** | `am start` with `CATEGORY_LAUNCHER`, preference on, task alive; `logcat -s ActivityTaskManager` | **Bug, found and fixed** (2026-09-03). `moveTaskToFront … result code=2` (`START_TASK_TO_FRONT`) — the instance is resumed, so §3's forward in `onCreate` could not run and the icon preference honoured a cold start and was silently inert for as long as the task survived, which is days. `launchMode="singleTop"` plus `onNewIntent` is the fix: re-read, `result code=2` now ends at `topResumedActivity=…/app.gloam.ControlsActivity`, and the cold path (`result code=0`) does too. **The same trace caught the guard working**: with the overlay op reset by `adb install -r`, one tap went `MainActivity` → `ControlsActivity` → `MainActivity` and **stopped there** — §2's ping-pong argument confirmed on the phone rather than argued, and the category test is what stopped it |
 | R10 | `SCREEN_BRIGHTNESS` under adaptive, and the control-centre slider | poll `settings get system screen_brightness` at 10 Hz through a control-centre drag; `dumpsys display`'s *Automatic Brightness Controller State* with the override live and released | **The slider writes it, and while our override is live nothing else can** (2026-09-03). The control-centre slider is not a decoration: one drag took the setting 255 → 13 and a second 13 → 30, with Gloam's override unmoved at `0.01` throughout — the drag that does nothing, measured. **It writes once per gesture, not per pixel**: across a 2.1 s drag sampled every 101 ms the value changed exactly once, to its final figure. And the noise objection turns out not to apply: with the override up the controller reads `mState=AUTO_BRIGHTNESS_DISABLED`, `mLightSensorEnabled=false`, `mCurrentLightSensorRate=-1`, `mAmbientLuxValid=false` — the sensor is not sampled at all — against `AUTO_BRIGHTNESS_ENABLED`, `true`, `250` and `mAmbientLux=12.02` the moment the shade stops. 600 samples over 61.7 s under adaptive with the shade up: **zero writes**. Releasing the override produced one immediately (30 → 21), which is R4's phenomenon, and then 311 samples over 49.7 s at a steady 12.02 lux with none. §4 |
 | R12 | **The notification line, and what it costs to post** | `dumpsys notification --noredact`; `logcat -b events` for `notification_enqueue`; `screencap` with the row open | **Both directions, one post each, and legible** (2026-09-03). Shade at dim 100 with the backlight toggle on: `android.title=(Screen dimmed)`, `android.text=(Your brightness slider is paused while Gloam is dimming)`. Toggling the backlight off gave **one** `notification_enqueue` and `android.text=null`, and back on one more and the line again; the whole 40% → 100% slider drag gave **none**. Starting the shade is two posts — `startForeground` without the line, then the transition with it. `NotificationShade` is `Window #4` above Gloam's `#7`, printed top-first, and the override stays `0.01` tagged ours with the row open: the text renders at **175/255**, which is HyperOS's own notification-body grey untouched, against **59/255** for `dim_backlight_hint`'s screen behind it (cream background at R6's 0.24 transmission) and 22/255 for that screen's own text. Wraps to two lines in English and in Polish, clipped in neither |
-| R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
+| R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The whole phase on the floor, and it holds** (2026-09-03). Panel above shade, `panelWidthPx` at 972 of 1080, touches caught and passed, both dismissals, the notification line. See below |
+| R13 | **The `alpha=0.8` R1 could not explain** | `settings put global maximum_obscuring_opacity_for_touch 0.5`, re-raise the shade, `dumpsys window windows` | **It is the platform's untrusted-touch cap, and the shade wears it** (2026-09-03). The window came back `alpha=0.5`, tracking the setting. **Added by R11 rather than planned** — the emulator printed the same unexplained 0.8 as the phone, which is what made it testable |
+
+### R11 — the phase on the API level it is allowed to be worst on
+
+`minSdk` is 33, so `gloam-api33` is the floor: what works here works everywhere Gloam ships. The pass
+walked the phase end to end on the build that closes it, on an AOSP image that shares no vendor code
+with the development phone.
+
+**The two windows, printed top-first, from one `dumpsys window windows`:**
+
+```
+Window #5 ... mAttrs={(0,31)(972xwrap) gr=BOTTOM CENTER_VERTICAL ty=APPLICATION_OVERLAY fmt=TRANSLUCENT
+              fl=NOT_FOCUSABLE LAYOUT_IN_SCREEN HARDWARE_ACCELERATED
+              frame=[54,1781][1026,2243]
+Window #6 ... mAttrs={(0,0)(fillxfill) ty=APPLICATION_OVERLAY fmt=TRANSLUCENT alpha=0.8 sbrt=0.026663352
+              fl=NOT_FOCUSABLE NOT_TOUCHABLE LAYOUT_IN_SCREEN LAYOUT_NO_LIMITS HARDWARE_ACCELERATED
+Window #9 ... io.github.srednimax.gloam.debug/app.gloam.MainActivity   ty=BASE_APPLICATION
+```
+
+- **The ordering is not a HyperOS accident.** Panel above shade above Activity, on a second ROM. R1's
+  reading was taken against one vendor image and the insertion-order expectation it confirmed is
+  still undocumented; this is the second independent device that behaves as §5 predicted.
+- **`panelWidthPx` on a display it has never seen.** 972 px of 1080 — 54 px each side, the 5% inset —
+  and the frame ends at 2243 with the navigation bar starting at 2274, so the 31 px gap is
+  `PANEL_BOTTOM_MARGIN_DP` at 420 dpi and the panel is clear of the bar without adding its inset by
+  hand. The flags are `PANEL_WINDOW_FLAGS` exactly: `NOT_TOUCHABLE` and `LAYOUT_NO_LIMITS` absent,
+  which is ADR-0011 read off a window rather than off a constant.
+- **`sbrt=0.026663352` at dim 40** with `top=0.37775588` off the debug readout. `shadeValuesFor`
+  computes `0.026663` for those inputs, so the ramp is not approximately right on this leg — it is
+  the same arithmetic to seven digits, on a device whose `float range=[null, null]` sends it down the
+  integer-decode path.
+
+**Touch, both directions, on the surface that is the phase's one deliberate safety reversal.** A
+drag inside the panel took the dim level to 98 and the shade's override from `0.026663352` to `0.01`,
+and the full app read **98%** back on its own slider — one preference, three hosts. A tap on the
+*Dim* tab's own coordinates, which the panel covers, **did nothing at all** while the panel was up
+and switched tabs the moment it closed. That is the property and its control in two taps: the panel
+eats what is under it, and nothing else does.
+
+**Both dismissals, and the shade outlives one of them.** The close control took the panel down and
+left the shade running. Left alone, the panel died at **28.7 s** against `PANEL_IDLE_TIMEOUT_MS`, with
+a 2 s poll and a stopwatch started at the tap rather than at the window — 30 s within the granularity
+of the reading. Stopping the shade from the compact controls took **everything** down: zero overlay
+windows owned by the package, nothing orphaned.
+
+**And the two hosts, in one frame each.** `ControlsActivity` comes up resumed in its own task
+(`t44`, beside `MainActivity`'s `t43`) with `(wrapxwrap)` and `fmt=TRANSPARENT` — R2's floating window
+on a second ROM — and the screenshot is §0's whole argument in one image: the compact host renders as
+dark brown under the shade while the panel, taken seconds earlier, is cream. The notification carries
+`android.title=(Screen dimmed)` and `android.text=(Your brightness slider is paused while Gloam is
+dimming)`, so checkpoint E is on the floor too.
+
+### R13 — the `alpha=0.8` has a name, and Phase 2b inherits it
+
+R1 found both of Gloam's overlay windows printing `alpha=0.8` in `mAttrs`, a `LayoutParams` field
+**this app never sets**, and left it open. R11 found the same 0.8 on an AOSP emulator, which rules out
+a vendor and makes it testable: if the number comes from the platform, changing the platform's number
+should change the window's.
+
+```
+$ adb shell settings put global maximum_obscuring_opacity_for_touch 0.5
+$ # stop the shade, start it again
+$ adb shell dumpsys window windows | grep -o 'alpha=[0-9.]*'
+alpha=0.5
+```
+
+**It is Android 12's untrusted-touch rule.** An app overlay that lets touches pass through may not
+obscure what is under it by more than `maximum_obscuring_opacity_for_touch` — unset on both the phone
+and the emulator, so both get the framework default of **0.8** — and the window manager applies the
+cap by writing it into the window's alpha. Three things line up behind it and none of them is an
+argument: the setting drives the number, the **panel** prints no alpha at all because it is the
+window that *catches* touches rather than passing them, and R3 and R6's measured transmissions of
+0.2393 and 0.2411 are `1 − 0.8 × MAX_SHADE_ALPHA` = 0.24 to three decimals.
+
+**So the shade's real ceiling is not `MAX_SHADE_ALPHA`.** Gloam's own two bounds still hold and are
+still the ones the tests keep, but the platform is holding a third and tighter one on top of them:
+the darkest a touch-passing overlay can make the screen is 0.8 of what the composite computes. The
+cap and this app's house rule agree — the window that passes touches is not allowed to hide what is
+under it, which is the same sentence from two directions — and the agreement is a coincidence of
+purpose worth not relying on.
+
+**Phase 2b is where this bites.** *Ultra dark* is defined as going past `MAX_SHADE_ALPHA`, and a
+window alpha the platform pins at 0.8 is not moved by raising a child's alpha at all: past a point,
+more alpha buys nothing and the phase's own feature has a ceiling nobody had priced. The escape
+routes are the backlight (already at `MIN_BACKLIGHT` there), the setting itself (a global the app
+cannot write), or accepting the ceiling and saying so. **Recorded in `DOD.md` against 2b** rather
+than solved here — this phase found it, it is not this phase's to spend.
+
+### R7's second half, corrected — the override that did not move is the ramp working
+
+The row above first carried the explanation *"`lowerBacklight` pins the backlight to `MIN_BACKLIGHT`
+rather than following the ramp"*. **The observation is right and that sentence is not.**
+`lowerBacklight` is a preference — whether Gloam may take the backlight down at all — and nothing in
+`applyShadeValues` pins anything: the value handed to the window is `maxOf(top × light,
+MIN_BACKLIGHT)` out of `shadeValuesFor`, recomputed on every change.
+
+**What decides whether the override moves under a drag is where the breakpoint is, and ADR-0010's
+central argument is that the breakpoint is not a constant.** It is `ln(ratio) / ln(ratio × span)`,
+and it travels with the user's own brightness. On the development phone, whose float range tops out
+near `0.5`, that puts it at **dim 56 for a user at their maximum** and at **dim 21 for one sitting at
+the `screen_brightness = 13` R10 measured on the same day**. Above the breakpoint the backlight is at
+`MIN_BACKLIGHT` *by construction* and the shade supplies the remainder — so a drag from 100 to 33
+never leaves the shade's stretch, and an override that does not move is the ramp doing exactly what
+it says.
+
+**Read rather than argued** (R11, 2026-09-03, API 33): with `top = 0.37776` the breakpoint is dim 55,
+the shade's window carries `sbrt=0.026663352` at dim 40 — `shadeValuesFor`'s own arithmetic to seven
+digits — and a drag on the panel's slider to 98 took it to exactly `0.01`. Same expression, a device
+whose top is nowhere near the floor: the override moves while there is something left to spend and
+pins when there is not.
+
+**What R7 is actually missing is one integer.** It did not record `settings get system
+screen_brightness` at the moment it was taken, and that is the number that decides which of the two
+cases it was. **Any reading of the override records the setting beside it** — the same shape of
+lesson as ADR-0010's *read a panel with the screen held awake*, and the same cost when it is skipped:
+a reading that is true and an explanation that is invented to fit it.
 
 ---
 

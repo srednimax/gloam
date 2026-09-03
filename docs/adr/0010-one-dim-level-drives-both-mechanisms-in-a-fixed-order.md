@@ -166,3 +166,50 @@ brightness back for exactly as long as the dialog is up.
 is a requester *below* ours losing. A panel window of Gloam's own *above* the shade that sets no
 brightness of its own should leave the shade the topmost requester by the same rule — but "should, by
 the rule" is not a reading, and 3b owns taking it.
+
+Amendment, 2026-09-03 (fourth). **The open question is closed by a reading, and the answer is the
+same rule.** *Consequences* left one question for Phase 3 — *"when a second window appears above the
+shade, whose override applies?"* — and the third amendment narrowed it to Gloam's own windows and
+refused to answer it without a device. Phase 3's checkpoint A took that reading before a line of the
+panel was written, because a no-go would have cut the phase in half.
+
+**Go, and it is the outcome that needs nothing built** (`phase-3.md` R1, 2026-09-02). With the shade
+live at dim 100 and a bare 200 dp square added above it as a second `TYPE_APPLICATION_OVERLAY`:
+
+- `dumpsys window windows` prints the stack top-first and the two come back adjacent and the right
+  way round — the square at `Window #8`, the shade at `#9`. **The later `addView` is on top**, which
+  is what insertion order predicted and what nothing documents.
+- With the square above and asking for no brightness of its own,
+  `mWindowManagerBrightnessOverride=0.01` and the tag still Gloam's. Removing the square changed
+  neither; stopping the shade released it to `NaN`.
+
+So **the topmost window that *asks* owns the override, and one that declines is not consulted** —
+between two windows of ours exactly as it held against everyone else's. The panel therefore keeps
+`BRIGHTNESS_OVERRIDE_NONE` and the shade keeps the override, which is what makes the panel legible at
+the 6.64 nits the shade left rather than at the 1.59 nits every Activity of ours sits at (R3, R6).
+The field-copy fallback the phase had written down — the panel carrying the shade's own
+`screenBrightness` on every update — is **not built**, and stays in `phase-3.md` §6 as the thing to
+reach for if a ROM ever disagrees.
+
+**Read this amendment with [ADR-0011](0011-the-panel-is-touchable-and-what-keeps-it-from-trapping-the-user.md).**
+This one says the second window may exist without disturbing the ramp; that one says what stops it
+trapping the user once it does.
+
+**One thing R1 found that it was not looking for, and R13 named: `MAX_SHADE_ALPHA` is not the alpha
+that lands.** Both of Gloam's overlay windows printed `alpha=0.8` in `mAttrs`, a `LayoutParams` field
+this app never sets. It is **Android 12's untrusted-touch cap** — an app overlay that lets touches
+pass through may not obscure what is under it by more than
+`maximum_obscuring_opacity_for_touch`, unset on both the phone and the emulator and therefore at the
+framework's default 0.8, which the window manager writes into the window's alpha. Proven by moving
+it: at `0.5` the shade comes back `alpha=0.5` (`phase-3.md` R13). The **panel** carries no alpha at
+all, because it catches touches rather than passing them.
+
+**So this ADR's cap is not the binding one, and the error runs in the safe direction.** R3 and R6
+measured 0.2393 and 0.2411 of the content still reaching the eye where the two invariants compute
+0.05 — that is `1 − 0.8 × MAX_SHADE_ALPHA` = 0.24, and it is *lighter* than computed, which is the
+right direction for the bound that keeps the way out visible and the wrong one for the thing the app
+is for. Nothing here changes: the invariants still hold, the tests still keep them, and a cap that
+binds tighter than ours cannot break a bound stated as a floor on transmitted light. **What it
+changes is Phase 2b's ceiling** — ultra dark is defined as going past `MAX_SHADE_ALPHA`, and past a
+point more alpha buys nothing at all while the platform pins the window at 0.8. That is in `DOD.md`
+against 2b, priced before the phase opens rather than discovered inside it.
