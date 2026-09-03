@@ -1,5 +1,6 @@
 package app.gloam
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -27,6 +28,31 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val app = application as MainApplication
+
+        // **Shape iii's forward** (`docs/phase-3.md` §2): the launcher entry stays on this Activity
+        // unconditionally, and the preference moves where a tap on it *lands*. The alternative was
+        // an `<activity-alias>` the app enables and disables, which on many launchers removes the
+        // icon from the home screen and on some does not put it back — a preference that can lose
+        // the app's icon is a preference that can lose the setting that lost it.
+        //
+        // **The category test is the load-bearing half, not the preference.** `ControlsActivity`
+        // forwards back here whenever it cannot draw a working dialog — no overlay permission, no
+        // escape hatch — so a forward keyed on the preference alone is two activities bouncing off
+        // each other with no user in the loop. A launcher tap always carries `CATEGORY_LAUNCHER`
+        // and a `startActivity` from inside the app never does, so this tests for the one case the
+        // preference is actually about, and every later entry — a deep link, a shortcut — is
+        // correct by default rather than correct for as long as someone remembers to opt out.
+        //
+        // The cost is one frame of this Activity's starting window before the dialog appears, which
+        // is the flash shape iii buys the icon back with.
+        if (app.launcherCompact && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+            // No `FLAG_ACTIVITY_NEW_TASK` and deliberately no categories: the dialog belongs in the
+            // task this tap opened, and `ControlsActivity` is `noHistory`, so it leaves with the
+            // user rather than waiting in the task for them to come back to something else.
+            startActivity(Intent(this, ControlsActivity::class.java))
+            finish()
+            return
+        }
 
         // Edge-to-edge, and **not** `enableEdgeToEdge()`. Every path in androidx.activity's version
         // of that call — `EdgeToEdgeApi35` included — reaches `Window.setStatusBarColor` and

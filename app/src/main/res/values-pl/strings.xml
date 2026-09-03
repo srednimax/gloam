@@ -52,6 +52,10 @@
     <string name="settings_theme_dark">Ciemny</string>
     <string name="settings_material_you">Użyj kolorów tapety</string>
     <string name="settings_material_you_hint">Android 12 i nowsze. Domyślnie wyłączone, aby aplikacja zachowała własną paletę.</string>
+    <string name="settings_controls">Sterowanie</string>
+    <string name="settings_launcher_compact">Otwieraj małe sterowanie z ikony</string>
+    <string name="settings_launcher_compact_hint">Dotknięcie ikony Gloam otwiera same suwaki zamiast całej aplikacji. Powiadomienie zawsze otwiera małe sterowanie.</string>
+
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Systemowy</string>
     <string name="settings_restart">Po ponownym uruchomieniu</string>

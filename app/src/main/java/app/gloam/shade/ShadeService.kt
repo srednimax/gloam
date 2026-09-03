@@ -14,7 +14,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
-import app.gloam.MainActivity
 import app.gloam.MainApplication
 import app.gloam.R
 import app.gloam.data.AppPreferences
@@ -771,11 +770,28 @@ class ShadeService : Service() {
     }
 
     private fun buildNotification(): Notification {
+        // **The row's plain tap summons the panel, and launches no Activity at all.** Phase 1's R8
+        // read what a tap does on HyperOS: the *Stop* action is behind a long-press and is not in
+        // the collapsed row, so a plain tap follows this intent — which used to land on the full app
+        // *under* the shade, at 0.33 nits. The panel is above the shade instead, at 6.64, so this
+        // is the one route in this phase that is a legibility improvement rather than a reach one.
+        //
+        // `getService` rather than `getActivity`, which also settles the caching question: pending
+        // intents are keyed by requesting identity, and two `Intent`s that are `filterEquals` — same
+        // action, component, data, categories — are the same pending intent whatever their extras
+        // say. This changes the kind as well as the component, so there is nothing stale to inherit
+        // from a previous version of the app. A later change that touches only extras would need
+        // `FLAG_UPDATE_CURRENT` beside `FLAG_IMMUTABLE`, or the old extras survive the update
+        // silently.
+        //
+        // The panel's precondition — that there is a shade for it to belong to — holds by
+        // construction here, because this notification exists only while the service does. It is
+        // still checked in [showPanel]: a `PendingIntent` outlives the process that built it.
         val open =
-            PendingIntent.getActivity(
+            PendingIntent.getService(
                 this,
                 0,
-                Intent(this, MainActivity::class.java),
+                Intent(this, ShadeService::class.java).setAction(ACTION_SHOW_PANEL),
                 PendingIntent.FLAG_IMMUTABLE,
             )
         val stop =

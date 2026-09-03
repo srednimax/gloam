@@ -86,6 +86,14 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_material_you">Use my wallpaper colours</string>
     <string name="settings_material_you_hint">Android 12 and later. Off by default, so the app keeps its own palette.</string>
+    <!-- The launcher route (docs/phase-3.md §2, §10). "The small controls" rather than "compact
+         mode": there is no mode, and the notification and the tile reach the same window whatever
+         this is set to. "The icon" rather than "the launcher", which is a developer's word. The
+         hint says what the preference does *not* move, because it moves one route of three. -->
+    <string name="settings_controls">Controls</string>
+    <string name="settings_launcher_compact">Open the small controls from the icon</string>
+    <string name="settings_launcher_compact_hint">Tapping Gloam opens just the sliders instead of the whole app. The notification always opens the small controls.</string>
+
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>
     <string name="settings_language_english" translatable="false">English</string>

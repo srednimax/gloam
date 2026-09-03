@@ -68,6 +68,18 @@ fun SettingsScreen(
                 onChange = viewModel::setMaterialYou,
             )
 
+            // Its own section rather than a row under *Appearance*: this is not what the app
+            // looks like, it is which of Gloam's two control surfaces the icon opens. The hint
+            // names the routes it does **not** move, because the preference only moves one of
+            // three — the notification and the tile reach the small controls either way.
+            SectionHeader(stringResource(R.string.settings_controls))
+            SettingsSwitch(
+                title = stringResource(R.string.settings_launcher_compact),
+                subtitle = stringResource(R.string.settings_launcher_compact_hint),
+                checked = state.launcherCompact,
+                onChange = viewModel::setLauncherCompact,
+            )
+
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
 

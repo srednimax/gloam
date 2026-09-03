@@ -71,6 +71,7 @@ class AppPreferences(
         val WARMTH = intPreferencesKey("warmth")
         val AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
         val OFF_AT_MILLIS = longPreferencesKey("off_at_millis")
+        val LAUNCHER_COMPACT = booleanPreferencesKey("launcher_compact")
     }
 
     /**
@@ -167,6 +168,22 @@ class AppPreferences(
     val warmth: Flow<Int> = store.data.map { (it[Keys.WARMTH] ?: 0).coerceIn(0, 100) }
 
     /**
+     * Whether a tap on the launcher icon opens the **compact controls** instead of the full app
+     * (`docs/phase-3.md` §2, shape iii).
+     *
+     * **Defaults off, and that is the whole design rather than caution.** A stranger's first launch
+     * has to be the full app — the overlay explainer, the notification warning and both hand-offs
+     * live there and nowhere else — so the launcher opens the full app until somebody decides
+     * otherwise. The notification and, from Phase 2b, the tile are the routes that reach the compact
+     * host without this key, because those are the two surfaces reachable while the shade is up.
+     *
+     * **Named for the one route it moves, not for a mode.** There is no compact mode: the compact
+     * host is always available from the other doors, and a name like `compact_mode` is one a later
+     * phase reads as permission to branch the whole app on it.
+     */
+    val launcherCompact: Flow<Boolean> = store.data.map { it[Keys.LAUNCHER_COMPACT] ?: false }
+
+    /**
      * The theme mode, read once, before any Activity exists.
      *
      * The one place a `suspend` read is worth its cost: `MainApplication.onCreate` needs the answer
@@ -175,6 +192,22 @@ class AppPreferences(
      * who chose dark.
      */
     suspend fun themeModeNow(): ThemeMode = themeMode.first()
+
+    /**
+     * The launcher preference, read once, before any Activity exists.
+     *
+     * The same shape and the same justification as [themeModeNow], and the same one caller:
+     * `MainApplication` needs both before the first window, because a value that arrives after the
+     * first composition arrives a frame too late — and here that frame is a whole activity launch,
+     * with `MainActivity` already on screen by the time the answer says it should not have been.
+     *
+     * Two one-shot reads rather than one combined one. Nothing writes the theme mode and this key
+     * together, so there is no torn read to prevent — [ShadeIntent] exists for the pair that *is*
+     * written in one transaction — and it costs nothing either way: DataStore serves `store.data`
+     * from its in-memory cache after the first collection, so the second `first()` is not a second
+     * disk read.
+     */
+    suspend fun launcherCompactNow(): Boolean = launcherCompact.first()
 
     /**
      * The stored intent, read once, for a caller with no lifetime to collect a `Flow` in.
@@ -248,6 +281,10 @@ class AppPreferences(
 
     suspend fun setWarmth(warmth: Int) {
         store.edit { it[Keys.WARMTH] = warmth.coerceIn(0, 100) }
+    }
+
+    suspend fun setLauncherCompact(enabled: Boolean) {
+        store.edit { it[Keys.LAUNCHER_COMPACT] = enabled }
     }
 }
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val materialYou: Boolean = false,
+    val launcherCompact: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -28,8 +29,9 @@ class SettingsViewModel(
         combine(
             preferences.themeMode,
             preferences.materialYou,
-        ) { theme, materialYou ->
-            SettingsUiState(theme, materialYou)
+            preferences.launcherCompact,
+        ) { theme, materialYou, launcherCompact ->
+            SettingsUiState(theme, materialYou, launcherCompact)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     /**
@@ -47,6 +49,16 @@ class SettingsViewModel(
 
     fun setMaterialYou(enabled: Boolean) {
         viewModelScope.launch { preferences.setMaterialYou(enabled) }
+    }
+
+    /**
+     * Move the launcher tap to the compact controls, or back.
+     *
+     * The write is all of it: `MainApplication` holds the live value for `MainActivity` to read
+     * before its first frame, and it is collecting this same `Flow`, so nothing here has to tell it.
+     */
+    fun setLauncherCompact(enabled: Boolean) {
+        viewModelScope.launch { preferences.setLauncherCompact(enabled) }
     }
 
     companion object {
