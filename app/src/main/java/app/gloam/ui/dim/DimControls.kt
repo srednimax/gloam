@@ -72,12 +72,9 @@ fun DimControls(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(horizontal = Spacing.base),
         )
-        Slider(
-            value = dimLevel.toFloat(),
-            // The `Float`-to-`Int` narrowing lives here rather than in the callback's type, so every
-            // host is handed the same whole number the preference stores.
-            onValueChange = { onDimLevel(it.toInt()) },
-            valueRange = 0f..100f,
+        DimLevelSlider(
+            dimLevel = dimLevel,
+            onDimLevel = onDimLevel,
             modifier = Modifier.padding(horizontal = Spacing.base),
         )
 
@@ -86,10 +83,9 @@ fun DimControls(
         // what was asked for rather than what the composite ended up with. It starts at 0 — a colour
         // cast nobody asked for is indistinguishable from a broken screen.
         SectionHeader(stringResource(R.string.dim_warmth_label))
-        Slider(
-            value = warmth.toFloat(),
-            onValueChange = { onWarmth(it.toInt()) },
-            valueRange = 0f..100f,
+        WarmthSlider(
+            warmth = warmth,
+            onWarmth = onWarmth,
             modifier = Modifier.padding(horizontal = Spacing.base),
         )
 
@@ -148,6 +144,55 @@ fun DimControls(
             Text(stringResource(if (running) R.string.dim_stop else R.string.dim_start))
         }
     }
+}
+
+/**
+ * The dim slider on its own, with no label and no value above it.
+ *
+ * ## Why the two sliders are extracted and the rest of [DimControls] is not
+ *
+ * The compact surfaces do not render a smaller [DimControls]; they render a **different chrome**
+ * around the same two controls — a bar and an icon row, against the full screen's headers, switch
+ * and hint. Extracting along that seam is what keeps `PLAN.md`'s "one composable in every host"
+ * promise where it actually pays: a change to what the dim range *means* — Phase 2b's ultra dark is
+ * the one already scheduled — lands here once and reaches all three hosts. A `dense = true` flag on
+ * [DimControls] would have been the other way to write this, and it is the one that rots: it makes
+ * one composable answer to two layouts, and every later widget has to pick a side of the boolean.
+ *
+ * No `SectionHeader` and no percentage: both belong to a host that has room for them.
+ */
+@Composable
+fun DimLevelSlider(
+    dimLevel: Int,
+    onDimLevel: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Slider(
+        value = dimLevel.toFloat(),
+        // The `Float`-to-`Int` narrowing lives here rather than in the callback's type, so every
+        // host is handed the same whole number the preference stores.
+        onValueChange = { onDimLevel(it.toInt()) },
+        valueRange = 0f..100f,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The warmth slider on its own. The label is the host's, because the compact surfaces put it on the
+ * disclosure row that reveals this rather than above it.
+ */
+@Composable
+fun WarmthSlider(
+    warmth: Int,
+    onWarmth: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Slider(
+        value = warmth.toFloat(),
+        onValueChange = { onWarmth(it.toInt()) },
+        valueRange = 0f..100f,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -220,11 +265,14 @@ fun AutoOffControls(
  * Its one weakness, recorded so nobody re-discovers it as a bug: four hours from 23:00 reads as
  * "03:00" with no date. At a four-hour ceiling that is unambiguous enough in context.
  *
+ * `internal` rather than private because the compact controls show the same deadline in their
+ * timer section, and a second copy of this would be a second place for a locale bug to live.
+ *
  * `DateFormat.getTimeFormat` is the platform's, so 12- or 24-hour follows the phone's own setting
  * and the locale for free — never a hand-built format string (`translator-brief.md` §4).
  */
 @Composable
-private fun rememberTimeText(instant: Long): String {
+internal fun rememberTimeText(instant: Long): String {
     val context = LocalContext.current
     return remember(context, instant) {
         android.text.format.DateFormat

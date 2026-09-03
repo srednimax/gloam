@@ -15,6 +15,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
+import app.gloam.MainActivity
 import app.gloam.MainApplication
 import app.gloam.R
 import app.gloam.data.AppPreferences
@@ -542,15 +543,22 @@ class ShadeService : Service() {
      * [AppPreferences.shadeIntent], no two of these are written in one transaction, so a reader that
      * takes them apart cannot see a half-written anything.
      */
-    private suspend fun panelStateNow(): PanelState =
-        PanelState(
+    private suspend fun panelStateNow(): PanelState {
+        // Read once and taken apart, rather than `.first()` twice: the two halves of the intent are
+        // written in one transaction, and two reads could straddle it and pair a live deadline with
+        // a stopped shade. Everything else here is an independent key, so it does not have the
+        // problem and does not need the ceremony.
+        val intent = preferences.shadeIntent.first()
+        return PanelState(
             dimLevel = preferences.dimLevel.first(),
             warmth = preferences.warmth.first(),
-            lowerBacklight = preferences.lowerBacklight.first(),
-            running = preferences.shadeIntent.first().running,
+            running = intent.running,
+            autoOff = preferences.autoOff.first(),
+            offAtMillis = intent.offAtMillis,
             themeMode = preferences.themeMode.first(),
             materialYou = preferences.materialYou.first(),
         )
+    }
 
     /**
      * Add the panel's window above the shade, with the controls in it.
@@ -588,18 +596,15 @@ class ShadeService : Service() {
 
         val state = MutableStateFlow(initial)
         val host = PanelHost(this) { panelTouches.tryEmit(Unit) }
-        // Read once per summon rather than collected: whether this device honours a window
-        // brightness override at all is a property of the device, not a preference.
-        val backlightAvailable = readBacklightTop(this) != null
 
         host.setContent {
             PanelContent(
                 state = state,
-                backlightAvailable = backlightAvailable,
                 onDimLevel = { level -> scope.launch { preferences.setDimLevel(level) } },
                 onWarmth = { warmth -> scope.launch { preferences.setWarmth(warmth) } },
-                onLowerBacklight = { on -> scope.launch { preferences.setLowerBacklight(on) } },
+                onAutoOff = ::setPanelAutoOff,
                 onToggleRunning = ::togglePanelRunning,
+                onOpenApp = ::openFullAppFromPanel,
                 onClose = ::removePanelWindow,
             )
         }
@@ -707,8 +712,14 @@ class ShadeService : Service() {
         coroutineScope {
             preferences.dimLevel.onEach { v -> state.update { it.copy(dimLevel = v) } }.launchIn(this)
             preferences.warmth.onEach { v -> state.update { it.copy(warmth = v) } }.launchIn(this)
-            preferences.lowerBacklight.onEach { v -> state.update { it.copy(lowerBacklight = v) } }.launchIn(this)
-            preferences.shadeIntent.onEach { v -> state.update { it.copy(running = v.running) } }.launchIn(this)
+            preferences.autoOff.onEach { v -> state.update { it.copy(autoOff = v) } }.launchIn(this)
+            // One collector for both halves of the intent, because they are written together — the
+            // panel's timer section shows the deadline beside the button that owns it, and two
+            // collectors could leave those disagreeing for a frame.
+            preferences
+                .shadeIntent
+                .onEach { v -> state.update { it.copy(running = v.running, offAtMillis = v.offAtMillis) } }
+                .launchIn(this)
             preferences.themeMode.onEach { v -> state.update { it.copy(themeMode = v) } }.launchIn(this)
             preferences.materialYou.onEach { v -> state.update { it.copy(materialYou = v) } }.launchIn(this)
 
@@ -720,6 +731,43 @@ class ShadeService : Service() {
                 }
             }
         }
+
+    /**
+     * The panel's auto-off chips — **the mirror of `DimViewModel.setAutoOff`, and the same pair of
+     * writes for the same reason.**
+     *
+     * Tapping a preset while the shade is up re-dates the deadline *from now* rather than from when
+     * the shade started, which is what somebody looking at "2 hours" expects it to mean and what
+     * makes the chips usable as "give me two more hours" without a second control for it.
+     *
+     * Written out here rather than shared with the `ViewModel`: a `ViewModel` is not reachable from
+     * a service, and the alternative — pushing the policy down into `AppPreferences` — would put a
+     * decision about deadlines inside the file `CLAUDE.md` reserves for keys, defaults and setters.
+     * It is the same trade [togglePanelRunning] already makes below.
+     */
+    private fun setPanelAutoOff(choice: AutoOff) {
+        scope.launch {
+            preferences.setAutoOff(choice)
+            if (preferences.shadeIntent.first().running) {
+                preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
+            }
+        }
+    }
+
+    /**
+     * The panel's cog: the full app, and the panel closed behind it.
+     *
+     * `FLAG_ACTIVITY_NEW_TASK` is required rather than stylistic — a service has no task of its own
+     * to start an Activity in, and the platform throws without it. The panel comes down because it
+     * would otherwise sit above the very screen it just opened; the shade stays up, because leaving
+     * it is not what the cog was tapped for.
+     */
+    private fun openFullAppFromPanel() {
+        startActivity(
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        removePanelWindow()
+    }
 
     /**
      * The panel's start/stop button.

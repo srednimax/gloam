@@ -67,6 +67,18 @@
     <!-- %1$s is a time of day, formatted for the phone's own locale and 12/24-hour setting. -->
     <string name="dim_auto_off_at">Turns off at %1$s</string>
 
+    <!-- The compact controls' auto-off chips (docs/phase-3.md §2). The same five AutoOff values the
+         full app offers, labelled short: R5 read five chips saying "After 30 minutes" wrapping in a
+         floating window, and this surface is narrower still. The duration carries no "+" because
+         the same chip means two things — while the shade is up, tapping one re-dates the deadline
+         from now ("two more hours"); while it is down, it sets what the next shade will get. The
+         section header above them is dim_auto_off_label, which says which of the two is happening. -->
+    <string name="compact_auto_off_never">Never</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 hour</string>
+    <string name="compact_auto_off_2h">2 hours</string>
+    <string name="compact_auto_off_4h">4 hours</string>
+
     <!-- The warmth slider. "Warmth" per CONTEXT.md: not "night mode" — that is the app's own dark
          theme — and not any wording about filtering or cutting blue light, which an overlay cannot
          do. It adds amber over an already-dark screen. -->

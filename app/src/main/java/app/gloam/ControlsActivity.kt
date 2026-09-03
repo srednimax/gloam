@@ -4,32 +4,24 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
-import app.gloam.shade.readBacklightTop
 import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
 import app.gloam.theme.AppTheme
 import app.gloam.theme.Spacing
-import app.gloam.ui.dim.AutoOffControls
-import app.gloam.ui.dim.DimControls
+import app.gloam.ui.dim.CompactControls
 import app.gloam.ui.dim.DimViewModel
 
 /**
@@ -60,6 +52,10 @@ import app.gloam.ui.dim.DimViewModel
  * the wrong place to meet Gloam for the first time. So when either precondition is missing this host
  * does not draw a degraded version of itself — it *becomes* the full app, which is the guard below.
  *
+ * **Nor does it have the settings**, which is [CompactControls]' rule rather than this class's: the
+ * backlight switch and everything after it belong to the full app, and the cog is how they are
+ * reached. This host no longer reads `readBacklightTop` at all, because nothing it draws asks.
+ *
  * **It is not an escape hatch** (`docs/phase-2.md` §2): reaching it still needs sight of Gloam's own
  * UI, under the shade. `EscapeHatch.kt`'s inventory does not gain a row for it.
  */
@@ -73,11 +69,6 @@ class ControlsActivity : AppCompatActivity() {
 
         val app = application as MainApplication
 
-        // Read once rather than on every resume, and the difference from `DimScreen` is the window
-        // rather than the value: this activity is `noHistory`, so it does not survive the trip to a
-        // settings screen and back — every summon is a fresh read by construction.
-        val backlightAvailable = readBacklightTop(this) != null
-
         setContent {
             val materialYou by app.preferences.materialYou.collectAsStateWithLifecycle(initialValue = false)
             val themeMode by
@@ -87,12 +78,16 @@ class ControlsActivity : AppCompatActivity() {
                 // `fillMaxWidth` and **not** `fillMaxSize`: the window's height is wrap-content, so
                 // filling it would grow the dialog to whatever the window manager allows and hand
                 // back a full screen with rounded corners.
+                // The same `extraLarge` radius the panel uses, so the two surfaces the user meets
+                // as one thing are shaped alike. It needs `Theme.App.Controls` to have made the
+                // window background transparent — a shape here over an opaque window is a rounded
+                // card with square corners painted behind it.
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.background,
+                    shape = MaterialTheme.shapes.extraLarge,
                 ) {
-                    CompactControls(
-                        backlightAvailable = backlightAvailable,
+                    ControlsBody(
                         onStart = ::startShade,
                         onStop = ::stopShade,
                         onOpenApp = ::openFullApp,
@@ -132,7 +127,7 @@ class ControlsActivity : AppCompatActivity() {
     }
 
     /**
-     * The way out to the full app, used by the guard and by the *Open Gloam* button.
+     * The way out to the full app, used by the guard and by the cog.
      *
      * **`FLAG_ACTIVITY_NEW_TASK` is load-bearing rather than boilerplate.** This activity declares an
      * empty `taskAffinity` and `excludeFromRecents`, so without the flag [MainActivity] would be
@@ -154,12 +149,16 @@ class ControlsActivity : AppCompatActivity() {
 }
 
 /**
- * The body of the floating window: the extracted controls, and one way out.
+ * The body of the floating window: the shared compact controls, wired to this host's `Context`.
  *
  * **The start button's wiring is the short version of `DimScreen`'s**, and the reason is the guard
  * above: the notification permission is a precondition of this window existing at all, so the ask
  * can never fire from here. What is left is the pair that must stay together — the stored intent and
  * the service — written the same way round as on the full screen.
+ *
+ * `onClose` is left at its default `null`: an Activity is closed by the back gesture, so a button
+ * that did the same thing would be a fourth icon buying nothing. The panel, which the Back key never
+ * reaches, is the host that passes one.
  *
  * No `extras` on the `viewModel()` call, unlike every screen inside `NavDisplay`: those resolve to a
  * bare per-entry `ViewModelStoreOwner` with no default extras, and this one resolves to the Activity,
@@ -168,8 +167,7 @@ class ControlsActivity : AppCompatActivity() {
  * the same DataStore keys, so the two agree without talking to each other.
  */
 @Composable
-private fun CompactControls(
-    backlightAvailable: Boolean,
+private fun ControlsBody(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onOpenApp: () -> Unit,
@@ -177,57 +175,32 @@ private fun CompactControls(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Scrollable because the window's height is bounded by the display and the content is not: five
-    // auto-off chips wrapping in a narrow window is what R5 reads, and a clipped safety control is
-    // worse than a scrolled one.
-    Column(
+    // Scrollable because the window's height is bounded by the display and the content is not: the
+    // timer section's five chips wrap in a narrow window (R5), and a clipped safety control is worse
+    // than a scrolled one. Cheaper than it was — only one section is ever open at a time — but the
+    // bound is the display's, not ours, so it stays.
+    CompactControls(
+        dimLevel = state.dimLevel,
+        warmth = state.warmth,
+        running = state.running,
+        autoOff = state.autoOff,
+        offAtMillis = state.offAtMillis,
+        onDimLevel = viewModel::setDimLevel,
+        onWarmth = viewModel::setWarmth,
+        onAutoOff = viewModel::setAutoOff,
+        onToggleRunning = {
+            if (state.running) {
+                viewModel.endShade()
+                onStop()
+            } else {
+                viewModel.beginShade()
+                onStart()
+            }
+        },
+        onOpenApp = onOpenApp,
         modifier =
             Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = Spacing.base),
-    ) {
-        DimControls(
-            dimLevel = state.dimLevel,
-            warmth = state.warmth,
-            lowerBacklight = state.lowerBacklight,
-            backlightAvailable = backlightAvailable,
-            running = state.running,
-            onDimLevel = viewModel::setDimLevel,
-            onWarmth = viewModel::setWarmth,
-            onLowerBacklight = viewModel::setLowerBacklight,
-            onToggleRunning = {
-                if (state.running) {
-                    viewModel.endShade()
-                    onStop()
-                } else {
-                    viewModel.beginShade()
-                    onStart()
-                }
-            },
-        )
-
-        // The deadline travels, per `docs/phase-3.md` §1: this is by construction the surface reached
-        // while the shade is up, in the dark, without opening the app — which is exactly where
-        // "turns off at 23:40" is worth reading and "give me two more hours" is worth tapping.
-        AutoOffControls(
-            autoOff = state.autoOff,
-            offAtMillis = state.offAtMillis,
-            running = state.running,
-            onAutoOff = viewModel::setAutoOff,
-        )
-
-        // Without this the dialog is a dead end: there is no Settings behind it, no support screen
-        // and no way to reach the explainer for anything it cannot do itself.
-        Row(
-            horizontalArrangement = Arrangement.End,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.tight),
-        ) {
-            TextButton(onClick = onOpenApp) {
-                Text(stringResource(R.string.controls_open_app))
-            }
-        }
-    }
+    )
 }

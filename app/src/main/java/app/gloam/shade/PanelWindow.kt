@@ -5,20 +5,15 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -28,11 +23,10 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import app.gloam.R
 import app.gloam.data.ThemeMode
 import app.gloam.theme.AppTheme
 import app.gloam.theme.Spacing
-import app.gloam.ui.dim.DimControls
+import app.gloam.ui.dim.CompactControls
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -253,15 +247,20 @@ private class TouchReportingLayout(
  * `{...state, warmth: 40}`. It is how each of the service's little collectors writes its one field
  * back without any of them needing to know about the others.
  *
- * There is deliberately no auto-off here. The panel gets [DimControls] and nothing else: every
- * widget added to it has to stay legible at 6.64 nits, fit a window that must never be
- * `MATCH_PARENT`, and be dismissible by somebody who cannot see the rest of the screen.
+ * **Auto-off is here now, and it was not before.** The rule that kept it out has not changed —
+ * every widget in this window must stay legible at 6.64 nits, fit a window that is never
+ * `MATCH_PARENT`, and be dismissible by somebody who cannot see the rest of the screen — but a
+ * disclosure that is closed by default costs one icon against all three, and the deadline is the one
+ * thing worth reading on the surface reached *while the shade is up*. What it replaced is the
+ * backlight switch, which went the other way for the same reason: a setting chosen once does not
+ * earn a permanent row in a window this size.
  */
 data class PanelState(
     val dimLevel: Int,
     val warmth: Int,
-    val lowerBacklight: Boolean,
     val running: Boolean,
+    val autoOff: AutoOff,
+    val offAtMillis: Long?,
     val themeMode: ThemeMode,
     val materialYou: Boolean,
 )
@@ -286,11 +285,11 @@ data class PanelState(
 @Composable
 internal fun PanelContent(
     state: StateFlow<PanelState>,
-    backlightAvailable: Boolean,
     onDimLevel: (Int) -> Unit,
     onWarmth: (Int) -> Unit,
-    onLowerBacklight: (Boolean) -> Unit,
+    onAutoOff: (AutoOff) -> Unit,
     onToggleRunning: () -> Unit,
+    onOpenApp: () -> Unit,
     onClose: () -> Unit,
 ) {
     // Collected here rather than passed as a value, so that a preference written from anywhere —
@@ -306,34 +305,24 @@ internal fun PanelContent(
             tonalElevation = Spacing.hair,
         ) {
             Column(modifier = Modifier.padding(vertical = Spacing.base)) {
-                DimControls(
+                // **`onClose` is not optional here, and it is the reason the parameter is nullable
+                // at all.** With `FLAG_NOT_FOCUSABLE` the Back key never reaches this window, so
+                // there is no system gesture that closes it: this button and the service's idle
+                // timeout are the only two ways out that do not also take the shade down. The
+                // compact host passes nothing, because an Activity already has a back gesture.
+                CompactControls(
                     dimLevel = current.dimLevel,
                     warmth = current.warmth,
-                    lowerBacklight = current.lowerBacklight,
-                    backlightAvailable = backlightAvailable,
                     running = current.running,
+                    autoOff = current.autoOff,
+                    offAtMillis = current.offAtMillis,
                     onDimLevel = onDimLevel,
                     onWarmth = onWarmth,
-                    onLowerBacklight = onLowerBacklight,
+                    onAutoOff = onAutoOff,
                     onToggleRunning = onToggleRunning,
+                    onOpenApp = onOpenApp,
+                    onClose = onClose,
                 )
-
-                // **Not optional.** With `FLAG_NOT_FOCUSABLE` the Back key never reaches this
-                // window, so there is no system gesture that closes it — this button and the
-                // service's idle timeout are the only two ways out that do not also take the shade
-                // down. A text button rather than an icon so the way out is readable rather than
-                // recognised, and so the label is its own accessibility name.
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.tight),
-                ) {
-                    TextButton(onClick = onClose) {
-                        Text(stringResource(R.string.panel_close))
-                    }
-                }
             }
         }
     }
