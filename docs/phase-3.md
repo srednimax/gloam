@@ -546,6 +546,28 @@ attached for this phase, and together they decide whether the strong form is eve
 the twelve say yes, the observer is then a small, already-measured piece of work rather than an
 investigation.
 
+**R10 is taken, and it removed the objection this section leant on hardest** (2026-09-03). Both
+halves came back yes-and-better: HyperOS's control-centre slider does write `SCREEN_BRIGHTNESS`, and
+it writes it **once per gesture rather than per pixel** — so an observer would hear one event per
+drag, not a hundred. The noise floor is the surprise. The argument above was that under adaptive the
+framework keeps writing its own choice into the same integer, so the observer would read a cloud
+passing as an instruction; that is true of the setting in general and **cannot happen while our
+override is live**, because the override switches the framework's auto-brightness controller off
+outright — `mState=AUTO_BRIGHTNESS_DISABLED` and the light sensor not sampled at all, against
+`AUTO_BRIGHTNESS_ENABLED` at a 250 ms rate the moment the shade stops. An observer that listens only
+while the shade is up therefore hears nothing it did not want to hear, **and the manual-mode gate
+this section called "a large fraction of users excluded" is not needed at all.**
+
+**The recommendation does not move, and it matters that it does not.** Two of the four objections
+were never about noise: a *system* control would be doing something the system did not promise, on a
+screen that does not say which app is responsible, and no reading can tell a user's drag from another
+app's write. Those are the reasons rule 5 sent this to the twelve, and they are untouched. What R10
+changes is the *shape of the question they get asked* — it is no longer "would you accept this on
+manual brightness only, knowing it might misfire", it is "should your brightness slider mean
+something else while Gloam is dimming", which is a taste question with the engineering objection
+removed from underneath it. `DOD.md` carries it, beside auto-off's default, because it outlives this
+phase the same way.
+
 ---
 
 ## 5. The go/no-go, restated in the terms ADR-0010 left it in
@@ -960,6 +982,7 @@ did nothing* — the correction is on ADR-0010's third amendment and it cost a w
 | **R9** | The panel's inactivity dismissal on a **touch**-idle timer, and that stopping the shade takes it down | §8's three routes out |
 | **R10** | **`SCREEN_BRIGHTNESS` noise under adaptive**, and whether HyperOS's control-centre slider writes it | §4 — whether the strong form is even available on this ROM |
 | **R11** | **API-33 AVD end-of-phase pass** (ADR-0008): launches, compact host appears, shade appears, panel appears if 3b went | the phase's own closing gate |
+| **R12** | The notification line: that it appears and disappears with the override, that a slider drag posts nothing, and that the row is legible above the shade | §4's cheap half. **Added by checkpoint E rather than planned** — the trigger is the part of §4 that is a decision, and a decision about how often to call `notify()` is only readable from outside the app |
 
 **R1 is the only reading in this file that another reading cannot be substituted for**, and it is
 numbered first because it is now taken first. Everything else here confirms something already argued;
@@ -1126,7 +1149,8 @@ right". Derivations are in §12 and are arithmetic, not observations.
 | R8 | Rotation and locale change with the panel up | `settings put system user_rotation 1`, `cmd locale …` | **The panel survives both, and the rotation needed a fix** (2026-09-03). `settings put system user_rotation` does nothing on HyperOS; `wm user-rotation lock 1` is the one that turns the display. A window laid out from explicit pixels keeps them across a rotation, so the panel wore the width of whichever orientation it was summoned in: landscape gives 1200 px (the cap biting, correctly) and rotating to portrait left 1200 px on a 1220 px display — 10 px of screen either side of a *touchable* window. `onConfigurationChanged` re-measures now, and it reads 1098 → 1200 → 1098 across both turns. **The locale is not re-read**: switched to English under an open panel, the panel stayed Polish. Left alone — it is stale for at most the 30 s idle timeout and the next summon is correct, where the rotation case was a safety property. Polish fits the panel in both orientations, nothing clipped |
 | R9 | Inactivity dismissal, and death with the shade | open the panel, leave it untouched; then stop the shade | **Both** (2026-09-03). Untouched, the panel lived **30.1 s** (poll granularity 2 s) and logged `panel idle for 30000ms, taking it down`; the shade survived it, `mWindowManagerBrightnessOverride` still `0.01`. The panel's own *Stop dimming* took both windows down and released the override to `NaN` (§8, third route). So does a process kill: `am force-stop` with both up went 2 overlay windows → 0 with nothing orphaned — the Xiaomi case. HyperOS never renders the notification's *Stop* action into the shade, so that route is unread |
 | F2 | **A launcher tap on an existing task never calls `onCreate`** | `am start` with `CATEGORY_LAUNCHER`, preference on, task alive; `logcat -s ActivityTaskManager` | **Bug, found and fixed** (2026-09-03). `moveTaskToFront … result code=2` (`START_TASK_TO_FRONT`) — the instance is resumed, so §3's forward in `onCreate` could not run and the icon preference honoured a cold start and was silently inert for as long as the task survived, which is days. `launchMode="singleTop"` plus `onNewIntent` is the fix: re-read, `result code=2` now ends at `topResumedActivity=…/app.gloam.ControlsActivity`, and the cold path (`result code=0`) does too. **The same trace caught the guard working**: with the overlay op reset by `adb install -r`, one tap went `MainActivity` → `ControlsActivity` → `MainActivity` and **stopped there** — §2's ping-pong argument confirmed on the phone rather than argued, and the category test is what stopped it |
-| R10 | `SCREEN_BRIGHTNESS` under adaptive, and the control-centre slider | observe the setting while the room changes and while dragging | — |
+| R10 | `SCREEN_BRIGHTNESS` under adaptive, and the control-centre slider | poll `settings get system screen_brightness` at 10 Hz through a control-centre drag; `dumpsys display`'s *Automatic Brightness Controller State* with the override live and released | **The slider writes it, and while our override is live nothing else can** (2026-09-03). The control-centre slider is not a decoration: one drag took the setting 255 → 13 and a second 13 → 30, with Gloam's override unmoved at `0.01` throughout — the drag that does nothing, measured. **It writes once per gesture, not per pixel**: across a 2.1 s drag sampled every 101 ms the value changed exactly once, to its final figure. And the noise objection turns out not to apply: with the override up the controller reads `mState=AUTO_BRIGHTNESS_DISABLED`, `mLightSensorEnabled=false`, `mCurrentLightSensorRate=-1`, `mAmbientLuxValid=false` — the sensor is not sampled at all — against `AUTO_BRIGHTNESS_ENABLED`, `true`, `250` and `mAmbientLux=12.02` the moment the shade stops. 600 samples over 61.7 s under adaptive with the shade up: **zero writes**. Releasing the override produced one immediately (30 → 21), which is R4's phenomenon, and then 311 samples over 49.7 s at a steady 12.02 lux with none. §4 |
+| R12 | **The notification line, and what it costs to post** | `dumpsys notification --noredact`; `logcat -b events` for `notification_enqueue`; `screencap` with the row open | **Both directions, one post each, and legible** (2026-09-03). Shade at dim 100 with the backlight toggle on: `android.title=(Screen dimmed)`, `android.text=(Your brightness slider is paused while Gloam is dimming)`. Toggling the backlight off gave **one** `notification_enqueue` and `android.text=null`, and back on one more and the line again; the whole 40% → 100% slider drag gave **none**. Starting the shade is two posts — `startForeground` without the line, then the transition with it. `NotificationShade` is `Window #4` above Gloam's `#7`, printed top-first, and the override stays `0.01` tagged ours with the row open: the text renders at **175/255**, which is HyperOS's own notification-body grey untouched, against **59/255** for `dim_backlight_hint`'s screen behind it (cream background at R6's 0.24 transmission) and 22/255 for that screen's own text. Wraps to two lines in English and in Polish, clipped in neither |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | — |
 
 ---
