@@ -10,7 +10,6 @@ import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
@@ -546,11 +545,13 @@ class ShadeService : Service() {
                     PixelFormat.TRANSLUCENT,
                 ).apply {
                     gravity = Gravity.BOTTOM
-                    val navigationBar =
-                        metrics.windowInsets
-                            .getInsets(WindowInsets.Type.navigationBars())
-                            .bottom
-                    y = navigationBar + (PANEL_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
+                    // **Measured, not assumed** (R6). Without `FLAG_LAYOUT_NO_LIMITS` — which the
+                    // shade has and the panel deliberately does not — the window is laid out inside
+                    // the display frame the system already keeps clear of the navigation bar, so
+                    // `y` is an offset from the *top* of that bar rather than from the bottom of the
+                    // display. Adding the navigation-bar inset here counted it twice and floated the
+                    // panel 59 dp up instead of 12.
+                    y = (PANEL_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
                 }
 
         runCatching { manager.addView(host.view, params) }
