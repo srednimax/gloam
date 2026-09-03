@@ -215,6 +215,17 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
       The twelve are the room. Recorded here rather than in `phase-2.md` so the question outlives
       the phase that raised it; the answer is a one-line change to `AutoOff.Default` or nothing.
+- [ ] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
+      Should the phone's own brightness slider mean *"give me more light"* while Gloam is dimming?
+      Phase 3 ships the cheap half — the ongoing notification now says the slider is paused, on the one
+      surface that can be read at 6.64 nits — and deliberately ships no `ContentObserver`.
+      **The engineering objection is gone and the taste one is not.** `phase-3.md`'s R10 measured that
+      the backlight override switches the framework's auto-brightness controller off entirely, so an
+      observer listening while the shade is up cannot mistake an adaptive write for a user's drag, and
+      the manual-mode-only limitation does not apply. What is left is that a *system* control would do
+      something the system never promised, on a screen that does not name the app responsible. That is
+      a taste argued in a room with one person in it, which is what the twelve are for. The answer is a
+      small, already-measured piece of work or nothing.
 - [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
       `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
       the thing most likely to block a first upload, and it is discovered late.
