@@ -29,30 +29,9 @@ class MainActivity : AppCompatActivity() {
 
         val app = application as MainApplication
 
-        // **Shape iii's forward** (`docs/phase-3.md` §2): the launcher entry stays on this Activity
-        // unconditionally, and the preference moves where a tap on it *lands*. The alternative was
-        // an `<activity-alias>` the app enables and disables, which on many launchers removes the
-        // icon from the home screen and on some does not put it back — a preference that can lose
-        // the app's icon is a preference that can lose the setting that lost it.
-        //
-        // **The category test is the load-bearing half, not the preference.** `ControlsActivity`
-        // forwards back here whenever it cannot draw a working dialog — no overlay permission, no
-        // escape hatch — so a forward keyed on the preference alone is two activities bouncing off
-        // each other with no user in the loop. A launcher tap always carries `CATEGORY_LAUNCHER`
-        // and a `startActivity` from inside the app never does, so this tests for the one case the
-        // preference is actually about, and every later entry — a deep link, a shortcut — is
-        // correct by default rather than correct for as long as someone remembers to opt out.
-        //
-        // The cost is one frame of this Activity's starting window before the dialog appears, which
-        // is the flash shape iii buys the icon back with.
-        if (app.launcherCompact && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
-            // No `FLAG_ACTIVITY_NEW_TASK` and deliberately no categories: the dialog belongs in the
-            // task this tap opened, and `ControlsActivity` is `noHistory`, so it leaves with the
-            // user rather than waiting in the task for them to come back to something else.
-            startActivity(Intent(this, ControlsActivity::class.java))
-            finish()
-            return
-        }
+        // **Shape iii's forward** (`docs/phase-3.md` §2), in `onCreate` and in [onNewIntent] both —
+        // see [forwardToCompactControls] for why one of those is not enough.
+        if (forwardToCompactControls(intent)) return
 
         // Edge-to-edge, and **not** `enableEdgeToEdge()`. Every path in androidx.activity's version
         // of that call — `EdgeToEdgeApi35` included — reaches `Window.setStatusBarColor` and
@@ -106,5 +85,68 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * A launcher tap on a task that already exists **never calls `onCreate`**, which is the platform
+     * fact this override exists for.
+     *
+     * Read off the phone rather than reasoned about: with the preference on and Gloam's task still
+     * in the background, `am start` with `CATEGORY_LAUNCHER` logs
+     * `ActivityTaskManager: moveTaskToFront … result code=2` (`START_TASK_TO_FRONT`) and the existing
+     * instance is simply resumed. The forward in `onCreate` cannot run, so the icon would honour the
+     * preference on a cold start and quietly ignore it for as long as the task survived — which is
+     * days. `launchMode="singleTop"` in the manifest is what turns that resume into a delivered
+     * intent, and this is where it lands.
+     *
+     * **`setIntent` before the forward, and it is not bookkeeping.** `getIntent()` otherwise keeps
+     * answering with the intent that created the Activity, so a later reader — a resume, a
+     * configuration change — would find `CATEGORY_LAUNCHER` on it and forward again over a user who
+     * had just come back from the dialog.
+     *
+     * Kotlin note: `onNewIntent` takes a non-null `Intent` here, unlike `onCreate`'s nullable
+     * `Bundle` — the platform never delivers a null one, and the override signature says so.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        forwardToCompactControls(intent)
+    }
+
+    /**
+     * Send a **launcher** tap to the compact controls when the preference says so, and say whether
+     * it did.
+     *
+     * The launcher entry stays on this Activity unconditionally and the preference moves where a tap
+     * on it *lands*. The alternative was an `<activity-alias>` the app enables and disables, which on
+     * many launchers removes the icon from the home screen and on some does not put it back — a
+     * preference that can lose the app's icon is a preference that can lose the setting that lost it
+     * (`docs/phase-3.md` §2, shape iii).
+     *
+     * **The category test is the load-bearing half, not the preference.** `ControlsActivity` forwards
+     * back here whenever it cannot draw a working dialog — no overlay permission, no escape hatch —
+     * so a forward keyed on the preference alone is two activities bouncing off each other with no
+     * user in the loop. A launcher tap always carries `CATEGORY_LAUNCHER` and a `startActivity` from
+     * inside the app never does, so this tests for the one case the preference is actually about, and
+     * every later entry — a deep link, a shortcut — is correct by default rather than correct for as
+     * long as somebody remembers to opt out.
+     *
+     * **`finish()` on both paths, including the one where this Activity was already alive.** The user
+     * asked the icon for the sliders; leaving the full app resumed behind the dialog would hand it
+     * back to them the moment the dialog goes away, which `noHistory` makes a matter of seconds. What
+     * is lost is a position in the app's own navigation, and the app opens on the dim screen anyway.
+     *
+     * The cost is one frame of this Activity's starting window before the dialog appears, which is
+     * the flash shape iii buys the icon back with.
+     */
+    private fun forwardToCompactControls(intent: Intent): Boolean {
+        val app = application as MainApplication
+        if (!app.launcherCompact || !intent.hasCategory(Intent.CATEGORY_LAUNCHER)) return false
+        // No `FLAG_ACTIVITY_NEW_TASK` and deliberately no categories: the dialog belongs in the task
+        // this tap brought forward, and `ControlsActivity` is `noHistory`, so it leaves with the user
+        // rather than waiting in the task for them to come back to something else.
+        startActivity(Intent(this, ControlsActivity::class.java))
+        finish()
+        return true
     }
 }
