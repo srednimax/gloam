@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.IBinder
 import android.util.Log
@@ -239,6 +240,12 @@ class ShadeService : Service() {
 
     /** The state collectors and the idle timer, cancelled together when the panel comes down. */
     private var panelJob: Job? = null
+
+    /**
+     * The panel window's own `LayoutParams`, kept for the same reason [shadeParams] is: a re-measure
+     * edits them in place and hands them back to `updateViewLayout`.
+     */
+    private var panelParams: WindowManager.LayoutParams? = null
 
     /**
      * Every touch the panel receives, whether or not a control consumed it.
@@ -584,11 +591,10 @@ class ShadeService : Service() {
             )
         }
 
-        val metrics = manager.currentWindowMetrics
         val params =
             WindowManager
                 .LayoutParams(
-                    panelWidthPx(metrics.bounds.width()),
+                    currentPanelWidth(manager),
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     PANEL_WINDOW_FLAGS,
@@ -609,6 +615,7 @@ class ShadeService : Service() {
                 panelView = host.view
                 panelHost = host
                 panelState = state
+                panelParams = params
                 // **`RESUMED` is not a formality.** Below `STARTED` the `Recomposer` stops applying
                 // recompositions, and the window draws its first frame correctly and then never
                 // changes again — a slider that will not move under a finger, with nothing in
@@ -616,6 +623,34 @@ class ShadeService : Service() {
                 host.show()
                 panelJob = scope.launch { trackPanel(state) }
             }.onFailure { host.destroy() }
+    }
+
+    /** The panel's width for the display as it is *now*, which is the only input [panelWidthPx] has. */
+    private fun currentPanelWidth(manager: WindowManager): Int =
+        panelWidthPx(manager.currentWindowMetrics.bounds.width())
+
+    /**
+     * Re-measure the panel when the display changes shape.
+     *
+     * **Android platform, not our choice:** a `WindowManager` window laid out from explicit pixels
+     * keeps those pixels across a rotation. Nothing re-runs [panelWidthPx], so without this the
+     * panel wears the width of whichever orientation it was summoned in. R8 read the bad case off
+     * the phone: summoned in landscape the width cap gives 1200 px, and rotating to portrait leaves
+     * 1200 px on a 1220 px display — a touchable window with 10 px of screen either side of it,
+     * where the whole point of the inset is that touches still reach the app beside the panel.
+     *
+     * Only the width. The height is `WRAP_CONTENT`, so Compose re-measures it for free, and `y` is
+     * a density-scaled constant that a rotation does not change.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val view = panelView ?: return
+        val params = panelParams ?: return
+        val manager = windowManager ?: return
+        val width = currentPanelWidth(manager)
+        if (params.width == width) return
+        params.width = width
+        runCatching { manager.updateViewLayout(view, params) }
     }
 
     /**
@@ -634,6 +669,7 @@ class ShadeService : Service() {
         panelView = null
         panelHost = null
         panelState = null
+        panelParams = null
     }
 
     /**
