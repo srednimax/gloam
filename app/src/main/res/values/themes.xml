@@ -61,6 +61,19 @@
     <style name="Theme.App.Controls" parent="Theme.AppCompat.DayNight.Dialog">
         <item name="android:windowIsFloating">true</item>
         <item name="android:windowIsTranslucent">true</item>
+        <!-- Transparent so the rounded `Surface` inside actually reads as rounded. The parent
+             dialog theme supplies an opaque, squared-off window background drawable, and it is
+             painted by the window manager *behind* everything Compose draws — so without this the
+             corner radius is there and simply has an opaque rectangle sitting under it. This is
+             the platform half of a rounded dialog; the radius itself is Compose's. -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- No shadow. The parent dialog theme carries an `android:windowElevation`, and a window's
+             elevation is drawn by the window manager *outside* the window's own bounds — so it is
+             not something the Compose `Surface` inside can decline, and setting `shadowElevation`
+             to 0 there (its default already) does nothing about it. A shade this app draws is meant
+             to be the darkest thing on screen; a system-drawn penumbra around the controls is one
+             more layer of dimming that CLAUDE.md's composite bound cannot see. -->
+        <item name="android:windowElevation">0dp</item>
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="windowNoTitle">true</item>

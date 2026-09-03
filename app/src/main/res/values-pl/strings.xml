@@ -41,6 +41,12 @@
     <string name="dim_auto_off_hint">Gloam zdejmuje zasłonę automatycznie po tym czasie, więc przyciemniony i zapomniany ekran nie będzie ciemny także jutro.</string>
     <string name="dim_auto_off_at">Wyłączy się o %1$s</string>
 
+    <string name="compact_auto_off_never">Nigdy</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 godz.</string>
+    <string name="compact_auto_off_2h">2 godz.</string>
+    <string name="compact_auto_off_4h">4 godz.</string>
+
     <string name="dim_warmth_label">Ciepło barwy</string>
 
     <string name="controls_open_app">Otwórz Gloam</string>
