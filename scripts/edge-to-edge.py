@@ -280,10 +280,11 @@ def usable_configs(configs: "list[Config]") -> "tuple[list[Config], list[tuple[C
     return kept, dropped
 
 
-# The config the phone is currently pinned to, so a wipe can put the rotation back. `pm clear` kills
-# the app, which hands the foreground to the portrait-locked launcher, and HyperOS writes
-# `user_rotation` back to 0 when it does — silently turning a landscape cell into a second portrait
-# one that still captures, still checks, and still reports "clean".
+# The config the device is currently pinned to, so anything that kills the app can put the rotation
+# back. `pm clear`, `am start -S` and `pm revoke` all hand the foreground to the portrait-locked
+# launcher, and the window manager writes `user_rotation` back to 0 when it does — silently turning a
+# landscape cell into a second portrait one that still captures, still checks, and still reports
+# "clean". Read by [repin_rotation], which is what all three of them call.
 _PINNED: "Config | None" = None
 
 
@@ -304,6 +305,40 @@ def apply_config(config: Config) -> None:
     # SystemUI rebuilds the navigation bar out of process; there is nothing to poll that is ready
     # before the new inset is published, so this is a wait rather than a check.
     settle(3.0)
+
+
+def repin_rotation() -> None:
+    """Put back the rotation the last force-stop cost us.
+
+    **Anything that takes the foreground away from this app can unpin the rotation, and the platform
+    does it silently.** `user_rotation` only turns a display whose top activity permits turning, so
+    the moment the app dies the launcher is in front — and launchers are portrait-locked — the window
+    manager settles on ROTATION_0 and writes `user_rotation` back to `0`. Nothing reports this: the
+    cell keeps its name, the screenshots keep coming, and [read_insets] keeps telling the truth about
+    a rotation that is no longer the one being tested. Measured on `gloam-api33` on 2026-09-03: a
+    `force-stop` alone took `user_rotation` from 1 to 0 within three seconds, and every scene of both
+    landscape cells came back 1080x2400 under a landscape name.
+
+    So this is not a wipe's problem, which is how it was first written. Three callers force-stop —
+    [wipe], [relaunch] and [deny_asks] — and each is a place a landscape cell can quietly become a
+    second portrait one.
+
+    **Read before write, because the write is not the cost — the settle is.** A portrait cell never
+    loses anything and would otherwise pay 1.5s per scene to be told so; the round-trip that asks is
+    an order of magnitude cheaper. `accelerometer_rotation` is read in the same trip rather than
+    written blind: on a device that *has* a sensor, leaving it enabled hands the display back to the
+    hand holding the phone, which is the same defect by a slower road.
+    """
+    if _PINNED is None:
+        return
+    live = shell(
+        "settings get system user_rotation; settings get system accelerometer_rotation"
+    ).split()
+    if live == [str(_PINNED.rotation), "0"]:
+        return
+    shell("settings put system accelerometer_rotation 0")
+    shell(f"settings put system user_rotation {_PINNED.rotation}")
+    settle(1.5)
 
 
 def restore_device() -> None:
@@ -623,6 +658,11 @@ def relaunch() -> None:
     """
     shell(f"am start -S -n {ACTIVITY} -f 0x10008000")
     wait_for_app()
+    # `-S` is a force-stop, and a force-stop hands the foreground to a portrait-locked launcher on
+    # the way past — which unpins the rotation for every scene in a landscape cell, not just the
+    # wiping ones. See [repin_rotation]; without this line the landscape half of this matrix is a
+    # second portrait half wearing landscape's name.
+    repin_rotation()
 
 
 # The two needles the isolation step is built on, both from the shell rather than from any screen.
@@ -973,14 +1013,10 @@ def wipe() -> None:
         shell(f"cmd locale set-app-locales {PACKAGE} --locales {_LOCALE}")
     shell(f"am start -n {ACTIVITY}")
     wait_for_app()
-    # Re-pin the rotation the wipe just cost us. Only the rotation: the navigation mode is a global
-    # and survives, and re-writing it would buy another 3s settle per wiping scene for nothing.
-    # Verified by the failure it exists to stop — `mRotation=ROTATION_0` and 1220x2712 PNGs in a
-    # cell named `landscape-gesture`.
-    if _PINNED is not None:
-        shell("settings put system accelerometer_rotation 0")
-        shell(f"settings put system user_rotation {_PINNED.rotation}")
-        settle(1.5)
+    # Only the rotation: the navigation mode is a global and survives a wipe, and re-writing it
+    # would buy another 3s settle per wiping scene for nothing. Verified by the failure it exists to
+    # stop — `mRotation=ROTATION_0` and 1220x2712 PNGs in a cell named `landscape-gesture`.
+    repin_rotation()
 
 
 def deny_asks() -> None:
@@ -1003,6 +1039,7 @@ def deny_asks() -> None:
         shell(f"pm revoke {PACKAGE} android.permission.POST_NOTIFICATIONS")
     shell(f"am start -S -n {ACTIVITY}")
     wait_for_app()
+    repin_rotation()  # another force-stop, the same cost — see [repin_rotation]
     settle(0.8)
 
 

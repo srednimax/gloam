@@ -1127,10 +1127,41 @@ because the two differ in three places and a plan nobody checks against the resu
   not carry — which is also what stops the launcher preference leaking into every later scene. The
   panel is not in that harness and cannot be; `PanelWidthTest` is the trade.
 
-**What G did not do.** The scene above is written but not walked — the matrix is an emulator job and
-this phase's device work went to R11, which is a different question about the same build. The first
-nightly that runs it is the one that proves the route, and a scene that cannot be reached fails
-loudly rather than silently.
+**The walk G deferred, and what it cost to take it** (2026-09-04, `gloam-api33`). G left the scene
+written but not walked, on the argument that *a scene that cannot be reached fails loudly rather than
+silently*. That argument was sound and it was aimed at the wrong failure. The scene is reached in all
+four configurations, in English and in Polish, and nothing it draws touches a system inset —
+`ControlsActivity` comes up resumed in its own task, above `MainActivity`, exactly as R11 read it by
+hand. What the walk found is a defect one layer out: **every landscape cell of this matrix had been a
+second portrait cell**, for every scene, since the harness was written.
+
+`relaunch()` opens each scene with `am start -S`. `-S` is a force-stop, the force-stop hands the
+foreground to the launcher, launchers are portrait-locked, and the window manager settles on
+ROTATION_0 and writes `user_rotation` back to `0` on the way. Nothing reports it: the cell keeps its
+name, the screenshots keep coming, and `read_insets` keeps telling the truth about a rotation nobody
+is testing any more. The tell was in the report rather than on screen — a cell whose *header* insets
+are landscape and whose every *scene* inset is portrait — and in the PNG headers, 1080x2400 in a
+directory called `landscape-gesture`.
+
+**The disease was already named in this file; only one of its carriers was.** `wipe()` carried the
+same re-pin, with a comment describing the same symptom (`mRotation=ROTATION_0`, and 1220x2712 PNGs
+in a landscape cell), attributed to `pm clear` and to HyperOS. It is neither: it is any force-stop,
+on any device, and there are three — `wipe`, `relaunch` and `deny_asks`. `repin_rotation` is now the
+one place that knows, and it reads before it writes so a portrait cell does not pay 1.5s a scene to
+be told it lost nothing.
+
+**What this invalidates.** Every landscape result this harness has ever reported, including Phase 2's
+— a landscape cell was evidence about portrait wearing landscape's name. The re-walk is clean: 36
+scenes across four cells plus the `empty` suite, in English and Polish, `--assert-clean` green, and
+every PNG's dimensions now match its cell's name. The four `touch` findings on `licences` and
+`licences-bottom` are the pre-existing judgement calls, not breakers.
+
+**Still open: the phone.** [R8] records that `settings put system user_rotation` does nothing on
+HyperOS and that `wm user-rotation lock` is what turns that display — which is the mechanism
+`apply_config` and `repin_rotation` both use. That was not settled here: read with the launcher in
+front, *neither* command rotates the phone, because the launcher is the portrait lock. The phone leg
+needs the app in the foreground before it can answer, and until it does, this fix is proven on the
+emulator only.
 
 ## Kotlin and Android notes for this phase
 
@@ -1205,6 +1236,7 @@ right". Derivations are in §12 and are arithmetic, not observations.
 | R12 | **The notification line, and what it costs to post** | `dumpsys notification --noredact`; `logcat -b events` for `notification_enqueue`; `screencap` with the row open | **Both directions, one post each, and legible** (2026-09-03). Shade at dim 100 with the backlight toggle on: `android.title=(Screen dimmed)`, `android.text=(Your brightness slider is paused while Gloam is dimming)`. Toggling the backlight off gave **one** `notification_enqueue` and `android.text=null`, and back on one more and the line again; the whole 40% → 100% slider drag gave **none**. Starting the shade is two posts — `startForeground` without the line, then the transition with it. `NotificationShade` is `Window #4` above Gloam's `#7`, printed top-first, and the override stays `0.01` tagged ours with the row open: the text renders at **175/255**, which is HyperOS's own notification-body grey untouched, against **59/255** for `dim_backlight_hint`'s screen behind it (cream background at R6's 0.24 transmission) and 22/255 for that screen's own text. Wraps to two lines in English and in Polish, clipped in neither |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The whole phase on the floor, and it holds** (2026-09-03). Panel above shade, `panelWidthPx` at 972 of 1080, touches caught and passed, both dismissals, the notification line. See below |
 | R13 | **The `alpha=0.8` R1 could not explain** | `settings put global maximum_obscuring_opacity_for_touch 0.5`, re-raise the shade, `dumpsys window windows` | **It is the platform's untrusted-touch cap, and the shade wears it** (2026-09-03). The window came back `alpha=0.5`, tracking the setting. **Added by R11 rather than planned** — the emulator printed the same unexplained 0.8 as the phone, which is what made it testable |
+| R14 | **Does the `compact-controls` scene reach the compact host in every cell?** | `edge-to-edge.py --scene compact-controls`, then the whole matrix; PNG header dimensions per cell | **The scene was fine and the matrix was not** (2026-09-04). The route works in all four configurations and in Polish; what the walk found instead is that *every landscape cell had been portrait*. `relaunch()`'s `am start -S` force-stops the app, the portrait-locked launcher takes the foreground, and the window manager writes `user_rotation` back to 0 — so all 36 shots came back 1080x2400 under two landscape names. Fixed by [repin_rotation]; the whole matrix re-walked clean |
 
 ### R11 — the phase on the API level it is allowed to be worst on
 
