@@ -32,12 +32,15 @@ Three things are already built and this phase adds to each rather than replacing
 - **One stored deadline, `off_at_millis`, with exactly one writer.** `AppPreferences.beginShade`
   writes it in the same transaction as `shade_running` — `ShadeIntent` exists so nothing can read one
   without the other — and `endShade` clears both. Auto-off is the writer. **This phase adds the
-  second, and that is the whole of §3.**
+  others, and that is the whole of §3** — a second that resolves, and two more that may only bring
+  the deadline forward.
 - **A deadline loop that trusts the wall clock and not a timer.** `ShadeService.awaitDeadline` wakes
   at most every `DEADLINE_RECHECK_MS` (60 s) and re-reads `System.currentTimeMillis()`, because
   `delay` on the main dispatcher is a `Handler.postDelayed` scheduled against `uptimeMillis`, a clock
-  that stops advancing in deep sleep. The scheduled *off* needs nothing from this phase: it is a
-  deadline, and this loop already fires deadlines.
+  that stops advancing in deep sleep. The scheduled *off* needs almost nothing from this phase: it is
+  a deadline, and this loop already fires deadlines. **Almost** is §5 — the wall-clock re-read fixes
+  the loop's *correctness* in deep sleep and says nothing about its *latency*, which auto-off could
+  afford and an overnight window cannot.
 - **A receiver that puts the shade back, with four branches of which three are refusals.**
   `shade/BootReceiver.kt` reads the stored intent at `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED`,
   refuses on a passed deadline, refuses without the overlay permission, and leaves the stored intent
@@ -70,7 +73,7 @@ fallback, and it is a fallback precisely because it is not a feature.
 
 **In:** the schedule as a window with one pair of times; the pure functions that answer *is it inside*
 and *when does it next open*, with midnight and daylight saving both swept rather than reasoned about;
-one stored deadline with a second writer and a rule for which one wins; an inexact alarm and the
+one stored deadline with three more writers and an asymmetry deciding what each may do to it; an inexact alarm and the
 receiver it wakes, with the battery-optimisation exemption that is the reason it is allowed to start a
 foreground service at all; the hand-off for that exemption and the live read behind it; the autostart
 grant re-read host-side rather than asked for again; a schedule screen and the one row that reaches
@@ -105,7 +108,7 @@ remembered — and is a point at which the phase could stop without stranding an
 
 | | Checkpoint | Merges | Depends on |
 | --- | --- | --- | --- |
-| **A** | **The gate** — will an inexact alarm start a foreground service on this ROM? | `chore:` debug apparatus, then no commit at all | phone attached, autostart read |
+| **A** | **The gate** — will an inexact alarm start a foreground service on this ROM? | `chore:` debug apparatus, then no commit at all | phone attached, autostart read, **one night** |
 | **B** | The window and the deadline, as pure functions with their tests | `refactor:` + `test:` | nothing |
 | **C** | Storage, the alarm, the receiver, and every place it is re-armed | `chore:` | B, and **A's verdict** |
 | **D** | The schedule screen, the row that reaches it, the battery hand-off, and the launcher default | `feat:` | C |
@@ -113,12 +116,24 @@ remembered — and is a point at which the phase could stop without stranding an
 | **F** | The documents | `docs:` | everything above |
 
 **A is a gate, not a task, and it runs before a line of this phase's real code is written.** Phase 1
-carried one that could veto the backlight half; Phase 3 carried one that could veto the panel; this
-one can veto scheduled-*on*, which is the expensive three-quarters of the phase. It is taken against a
-**bare** receiver and a bare alarm — no schedule, no preferences, no UI, no decision logic — because
-the question is about the platform and the ROM and nothing else, and every line written before the
-answer is a line written on a bet. §1 is the whole of it, including what happens on each of the
-three verdicts.
+carried one that could veto the backlight half; Phase 3 carried one that could veto the panel. It is
+taken against a **bare** receiver and a bare alarm — no schedule, no preferences, no UI, no decision
+logic — because the question is about the platform and the ROM and nothing else, and every line
+written before the answer is a line written on a bet. §1 is the whole of it, including what happens on
+each of the three verdicts.
+
+⚠️ **What A vetoes is one file, not three quarters of the phase, and that is a correction
+to an earlier draft of this document.** §6's reconcile means a process that starts for any reason
+inside the window raises the shade — so `work/ScheduleAlarm.kt` and one `<receiver>` are the only
+things downstream of R2, and everything else (the window, the deadline rule, the marker, the screen,
+the copy) is identical in both worlds. The gate keeps its position because it is cheap and because it
+still decides §7's banner and §11's two drafts; it does not keep the stakes it was written with.
+
+**A costs a night, and that is the change that makes it a gate rather than a rehearsal.** §13 says in
+as many words that `force-idle` is a simulation, so a gate taken only under `force-idle` vetoes on a
+reading this document has already disowned. R4 moves inside A: the same bare apparatus, one alarm
+armed about ten hours out, a phone put down and left to reach natural Doze on its own. It is the
+cheapest night in the phase, because nothing has been built yet for it to waste.
 
 **B is deliberately in front of C and not beside it**, and it is the `ShadeRamp.kt` precedent for the
 third time: the arithmetic lands with its sweep, wired to nothing, at the cheapest possible moment to
@@ -132,9 +147,11 @@ That is the same shape as Phase 3's F `chore:`, and the reason is the same: a re
 the shade over somebody's phone is worth putting in front of a reviewer before it is put in front of a
 user.
 
-**E can find things D cannot, and it is the one checkpoint that costs a night.** Auto-off's R7 read
-its lateness off a two-minute deadline; scheduled-on's honest reading is a real 22:00 on a phone that
-has been in Doze since 23:00 the night before, which is a wall-clock day per attempt.
+**E can find things D cannot, and it is the *second* checkpoint that costs a night.** A now carries
+the first, against the bare apparatus (R4). E's is the same shape against the real feature — a real
+22:00 on a phone that has been in Doze since the morning, which is a wall-clock day per attempt — and
+it still earns its night, because a bare receiver and a receiver that reads preferences, writes two
+keys and starts a foreground service are not the same load on a ROM deciding whether to run either.
 `scripts/doze-capture.sh` exists for exactly this and already dumps `dumpsys alarm`.
 
 ---
@@ -187,6 +204,11 @@ than crashing — and `DebugSettings.kt` gains one button that arms it *n* minut
 `setAndAllowWhileIdle(RTC_WAKEUP, ...)`. Nothing reads a preference; nothing writes one. That is the
 whole apparatus, and it commits to none of §2, §3, §4 or §9.
 
+⚠️ **The gate measures `…gloam.debug`, not the release id.** The power allowlist and HyperOS's
+autostart list are both per-package, so R1 to R3 have to be granted against the debug package and the
+verdict transfers on that basis. Worth one line here because the failure is silent and expensive: a
+night spent against grants sitting on the release id reads exactly like a ROM that refused.
+
 **The debug manifest is new and is the point of the file layout, not an accident of it.**
 `CLAUDE.md`'s rule is that developer-only surface lives in `app/src/debug/` and never in `main/`
 behind `BuildConfig.DEBUG`, because with `isMinifyEnabled = false` a statically-false branch is still
@@ -231,6 +253,24 @@ adb shell dumpsys battery reset          # ⚠️ always, or the phone thinks it
 job and is a pass; a fire ninety minutes late is Doze holding the alarm to a maintenance window and is
 a different feature than the one being planned.
 
+### And then the same cell overnight, which is the reading the verdict is taken on
+
+`force-idle` is a simulation, and §13 says so about itself. Stepping the state machine by hand skips
+whatever the ROM does on its own between 23:00 and 07:00, which on this phone is the entire question.
+So R2 is re-taken with **no `force-idle` at all**: arm the debug button about ten hours out, unplug,
+put the phone down, and read the log in the morning.
+
+```bash
+python3 scripts/device-gate.py             # autostart, again, before putting it down
+# arm from the debug button at ~10 h, unplug, and leave the phone alone until morning
+adb logcat -d -s GloamGate:* | tail -5     # what ran, and how late
+```
+
+**One night, against the bare apparatus, before anything is built on the answer.** It is R4, moved
+here from E, and the move is the point: a gate whose reading is a simulation is a rehearsal for a
+gate. E keeps a second overnight run against the real receiver, because the bare one proves the ROM
+will start *a* process and not that it will start this one.
+
 ### The three verdicts, decided now rather than argued about later
 
 **(i) R2 fires within minutes.** Build as planned. The copy in §11 promises *within a few
@@ -244,10 +284,13 @@ autostart manager, and the copy says the ROM decides. This is the outcome ADR-00
 **(iii) R2 does not fire.** Then scheduled-*on* is not deliverable on this ROM with the mechanism
 `PLAN.md` chose, and the phase does not get to improvise. Three responses, in order:
 
-- **Ship the off-half alone and say so.** The window's end becomes a deadline the user can set, which
-  needs nothing new — §5's machinery is the existing loop. It is honest and it is barely a
-  feature (see §0), so it ships *with* the reason written into the copy rather than as a silent
-  half.
+- **Ship the schedule without the alarm**, which is a narrowing rather than a cut and is the
+  response. §6's reconcile raises the shade whenever a process starts inside the window for any
+  reason — a launch, a reboot, an update — so what is lost is not the feature but its on-*edge*: the
+  shade comes up the next time you open Gloam inside your window, rather than at 22:00 with the phone
+  in your pocket. That is honest copy a person can act on, and a great deal more than the off-half
+  alone this section reached for in an earlier draft. Scheduled-*off* is untouched in that world,
+  because §5's loop never depended on the alarm.
 - **Reopen `SCHEDULE_EXACT_ALARM`, as a decision and not as a fix.** ADR-0003 rejects it on Play
   policy — a declaration form, and a dimmer that does not qualify as an alarm or clock app — and
   `PLAN.md` inherits that. Reversing it is a new ADR, a Console form and a listing risk on an app that
@@ -282,11 +325,20 @@ fun Schedule.nextOn(now: Long, zone: ZoneId): Long?
 
 /** The instant the window containing [now] closes, or null when [now] is outside it. */
 fun Schedule.windowEnd(now: Long, zone: ZoneId): Long?
+
+/** The instant the window containing [now] opened, or null when [now] is outside it. */
+fun Schedule.windowStart(now: Long, zone: ZoneId): Long?
 ```
 
 `java.time` is available unconditionally at `minSdk` 33 — it desugars from API 26 and Gloam ships to
 nothing below 33 (ADR-0008) — so there is no `ThreeTenABP`, no desugaring flag and no `Calendar` in
 this file.
+
+**`windowStart` is the fourth function and it exists for §6's reconcile**, which has to tell *this
+window has not been acted on* from *this window was acted on and the user ended it*. The on-instant of
+the window containing `now` is the identity of a night, and it is the value the marker holds. It is
+the exact mirror of `windowEnd` — same derivation, same helper, same null outside the window — so it
+costs the sweep in §14 one more column rather than a new argument.
 
 **`ZoneId` is a parameter and not `ZoneId.systemDefault()`.** A pure function that reads the device's
 zone is not a pure function, and the DST rows below are exactly the ones that cannot be written
@@ -378,6 +430,12 @@ is a safety property:
   07:00, and the shade is up all night. This is the failure. It is the app's named fear, in
   `PLAN.md`'s own words: *"I hate when other apps have no auto disable and the next day I cannot see
   anything on my phone."*
+  ⚠️ **The load-bearing word is *silently*, and it has to be earned rather than asserted.** The
+  table below contains that exact sequence of writes — 23:00 replaced by 07:00, on the second row —
+  and calls it correct. What separates the row from the failure is not the arithmetic, which is
+  identical, but whether the person can see it happen: adoption is something they asked for when they
+  enabled the schedule, and an extension they cannot observe is indistinguishable from a deadline
+  that was lost. So the row carries an obligation, discharged below and in §11.
 - **A deadline that is silently shortened** — the user expects 07:00 and gets 23:00. Annoying, visible,
   self-correcting (the Start button is right there), and it errs toward light.
 
@@ -388,8 +446,24 @@ where the two failures are *asymmetric* it takes the visible one.
 
 ### The rule
 
-> **`off_at_millis` is the earliest of the deadlines live at the moment it is written, and it is
-> written at exactly two moments: the user's hand, and the schedule's on-instant.**
+> **`off_at_millis` is the earliest of the deadlines live at the moment it is written. It is
+> *resolved* at exactly two moments — the user's hand, and the schedule's on-instant — and every
+> other writer may only bring it forward.**
+
+**Three kinds of writer, and the asymmetry between them is the invariant.** The rule started as "two
+writers, earliest wins", which was not enough: an edit to the schedule and a missed on-instant both
+need to touch this key, and neither is a start.
+
+| Writer | When | May it move the deadline *later*? |
+| --- | --- | --- |
+| The hand — Start, or a chip on a running shade | `beginShadeAt(ByHand)` | **Yes.** An explicit act, and the shade is going up now |
+| The schedule's on-instant | `beginShadeAt(BySchedule)`, §4 | **Yes**, and only here. The adoption row |
+| The schedule being edited under a live shade | §6's collector | **No.** `min(stored, windowEnd(now, zone))` |
+| A window found already open | §6's reconcile | Resolves as a start; the marker stops it repeating |
+
+So the safety property is *monotone except at a start*: outside the two resolving moments, the stored
+deadline can only ever come forward, never go out. That is what §14 asserts, and it is a stronger
+claim than the one this section made when it had only two writers to keep track of.
 
 The candidates, and when each is live:
 
@@ -465,6 +539,13 @@ are what keep the callers to one line and the test to none.
 All four call sites become `preferences.beginShadeAt(ShadeStart.ByHand)`. §4's receiver is the
 one caller that passes `BySchedule`.
 
+⚠️ **`setAutoOff`'s `running` guard has to survive the move, and it is not visible in the list
+above.** `DimViewModel.setAutoOff` and `ShadeService.setPanelAutoOff` both write the deadline *only*
+`if (preferences.shadeIntent.first().running)`, because `beginShade` writes `running = true` in the
+same transaction — so a call site rewritten to a bare `beginShadeAt(ByHand)` turns the shade **on**
+from a chip tap while it is off. The pair exists so a deadline is never written without the flag
+beside it, and that is exactly what makes the naive rewrite compile and ship.
+
 ### What this rule does at each moment, as a table nobody has to re-derive
 
 Window 22:00 to 07:00, auto-off two hours, and the shade going up:
@@ -482,7 +563,19 @@ Window 22:00 to 07:00, auto-off two hours, and the shade going up:
 
 **The second row is the one that makes the schedule work, and it is why §4's receiver fires even
 when the shade is already up.** Without it, a user who starts by hand at 21:00 gets their schedule
-silently skipped every night they happened to be early.
+silently skipped every night they happened to be early — the shade is up, so the on-edge does
+nothing, and auto-off takes it down at 23:00 in the middle of the reading the window exists for.
+
+**It is also the one place in this app where a deadline moves outward, so it is the one place that has
+to be visible.** The only surface showing `off_at_millis` today is `DimScreen`'s *"Turns off at
+23:40"* line, and at 22:00 the user is in a reading app, not on that screen. So the obligation from
+the failure definition above is discharged in the ongoing notification, which *is* on their screen:
+**the deadline goes in `setSubText`** — *"Until 07:00"* — leaving `setContentText` to Phase 2's
+backlight sentence, which would otherwise be displaced on every episode that has a deadline, which
+with a two-hour auto-off default is nearly all of them. One string, one format argument, and the
+subtext is absent rather than empty when there is no deadline. Undoing a Phase 2 decision as a side
+effect of a Phase 4 edit is the kind of thing this repository writes ADRs to catch, so it is written
+down here instead.
 
 **The third row is the one somebody will complain about**, and it is a taste rather than a safety
 property: inside your own reading window, tapping Start gives you two hours rather than the night.
@@ -568,6 +661,7 @@ private suspend fun MainApplication.onScheduledOn() {
 
         else -> {
             preferences.beginShadeAt(ShadeStart.BySchedule, now, zone)
+            preferences.setScheduleHonouredAt(schedule.windowStart(now, zone)) // this night, done
             startShade()
             Log.i(TAG, "scheduled shade up until ${schedule.windowEnd(now, zone)}")
         }
@@ -643,6 +737,48 @@ written anyway. It would cost a second `PendingIntent` identity, a second thing 
 armed across every site, a second thing to cancel, and a second entry point for the ROM to decline — in
 exchange for correcting a stored boolean a few hours earlier than the screen that reads it.
 
+### What the loop does not fix, which is not the same as what it gets wrong
+
+**The wall-clock re-read fixes correctness and says nothing about latency, and the schedule is what
+makes the difference matter.** `awaitDeadline` is `delay(min(remaining, DEADLINE_RECHECK_MS))` on
+`Dispatchers.Main.immediate` — a `Handler.postDelayed` against `uptimeMillis`. §0 already names that
+clock as one that stops in deep sleep and treats re-reading `System.currentTimeMillis()` as the
+answer. It is the answer to the wrong half: re-reading the wall clock means the loop can never fire
+early or drift, but **nothing in the process is scheduled at all while the CPU is asleep**, so the
+deadline is not late by a wrong number — it is not evaluated.
+
+> Window 22:00 to 07:00. The phone is in deep sleep from 02:00. At 07:00 nothing runs. The user picks
+> the phone up at 08:14; the screen turning on wakes the device; the pending `postDelayed` still owes
+> up to sixty seconds of *uptime*. For up to a minute, the first thing they see is the shade, at the
+> dim level, with the backlight override still on.
+
+That is `PLAN.md`'s named fear — *"the next day I cannot see anything on my phone"* — reached through
+the feature built to prevent it. Phase 2 has the same loop and could afford it: a two-hour auto-off
+usually expires while the user is awake and holding the phone. **The schedule is what makes the
+overnight deadline the ordinary case rather than the unlucky one.** `DimScreen.endShadeIfDue()`
+(Phase 2's R8b) does not cover it either — that reconciles on *Gloam's* screen, and at 08:14 the user
+is opening something else.
+
+**The fix is not §5's second alarm. It is `ACTION_SCREEN_ON`, registered at runtime.**
+
+- It is a protected broadcast that **cannot** be declared in a manifest, so it must be
+  `registerReceiver`'d — which means no manifest entry, no permission, and **no fourth entry point
+  for the ROM to decline**. Every cost §5 refuses the off-alarm for, this avoids by construction.
+- It exists only while `ShadeService` is alive, which is exactly when there is a shade to take down.
+  Registered in `onCreate`, unregistered in `onDestroy`; all it does is wake the deadline loop for one
+  more wall-clock comparison.
+- It rides a wake that has already happened rather than causing one, so it costs no battery, and it
+  catches the single instant at which the latency is observable — the screen coming on.
+
+⚠️ **What does not work, recorded so it is not reached for later:** switching the `delay` to
+`elapsedRealtime` changes nothing. The problem is that the process is not scheduled, not that the
+clock is wrong. Shortening `DEADLINE_RECHECK_MS` changes nothing either, for the same reason, and
+costs a wakeup a minute on an awake device to fix a case that only exists on a sleeping one.
+
+**This one is independent of the schedule and repairs auto-off today**, which is why §15 lands it as
+its own `fix:` ahead of B rather than inside D. It is the phase's only genuine `fix:`, and the only
+line of this phase that reaches a user who never opens the schedule screen.
+
 **The gap this leaves, stated rather than hidden:** between a ROM kill and the user's next look at
 Gloam's own screen, `shade_running` can say `true` with no shade and no service. That is Phase 2's gap
 and this phase does not widen it, because the schedule writes the same key through the same pair.
@@ -653,13 +789,21 @@ and this phase does not widen it, because the schedule writes the same key throu
 
 An `AlarmManager` alarm is **not durable**. Five things destroy it and all five are ordinary:
 
-| Lost by | Recovered at |
-| --- | --- |
-| Reboot | `BootReceiver`, on `BOOT_COMPLETED` — a job it does not have yet |
-| App update | `BootReceiver`, on `MY_PACKAGE_REPLACED` — already in its filter |
-| Force-stop (the user, or the ROM's task killer) | `MainApplication.onCreate`, next time anything launches |
-| The user editing the schedule | The collector below, immediately |
-| Firing | The receiver's own re-arm (§4) |
+| Lost by | The alarm is recovered at | And the night in progress? |
+| --- | --- | --- |
+| Reboot | `BootReceiver`, on `BOOT_COMPLETED` — a job it does not have yet | Reconciled |
+| App update | `BootReceiver`, on `MY_PACKAGE_REPLACED` — already in its filter | Reconciled |
+| Force-stop (the user, or the ROM's task killer) | `MainApplication.onCreate`, next time anything launches | Reconciled |
+| The user editing the schedule | The collector below, immediately | Reconciled, and the deadline tightened |
+| Firing | The receiver's own re-arm (§4) | It *is* the night |
+
+**The third column is the correction, and without it this table answers the wrong question.** Every
+recovery above arms `nextOn`, which is **strictly future** — so recovering the alarm after a
+force-stop at 21:50 arms it for *tomorrow* 22:00, and tonight is skipped in silence while the screen
+still says the schedule is on. Losing the alarm and losing the night are different failures, and on
+HyperOS the second is the ordinary one: swiping Gloam out of recents force-stops it, and the whole
+reason this phase is expensive is that this ROM kills things. A table that recovers only the alarm is
+a table that answers *"is an alarm armed?"* when the user's question is *"did it come on?"*
 
 Which gives **three call sites** for five loss paths, and one of them carries two:
 
@@ -667,9 +811,52 @@ Which gives **three call sites** for five loss paths, and one of them carries tw
 // MainApplication.onCreate, beside the launcherCompact collector that is already there.
 preferences.schedule
     .distinctUntilChanged()
-    .onEach { armScheduleAlarm(it) }
+    .onEach { schedule ->
+        armScheduleAlarm(schedule)             // the alarm
+        preferences.tightenToWindow(schedule)  // the deadline, forward only
+        reconcileWindow(schedule)              // the night, if one is open and unspent
+    }
     .launchIn(applicationScope)
 ```
+
+**`tightenToWindow` is §3's third writer and it can only move the deadline forward.**
+
+```kotlin
+/** With a shade up, bring the stored deadline forward to the window's end if that is sooner. */
+suspend fun AppPreferences.tightenToWindow(
+    schedule: Schedule,
+    now: Long = System.currentTimeMillis(),
+    zone: ZoneId = ZoneId.systemDefault(),
+)
+```
+
+Without it, editing the schedule under a live shade does nothing until the next on-instant: a
+scheduled shade up at 22:30 with a deadline of 07:00, an off-time moved to 23:00, and the shade stays
+up until morning against a promise the user has just withdrawn. `DeadlineTest` would pass, because the
+pure function was never called. One `min` closes it, and the direction is what makes it safe in every
+case at once — an off-time moved *later* leaves the stored value alone, and so does disabling the
+schedule, because `windowEnd` is then null or further out. Both err toward light. It is idempotent, so
+the collector firing on every process start costs nothing, and it preserves an explicit chip override:
+`min(23:30, 07:00)` is still 23:30.
+
+**`reconcileWindow` is what stops a lost alarm from costing the whole night.**
+
+```kotlin
+/** Raise the shade if a window is open, has not been acted on, and nothing is up. */
+private suspend fun MainApplication.reconcileWindow(schedule: Schedule)
+// enabled && contains(now) && honouredAt != windowStart(now) && !shadeIntent.running
+//   -> beginShadeAt(BySchedule); setScheduleHonouredAt(windowStart(now)); startShade()
+```
+
+**The marker is the whole of why this is safe.** The naive version — *window open, shade down, raise
+it* — breaks the Stop button: the user stops at 23:00 inside a 22:00-to-07:00 window and the next
+process start puts the shade straight back. Comparing against the on-instant already acted on tells
+*never opened this window* from *opened, and ended by the person* — so `endShade` writes the marker
+too when it runs inside a window, and Stop stays Stop for the rest of the night.
+
+It also carries §1's third verdict. A process that starts inside the window for any reason now raises
+the shade, so if R2 says this ROM will not run the alarm, what is lost is the on-*edge* and not the
+feature.
 
 **One collector rather than a call in the ViewModel, and the reason is `CLAUDE.md`'s own rule.** A
 `ViewModel` never holds a `Context`, and `AlarmManager` needs one — which by the same house rule would
@@ -778,14 +965,35 @@ Two consequences that are this phase's rather than Phase 2's:
 
 ## 9. Storage
 
-Three new keys, no migration, no database, and the whole of `PLAN.md`'s *"four values — on time, off
-time, enabled, `off_at_millis`"* with the fourth already in the file.
+Four new keys, no migration, no database. `PLAN.md` promised *"four values — on time, off time,
+enabled, `off_at_millis`"* with the fourth already in the file; the count below is one more than that,
+and the extra one is app state rather than a setting.
 
 ```kotlin
-val SCHEDULE_ENABLED     = booleanPreferencesKey("schedule_enabled")
-val SCHEDULE_ON_MINUTES  = intPreferencesKey("schedule_on_minutes")
-val SCHEDULE_OFF_MINUTES = intPreferencesKey("schedule_off_minutes")
+val SCHEDULE_ENABLED      = booleanPreferencesKey("schedule_enabled")
+val SCHEDULE_ON_MINUTES   = intPreferencesKey("schedule_on_minutes")
+val SCHEDULE_OFF_MINUTES  = intPreferencesKey("schedule_off_minutes")
+val SCHEDULE_HONOURED_AT  = longPreferencesKey("schedule_honoured_at")
 ```
+
+**`schedule_honoured_at` holds the on-instant of the night most recently acted on**, and it is what
+makes §6's reconcile safe. Without it, *the window is open and the shade is down* is indistinguishable
+from *the user pressed Stop ten minutes ago*, and a reconcile that cannot tell them apart is a Stop
+button that undoes itself at the next process start. It is written by §4's receiver when it raises,
+and by `endShade` when a shade ends inside a window. Its default is `0L`, which is no window and
+therefore reconcilable, which is the right answer on a fresh install.
+
+⚠️ **It is deliberately *not* part of `Schedule`, and that placement is load-bearing rather than
+tidy.** The reconcile writes it, and §6's collector is what triggers the reconcile — so folding it
+into the `schedule` `Flow` means every write re-emits, `distinctUntilChanged` passes it through, and
+`armScheduleAlarm` runs a second time. It terminates, because the second reconcile is a no-op, but it
+doubles every arm. Worse, the reconcile also needs `shade_running`, which is not in `schedule` either:
+combining the two flows to get it would re-arm the alarm on **every shade start and stop**. That is
+precisely the noise this file's closing note warns about — *"the log fills with arms nobody asked for,
+and §13's R5 reads that log"* — and R5 is the reading that asks whether exactly one alarm is armed.
+So the collector stays on `schedule.distinctUntilChanged()` and owns **arming only**; the tighten and
+the reconcile are `suspend` one-shots called from the same `onEach`, reading `shadeIntent` and the
+marker with `.first()`. Nothing they write is in the flow that triggered them.
 
 **Minutes since local midnight, as an `Int`.** The same shape and the same reasoning as
 `auto_off_minutes`: storage holds a number and the domain holds a type. A `LocalTime` serialised as
@@ -801,7 +1009,8 @@ user did not ask about is indistinguishable from a broken phone — the same arg
 they cost nothing and exist only so the picker opens on something plausible rather than on midnight.
 22:00 to 07:00 is `PLAN.md`'s own example and is the shape of the thing.
 
-**One `Flow` for the three keys, like `shadeIntent` and for a related reason.** A reader that could
+**One `Flow` for the three *settings* keys — not the marker — like `shadeIntent` and for a related
+reason.** A reader that could
 take them apart is a reader that can see the old on-time beside the new off-time — a torn window,
 briefly inverted, at the exact moment §6's collector is arming an alarm from it. They are not
 written in one transaction the way `beginShade`'s pair is (the picker writes one at a time), which
@@ -818,7 +1027,11 @@ val schedule: Flow<Schedule> =
     }
 ```
 
-**Setters: two, not three.** `setScheduleEnabled(Boolean)` and `setScheduleWindow(onAt, offAt)` —
+**Setters: three, and only two of them are the user's.** `setScheduleEnabled(Boolean)`,
+`setScheduleWindow(onAt, offAt)`, and `setScheduleHonouredAt(Long?)`, which no screen ever calls —
+it is written by §4's receiver, by §6's reconcile and by `endShade`, and it is the one preference in
+this file that records what the *app* did rather than what the person asked for. The first two are
+the ones the rule below is about:
 the window written as a pair in one `edit`, because §2's three cases are properties of the
 *pair* and a caller that can move one edge without the other is a caller that can transiently create
 the degenerate `onAt == offAt` window while the user is halfway through a picker. The screen picks one
@@ -920,6 +1133,16 @@ wrong trade, and the forgot-I-set-it case this row exists for is a **read**.
   off-time equal to the on-time keeps the dialog open with one line of copy. §2's function still
   answers *never* for it, because a function that is total is what makes the screen's refusal a
   convenience rather than the only thing standing between the user and a shade that never lifts.
+- **A short window is warned about and not refused**, which is the opposite treatment and follows from
+  the same reasoning. §4's second refusal exists because an inexact alarm can be minutes late, and the
+  rate limit is roughly nine minutes — so **a window shorter than the rate limit cannot reliably fire
+  at all**, every night, while the screen shows the schedule as on. §10 currently refuses only the
+  exactly-equal case, and `onAt + 5 min` sails through. It gets a line rather than a refusal because
+  the failure it produces is the *visible, harmless* one this section already says it prefers: a
+  schedule that does nothing, not a shade that never lifts. **The threshold comes from R2 and R4's
+  measured lateness rather than from a number invented here**, which is one more reason the overnight
+  run moved into A. Worth noting against §13: R7 asks for a five-minute test window, which sits inside
+  exactly this zone and should say so rather than be debugged as a mystery.
 - **The battery banner** (§7), when enabled and unexempted.
 - **One line about the ROM** on phones where `hasAutostartSettings()` is true, pointing at Settings.
 
@@ -957,6 +1180,8 @@ translated once rather than against draft wording and again after review.
 | `schedule_battery_body_late` | Android may hold the schedule back by a few minutes. Turn battery optimisation off for Gloam to keep it close to the time you picked. |
 | `schedule_battery_body_never` | Android will not let Gloam start itself while the schedule is on. Turn battery optimisation off for Gloam, or the shade will not come up on its own. |
 | `schedule_battery_action` | Battery settings |
+| `schedule_short_window` | This window is very short. Android may start Gloam a few minutes late, so a window this short can be missed. |
+| `shade_notification_until` | Until %1$s |
 | `schedule_rom_note` | This phone can also stop apps from starting in the background. If the shade does not come up, check After a restart in Settings. |
 
 **Two drafts for one string, and E picks.** `schedule_battery_body_late` and `_never` are the two
@@ -986,11 +1211,17 @@ words.
   the fallback the ADR describes as a fallback is the only mechanism. The amendment also records
   §1's verdict, because ADR-0003 is where a future reader will look for "can this app schedule
   anything".
-- **`ADR-0012`** (new) — *One deadline, and the earliest promise owns it.* §3 is the decision and
-  it is ADR-shaped by the template's own test: there was a plausible alternative (auto-off applies to
-  every episode; or the schedule always wins), it is a safety-shaped invariant with a test in front of
-  it, and it is exactly the kind of rule a later phase breaks by adding a third writer. The
-  alternatives section is the point: *last writer wins* is what the code would do by accident.
+- **`ADR-0012`** (new) — *One deadline, monotone except at a start.* §3 is the decision and it is
+  ADR-shaped by the template's own test: there was a plausible alternative (auto-off applies to every
+  episode; or the schedule always wins), it is a safety-shaped invariant with a test in front of it,
+  and it is exactly the kind of rule a later phase breaks by adding another writer. The alternatives
+  section is the point: *last writer wins* is what the code would do by accident.
+  **Its statement is not the one this file first drafted.** "Two writers, earliest wins" did not
+  survive: an edit under a live shade and a window found already open both have to touch the key and
+  neither is a start, so the decision is now an asymmetry — the deadline is *resolved* at two moments
+  and may only be brought *forward* at every other. That is stronger, more testable, and names the
+  one deliberate exception rather than pretending there is none: adoption at the on-instant moves a
+  deadline outward, which is why §3 pairs it with an obligation to make it visible.
 - **`PLAN.md`** — Phase 4's paragraph currently says the schedule *uses* an inexact alarm plus the
   exemption. After §1 it says whether that worked, on this ROM, with the reading that says so.
   Rule 3's test count is reconciled: the rule promised the window and earlier-deadline-wins, and both
@@ -1035,12 +1266,14 @@ only way to know whether any of it runs.
 | **R1** | Inexact alarm, **no** battery exemption, autostart on, forced Doze | Is the exemption load-bearing, or was the ROM the only gate? | §1's matrix; `logcat -s GloamGate:*` |
 | **R2** | Inexact alarm, exemption on, autostart on, forced Doze | **The gate.** Does the shipping configuration fire, and how late? | §1's matrix |
 | **R3** | Inexact alarm, exemption on, **autostart off** | What a user who granted one and not the other gets | §1's matrix |
-| **R4** | The overnight run — a real 22:00 after a full day idle | The lateness that is not an artefact of `force-idle` | `scripts/doze-capture.sh` |
+| **R4** | The overnight run — natural Doze, no `force-idle`. **Taken twice: in A against the bare apparatus, in E against the real receiver** | The lateness that is not an artefact of `force-idle`, and the threshold §10's short-window warning is written from | `scripts/doze-capture.sh` |
 | **R5** | `dumpsys alarm` after each of §6's five loss paths | Is exactly one alarm armed, for the right instant, after reboot / update / force-stop / edit / fire? | `device-gate.py`, `dumpsys alarm` |
 | **R6** | A scheduled shade adopted from a hand-started one | §3's second table row, on the phone: does 23:00 become 07:00 at 22:00? | Debug button + `logcat -s GloamSchedule:*` |
 | **R7** | The window crossing midnight, on the phone rather than in the test | That the zone the device hands us is the zone the test assumed | Set the window five minutes out across a synthetic midnight |
 | **R8** | The API-33 emulator pass (ADR-0008) | The phase, on the API level it is allowed to be worst on | `gloam-api33`, headless |
 | **R9** | The launcher default at `true`, on a `pm clear`ed install | Where does a first launcher tap land, and is the bounce visible? | `am start -c LAUNCHER`, `dumpsys window`, `logcat` |
+| **R10** | Shade up, deadline passed, phone asleep, then the power button | How long until it comes down — the reading that proves §5's `ACTION_SCREEN_ON` did what the loop could not | `logcat`, a stopwatch, a deadline set an hour back |
+| **R11** | Force-stop, reboot, and permission-granted, each mid-window | Does §6's reconcile raise the shade, and does Stop still stay stopped for the rest of the night? | `am force-stop`, `logcat -s GloamSchedule:*` |
 
 **Things that look like readings and are not**, listed because the temptation is real and each one
 would produce a green result meaning nothing:
@@ -1082,6 +1315,10 @@ nothing the rule did not know about.
     takes the earlier offset.
   - **`UTC` and a half-hour-offset zone** as controls, so a passing suite is not a suite that only
     works where the author lives.
+  - **`windowStart` in the same sweep as `windowEnd`**, with the same equivalence — non-null exactly
+    when `contains(now)` — and one property the reconcile depends on: `windowStart` is *constant
+    across every minute of one window*, which is what makes it usable as a night's identity. A
+    version that drifted by a minute would let §6 reconcile the same night repeatedly.
   - `onAt == offAt` answers *never* on all three functions, and `enabled == false` answers identically
     to it.
 - **`DeadlineTest`** (JVM, no Android) — *earlier-deadline-wins*, and it is written as an invariant
@@ -1101,6 +1338,11 @@ nothing the rule did not know about.
   - **The Phase 2 regression rows**: with the schedule disabled and `ByHand`, `deadlineFor` reproduces
     `autoOffDeadline` exactly, for all five choices. This is what makes B a `refactor:` with a straight
     face.
+  - **Monotonicity, which is the third writer's whole safety argument**: `tightenToWindow` applied to
+    any stored deadline, against any schedule, at any minute, returns a value **less than or equal to
+    the one it was given** — and equal whenever `windowEnd` is null. Stated as a property rather than
+    as rows, because the thing being asserted is that no input exists which pushes a deadline out.
+    §3's table is what the invariant produces; this is what proves it.
 - **`AutoOffTest`** keeps every row it has. `autoOffDeadline` is the same function under a new name and
   `isDue`, `deadlineOrNull` and `NO_DEADLINE` are untouched — so the rename is a rename in the test too,
   and nothing about the sentinel's coverage moves.
@@ -1122,14 +1364,16 @@ Everything else in this phase is device behaviour and belongs in §13.
 
 Conventional Commits, and each one leaves the app working. **`feat:` lines land in `CHANGELOG.md`
 through release-please and `chore:` / `refactor:` / `test:` do not**, which is what decides the type
-below rather than taste. **The phase ships one `feat:`, which is release 0.6.0** — the smallest
-changelog of any phase and the largest gap between what a release note says and what was built.
+below rather than taste. **The phase ships one `feat:` and one `fix:`, which is release 0.6.0** —
+close to the smallest changelog of any phase, and the largest gap between what a release note says and
+what was built. The `fix:` is the odd one out: §5's screen-on receiver is the only line of this phase
+that reaches a user who never opens the schedule screen.
 
 | Checkpoint | Commits |
 | --- | --- |
 | **A** | `chore: add an alarm to the debug section` — the bare receiver, its debug manifest and the arming button §1 is read against. Then no commit at all: the verdict is a reading |
-| **B** | `refactor: resolve the shade's deadline from every promise that is live` — `shade/Schedule.kt`, `ShadeStart`, the five-argument `deadlineFor`, `autoOffDeadline`'s rename, `shade/Deadlines.kt` and the four call sites. Plus `test: sweep the schedule window and the deadline that wins` — `ScheduleTest` and `DeadlineTest`. **No behaviour change**, and the regression rows are what say so |
-| **C** | `chore: arm an alarm for the schedule that cannot be switched on yet` — the three keys, `AppPreferences.schedule` and its two setters, `work/ScheduleAlarm.kt`, `shade/ScheduleReceiver.kt`, its manifest entry, `BootReceiver`'s extra line and `MainApplication`'s second collector |
+| **B** | First, `fix: take the shade down when the screen comes on, not a minute later` — §5's runtime `ACTION_SCREEN_ON` receiver in `ShadeService`. It depends on nothing else here and repairs auto-off today, so it lands ahead of the rest. Then `refactor: resolve the shade's deadline from every promise that is live` — `shade/Schedule.kt` with all four functions, `ShadeStart`, the five-argument `deadlineFor`, `autoOffDeadline`'s rename, `shade/Deadlines.kt` and the four call sites. Plus `test: sweep the schedule window and the deadline that wins` — `ScheduleTest` and `DeadlineTest`. **No behaviour change** in the last two, and the regression rows are what say so |
+| **C** | `chore: arm an alarm for the schedule that cannot be switched on yet` — the four keys, `AppPreferences.schedule` and its three setters, `work/ScheduleAlarm.kt`, `shade/ScheduleReceiver.kt`, its manifest entry, `BootReceiver`'s extra line, and `MainApplication`'s second collector with the tighten and the reconcile hanging off it. **C grew**: the marker, `windowStart` and the reconcile all land here, because a receiver that can raise the shade and a reconcile that can raise it without one are the same review |
 | **D** | `feat: dim on a nightly schedule` — the `Schedule` route and screen, the dim screen's summary row, the time pickers, the battery banner and its hand-off, the compact host's read-only schedule section, `launcherCompact`'s default, and the copy in both locales |
 | **E** | The readings. Not a commit — and if R4 moves the banner's wording, a `fix:` carrying one string |
 | **F** | `docs: ...` — §12's edits, ADR-0003's third amendment, ADR-0012, this file's readings block filled in, and the release notes the notes gate wants |
@@ -1139,10 +1383,13 @@ nothing, which is the cheapest possible place to get a deadline rule wrong; C la
 raise the shade on somebody's phone while no user can reach it; and D is the commit that puts a person
 in front of both.
 
-**If A is a no-go, the sequence is B, then a narrowed C and D carrying scheduled-*off* alone**, with
-§1's third verdict written into `PLAN.md` and into ADR-0003's amendment by F. B does not change
-at all in that world — the pure functions and both tests are the same, because `windowEnd` is what
-scheduled-off is made of. That is a phase closing narrower, not a phase failing.
+**If A is a no-go, the sequence does not change and C loses two files.** `work/ScheduleAlarm.kt`,
+`shade/ScheduleReceiver.kt` and its manifest entry are the whole of what R2 vetoes. B, the marker, the
+reconcile, `MainApplication`'s collector, D's screen and every string are identical, because none of
+them is downstream of the alarm. What changes is §11's copy — the schedule promises *the next time you
+open Gloam* rather than *at the time you picked* — and §1's third verdict goes into `PLAN.md` and
+ADR-0003's amendment by F. That is a phase closing narrower, and rather less narrow than this document
+assumed before §6 had a reconcile in it.
 
 ---
 
@@ -1191,7 +1438,8 @@ written on `ShadeService`'s `combine`.
 - **R1** — inexact alarm, no exemption, autostart on, forced Doze: -
 - **R2** — **the gate**: -
 - **R3** — exemption on, autostart off: -
-- **R4** — the overnight run: -
+- **R4** — the overnight run, natural Doze. In **A** against the bare apparatus: - . In **E** against
+  the real receiver: -
 - **R5** — one alarm armed after each of the five loss paths: -
 - **R6** — the hand-started shade adopted at the on-instant: -
 - **R7** — the midnight crossing, on the device: -
@@ -1201,6 +1449,8 @@ written on `ShadeService`'s `combine`.
   on `MainActivity`; both granted lands on `ControlsActivity`. `ControlsActivity` is started and
   forwards back, and is given `STARTING_WINDOW_TYPE_NONE` because it is translucent and floating —
   so the bounce paints nothing and the flash shape iii was thought to cost does not exist.
+- **R10** — the screen-on latency, after §5's receiver: -
+- **R11** — the reconcile paths, and Stop staying stopped: -
 
 ---
 
