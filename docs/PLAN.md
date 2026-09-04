@@ -392,6 +392,8 @@ front of it.
 
 ## Phase 4 — It turns itself on and off
 
+**Detail: [`phase-4.md`](phase-4.md).**
+
 Auto-off shipped in Phase 2. What is left is the expensive half — the part needing new machinery,
 because nothing of ours is running to do it.
 
