@@ -51,6 +51,16 @@ control surface in Gloam that is legible at maximum dim (1.59 nits under it agai
 measured both ways). The notification now says when the user's own brightness slider is paused.
 **What is left of the phase is not code**: the two rule-5 questions below, which outlive it.
 
+**Phase 4 is planned and open, and its detail is [`phase-4.md`](phase-4.md)** — six checkpoints,
+A–F, none started. **A is a gate and it runs before any of the phase's own code**: an inexact
+`setAndAllowWhileIdle` alarm plus the battery-optimisation exemption, read in forced Doze against a
+bare receiver under the debug seam, deciding whether this ROM will let the shade come up on its own
+at all. If it says no, scheduled-*on* is not deliverable with the mechanism `PLAN.md` chose and the
+phase closes narrower — §1 carries the three verdicts and what each one ships.
+⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
+grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
+which here costs a night rather than a minute.
+
 ## The standing schema gate — parked, because there is no database
 
 **Gloam has no database** (ADR-0007). It keeps a dim level and a shade-running flag in DataStore,
