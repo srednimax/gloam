@@ -275,6 +275,10 @@ why the workflow renders metadata unconditionally and still skips the listing fi
 Granting these is the deliberate act that opens the production door, and leaving them ungranted is a
 fourth brake on top of the three that workflow already carries.
 
+**Nor is any of it needed to reach closed testing.** `publish-play-closed.yml` promotes onto a
+testing track and skips the listing unconditionally, so the two original boxes cover it - which
+is why it works on a first run where the production workflow 403s.
+
 **Nothing above is needed for the automatic internal pipeline.** `publish-play.yml` sends the AAB and
 its mapping and nothing else — no metadata, no images, no notes — which is why two boxes cover it.
 
@@ -288,7 +292,65 @@ Internal processes in minutes with no Google review, which is what makes it a sa
 automatic target. ⚠️ **It is not the track for an upgrade proof.** An internal-track
 install demands an uninstall on the device where a closed-track one updates in place, so a
 build that arrives this way cannot stand in for "an existing owner's install survived the
-update". Promoting to closed or production stays a Console decision, made by a human.
+update". Promoting to closed testing is what `publish-play-closed.yml` below is for, and
+production has its own workflow after it. Both are manual: neither happens without you
+clicking *Run workflow*.
+
+## Reaching closed testing (manual, promotes)
+
+`.github/workflows/publish-play-closed.yml` - **Run workflow**, never automatic, for the same reason
+production is not: no event means "the build on internal is ready for the twelve". You decide that, so
+you trigger it. It promotes the build already sitting on internal to a **closed** track, and like the
+production workflow it never runs `bundleRelease` and never materialises the upload key, because it
+has nothing to sign.
+
+| Input | Default | What it does |
+| --- | --- | --- |
+| `track` | `alpha` | destination closed track. Free text, because Console's *Create track* makes ids nobody can enumerate here |
+| `version_code` | *(blank)* | which build to promote; blank asks Play what is on internal |
+| `release_version` | *(blank)* | which release's notes go up; blank takes the newest in `docs/store-listing.md` |
+| `dry_run` | `false` | validate against Play, commit nothing |
+
+The source track is hardcoded to `internal`. That is the whole point of a second workflow: it is the
+one promotion made over and over during a closed test, and a dialog field whose only correct answer is
+`internal` is a field that can be got wrong.
+
+**It cannot reach the public, by construction.** Play has exactly three tracks that are not closed
+testing - `production`, `beta` (open testing) and `internal` - and every other track id is a closed
+one, because Console's *Create track* only makes those. So the first step is a deny list of three,
+which is a complete list, and a typo in the `track` box fails the run instead of publishing something.
+That guard is also what pays for the missing approval gate: this job declares no `environment`,
+because a required reviewer is what stands between a build and every *owner*, and there is nobody to
+protect from a build reaching people who asked to test it.
+
+⚠ **`dry_run` defaults to false here**, where production's defaults to true. A closed promotion is
+reversible from the Console - halt the release - and cannot reach anyone who did not opt in, so making
+every routine promotion a two-run ritual would only teach the habit of clicking through the first one.
+Turn it on for the first run of this workflow, and any time the dialog holds a value you are unsure of.
+
+**It needs no new Play permissions.** It stays inside the two boxes the service account already has -
+*View app information* and *Release apps to testing tracks* - because it never touches the listing.
+The three `--skip_upload_*` flags for metadata, images and screenshots are unconditional rather than an
+input, and that is a permission boundary rather than a preference: descriptions, screenshots and
+graphics belong to the *app* and not to a track, so pushing them from a test promotion would edit the
+**public** listing and would want *Manage store presence*. Release notes are part of the track release,
+so they still ride up - `--skip_upload_metadata` does not skip changelogs.
+
+**Always `completed`, never a rollout fraction.** A closed test wants all twelve testers on the same
+build. A fraction would quietly hold some of them back on the previous one, and since the 14-day
+window is measured on testers being opted in, a tester who never receives the build is a tester
+quietly not testing.
+
+⚠ **`release_version` is the field that goes wrong in silence.** `play-metadata.py` renders the newest
+`### x.y.z` under *Release notes* in `docs/store-listing.md`, which is the right answer only while the
+checkout still points at the release being promoted. Promote an older build from a `main` that has
+moved on and the testers are told about a version they do not have - exactly the failure
+`scripts/notes-gate.py` exists to prevent, one ref away. Run the workflow from the tag, or name the
+version in the dialog.
+
+⚠ **The first release on a closed track waits on Play review.** A green run means the promotion was
+accepted, not that any tester has the build. Later releases on a track Play has already reviewed
+appear within minutes.
 
 ## Going to production (manual, gated, staged)
 
@@ -327,7 +389,7 @@ promotion: it moves the release already sitting on `from_track` instead of looki
 
 | Input | Default | What it does |
 | --- | --- | --- |
-| `track` | `production` | destination — also `beta` / `alpha` |
+| `track` | `production` | destination - also `beta` / `alpha`, though closed testing now has its own workflow above |
 | `from_track` | `internal` | source track holding the build being promoted |
 | `rollout` | `0.1` | fraction of users; `1.0` is everyone |
 | `version_code` | *(blank)* | which build to promote; blank asks Play what is on `from_track` |
