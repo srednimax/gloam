@@ -108,7 +108,7 @@ remembered — and is a point at which the phase could stop without stranding an
 | **A** | **The gate** — will an inexact alarm start a foreground service on this ROM? | `chore:` debug apparatus, then no commit at all | phone attached, autostart read |
 | **B** | The window and the deadline, as pure functions with their tests | `refactor:` + `test:` | nothing |
 | **C** | Storage, the alarm, the receiver, and every place it is re-armed | `chore:` | B, and **A's verdict** |
-| **D** | The schedule screen, the row that reaches it, and the battery hand-off | `feat:` | C |
+| **D** | The schedule screen, the row that reaches it, the battery hand-off, and the launcher default | `feat:` | C |
 | **E** | The readings — the overnight run, the matrix, the emulator pass | no commit | D |
 | **F** | The documents | `docs:` | everything above |
 
@@ -872,6 +872,41 @@ with the others; `TopLevelDestination` is untouched.
 finds out on the screen they already open, which is the whole reason it is here and not two taps into
 Settings.
 
+### The row's placement depends on a default this phase changes
+
+**The paragraph above is only true while the launcher opens the full app**, and this phase flips that.
+`AppPreferences.launcherCompact` shipped in Phase 3a defaulting to `false` — the icon opens the full
+app and the compact host is the setting — and `DOD.md` holds the inversion open as a `PLAN.md` rule-5
+question for the twelve. **It ships `true` from here**, which makes the compact host the screen the
+user already opens and takes the summary row's own justification with it.
+
+**The argument that kept it `false` does not survive the device** (R9). `phase-3.md` and `DOD.md` both
+rest on one claim: that a first launcher tap landing on a dialog over another app is a bad first
+meeting with an app nobody has used yet. It cannot happen. `ControlsActivity.forwardIfUnusable()`
+returns to `MainActivity` whenever `canDrawShade()` or `escapeHatchLive()` is false, and on a genuine
+first run both are — so the tap lands on the full app with its explainer, measured rather than
+reasoned about. The same reading kills a cost the argument never named: a translucent, floating
+activity is given **no starting window at all** (`STARTING_WINDOW_TYPE_NONE`), so the bounce paints
+nothing and the flash shape iii was thought to buy the icon back with does not exist.
+
+**What the reading found instead is a row nobody had written down.** `escapeHatchLive()` is in the
+same guard, so the *notification* permission decides whether the launcher route works: deny it and
+the icon opens the full app for good, with nothing on screen saying why. That is not a bug to fix
+here — the compact host is not an escape hatch (`phase-2.md` §2), and sending somebody to a dialog
+they cannot escape from is the worse failure. It has one consequence this phase owns: **`DOD.md`'s
+rule-5 item is answerable only by testers who granted notifications**, and a tester who declined is
+not using the default at all. Read as approval, their silence would be the wrong reading.
+
+**So the compact host gets the schedule as a read-only section, not as a control.** A fourth
+`CompactSection` beside `Timer` and `Warmth` — mutually exclusive with them, so it costs one icon in
+the row and no height beyond a single open section — showing *22:00 to 07:00*, or *Off*, with the cog
+as the way to change it. **Not the pickers, and the reason is the panel rather than the size.** A
+Material 3 `TimePicker` inside a `Dialog` needs an Activity's window token and `PanelWindow` has no
+Activity under it; `TimeInput`'s text fields need an IME, which `PANEL_WINDOW_FLAGS`'
+`FLAG_NOT_FOCUSABLE` refuses by design and for the shade's own reason. An inline dial *would* work in
+both hosts — but a dial dragged at 1.59 nits, to set a time that is set once and read often, is the
+wrong trade, and the forgot-I-set-it case this row exists for is a **read**.
+
 ### The screen
 
 - **The toggle**, with a hint saying what a window is: on at one time, off at another, every night.
@@ -964,7 +999,14 @@ words.
 - **`DOD.md`** — the rule-5 question from §3's third table row goes in beside auto-off's default
   and the launcher preference's, phrased so it outlives this phase; §7's banner wording is
   closed by E; and the standing artifact check gets a note that this is the release where "no new
-  permissions" is a claim worth reading off `aab-permissions.py` rather than off the diff.
+  permissions" is a claim worth reading off `aab-permissions.py` rather than off the diff. **The
+  launcher preference's own rule-5 item is rewritten rather than ticked**: the default ships `true`
+  (§10), the first-meeting argument that set it `false` is replaced with R9, and the item gains the
+  caveat that only testers who granted notifications are using the default at all.
+- **`phase-3.md`** — §2's launcher paragraph is corrected in place. It argues for `false` from a
+  first-run hazard the forward already prevents and from a flash a floating activity never paints;
+  R9 is the reading, and the correction is a note rather than a rewrite, in the idiom Phase 3 already
+  used to withdraw R8's rotation explanation.
 - **`CONTEXT.md`** — **owed nothing**, checked rather than assumed. *Schedule* already reads "the
   nightly window: on at one time, off at another. One pair, not two independent switches", which is
   §2. *Deadline* already reads "the one instant at which the shade next comes down, **whoever
@@ -998,6 +1040,7 @@ only way to know whether any of it runs.
 | **R6** | A scheduled shade adopted from a hand-started one | §3's second table row, on the phone: does 23:00 become 07:00 at 22:00? | Debug button + `logcat -s GloamSchedule:*` |
 | **R7** | The window crossing midnight, on the phone rather than in the test | That the zone the device hands us is the zone the test assumed | Set the window five minutes out across a synthetic midnight |
 | **R8** | The API-33 emulator pass (ADR-0008) | The phase, on the API level it is allowed to be worst on | `gloam-api33`, headless |
+| **R9** | The launcher default at `true`, on a `pm clear`ed install | Where does a first launcher tap land, and is the bounce visible? | `am start -c LAUNCHER`, `dumpsys window`, `logcat` |
 
 **Things that look like readings and are not**, listed because the temptation is real and each one
 would produce a green result meaning nothing:
@@ -1087,7 +1130,7 @@ changelog of any phase and the largest gap between what a release note says and 
 | **A** | `chore: add an alarm to the debug section` — the bare receiver, its debug manifest and the arming button §1 is read against. Then no commit at all: the verdict is a reading |
 | **B** | `refactor: resolve the shade's deadline from every promise that is live` — `shade/Schedule.kt`, `ShadeStart`, the five-argument `deadlineFor`, `autoOffDeadline`'s rename, `shade/Deadlines.kt` and the four call sites. Plus `test: sweep the schedule window and the deadline that wins` — `ScheduleTest` and `DeadlineTest`. **No behaviour change**, and the regression rows are what say so |
 | **C** | `chore: arm an alarm for the schedule that cannot be switched on yet` — the three keys, `AppPreferences.schedule` and its two setters, `work/ScheduleAlarm.kt`, `shade/ScheduleReceiver.kt`, its manifest entry, `BootReceiver`'s extra line and `MainApplication`'s second collector |
-| **D** | `feat: dim on a nightly schedule` — the `Schedule` route and screen, the dim screen's summary row, the time pickers, the battery banner and its hand-off, and the copy in both locales |
+| **D** | `feat: dim on a nightly schedule` — the `Schedule` route and screen, the dim screen's summary row, the time pickers, the battery banner and its hand-off, the compact host's read-only schedule section, `launcherCompact`'s default, and the copy in both locales |
 | **E** | The readings. Not a commit — and if R4 moves the banner's wording, a `fix:` carrying one string |
 | **F** | `docs: ...` — §12's edits, ADR-0003's third amendment, ADR-0012, this file's readings block filled in, and the release notes the notes gate wants |
 
@@ -1153,6 +1196,11 @@ written on `ShadeService`'s `combine`.
 - **R6** — the hand-started shade adopted at the on-instant: -
 - **R7** — the midnight crossing, on the device: -
 - **R8** — the API-33 emulator pass: -
+- **R9** — the launcher default at `true`, first run: **taken 2026-09-04**, HyperOS, debug build. A
+  `pm clear`ed install lands on `MainActivity`; overlay granted with notifications denied also lands
+  on `MainActivity`; both granted lands on `ControlsActivity`. `ControlsActivity` is started and
+  forwards back, and is given `STARTING_WINDOW_TYPE_NONE` because it is translucent and floating —
+  so the bounce paints nothing and the flash shape iii was thought to cost does not exist.
 
 ---
 
