@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0](https://github.com/srednimax/gloam/compare/v0.4.0...v0.5.0) (2026-09-04)
+
+
+### Features
+
+* add the compact controls ([744d9df](https://github.com/srednimax/gloam/commit/744d9dfd9d8df0336996a0156629f7345388d309))
+* give the compact controls a bar and three buttons ([c87ad8f](https://github.com/srednimax/gloam/commit/c87ad8fa5d1b2442ebd4aff43c3f50d2d05fe24d))
+* open the compact controls from the notification and the icon ([3c2146e](https://github.com/srednimax/gloam/commit/3c2146e04146aa7b1e372d16109c1ac97dcb4f26))
+* put the controls in a window above the shade ([012459c](https://github.com/srednimax/gloam/commit/012459ca4d64f44dcc11fdf135d21c0309ce5a3f))
+* say in the notification that the brightness slider is paused ([2e3f908](https://github.com/srednimax/gloam/commit/2e3f908045b3ccfbead56a7733c0159e7d0f8af8))
+
+
+### Bug Fixes
+
+* honour the icon preference when Gloam's task is already open ([94e5396](https://github.com/srednimax/gloam/commit/94e53969acf5b8e32444ab31030ad08ed4450209))
+* re-measure the panel when the display turns ([74ea7cc](https://github.com/srednimax/gloam/commit/74ea7cc5cccfc0afee84e95006452a1e45a9ed01))
+* stop a summon from raising the shade the user turned off ([eb3d33a](https://github.com/srednimax/gloam/commit/eb3d33acaab2ba71698496945a1c5ee25b8b038a))
+* stop counting the navigation bar twice under the panel ([23fc329](https://github.com/srednimax/gloam/commit/23fc329ccf0e342d6c3a16b06f63707a1f27a554))
+
 ## [0.4.0](https://github.com/srednimax/gloam/compare/v0.3.0...v0.4.0) (2026-09-01)
 
 
