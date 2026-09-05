@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/srednimax/gloam/compare/v0.5.0...v0.6.0) (2026-09-05)
+
+
+### Features
+
+* dim on a nightly schedule ([b961b9a](https://github.com/srednimax/gloam/commit/b961b9ad7b1c8419cf101b0c95349080ecc3e95f))
+* put the icon's ground on the night instead of the mud ([159113b](https://github.com/srednimax/gloam/commit/159113b9dd5ffd296825c9d444d92f53167cee02))
+* replace the placeholder mark with the moon ([2feadf0](https://github.com/srednimax/gloam/commit/2feadf0fe6eedc216cfac26dc2b9f4028f2544f5))
+
+
+### Bug Fixes
+
+* keep the feature graphic inside Play's 16:9 crop ([f976de4](https://github.com/srednimax/gloam/commit/f976de4202d1af51e0cd5f1abda38b6d64a283bf))
+* sweep the two call sites the refactor's sweep missed ([0332a88](https://github.com/srednimax/gloam/commit/0332a88cff0a5a9d9ce415b005904b637c324e6b))
+* take the shade down when the screen comes on, not a minute later ([e779c38](https://github.com/srednimax/gloam/commit/e779c38faf5c518f18c1672e3e5e5e248e52e124))
+
 ## [0.5.0](https://github.com/srednimax/gloam/compare/v0.4.0...v0.5.0) (2026-09-04)
 
 
