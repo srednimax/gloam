@@ -52,15 +52,17 @@ measured both ways). The notification now says when the user's own brightness sl
 **What is left of the phase is not code**: the two rule-5 questions below, which outlive it.
 
 **Phase 4 is open, and its detail is [`phase-4.md`](phase-4.md)** — seven checkpoints, 0 and A–F.
-**0, A, B and C are done; D is next.** The gate answered on 2026-09-05 and its verdict is **(ii)**,
+**0, A, B, C and D are done; E is next.** The gate answered on 2026-09-05 and its verdict is **(ii)**,
 build as planned: the alarm fires in forced Doze with the battery exemption and autostart both
 granted, the exemption licenses the *service start* rather than the alarm, and autostart is absolute.
 So §7's Xiaomi half is load-bearing rather than a footnote, and the one finding no verdict
 anticipated — an inexact alarm is delivered at the far end of a window 75% as wide as its futurity,
 capped at an hour — is why §4 arms a chain of hops rather than `nextOn` itself. The verdict and its
-numbers are in `phase-4.md` §1; what is left is **D** (the screen, the row, the pickers, the battery
-hand-off, the launcher default and the copy), **E** (the readings, including a second night) and
-**F** (the documents).
+numbers are in `phase-4.md` §1. **D landed on 2026-09-05** — the schedule screen and its route, the
+dim screen's summary row, the pickers with the equal-times refusal and the short-window warning, the
+battery banner and its widened hand-off, the compact hosts' read-only section, `launcherCompact`
+defaulting `true`, the deadline on the notification's sub-text, and the copy in both locales. What is
+left is **E** (the readings, including a second night) and **F** (the documents).
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
 which here costs a night rather than a minute.
@@ -257,14 +259,19 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       full-screen overlay is the trap the app exists not to be — so 2b's honest options are the
       backlight (already at `MIN_BACKLIGHT` there), or accepting the ceiling and saying so in the
       copy. Read `phase-3.md`'s R13 and ADR-0010's fourth amendment before designing the feature.
-- [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). The icon opens
-      the **full app** unless the user says otherwise, and the compact controls are the setting. The
-      draft had it the other way round — compact by default, with a setting that expands — and the
-      inversion is an argument rather than a reading: a first launcher tap that lands on a dialog
-      over another app is a bad first meeting with an app nobody has used yet, and the compact host
-      already has two doors that do not involve the icon. The twelve are the room, because the
-      argument is about the *second week* of use rather than the first. The answer is a one-line
-      change to `AppPreferences.launcherCompact`'s default or nothing.
+- [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
+      inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
+      What stood behind the old default was an argument rather than a reading — that a first launcher
+      tap landing on a dialog over another app is a bad first meeting with an app nobody has used yet
+      — and R9 measured that it cannot happen: `ControlsActivity.forwardIfUnusable()` returns to
+      `MainActivity` whenever `canDrawShade()` or `escapeHatchLive()` is false, and on a genuine first
+      run both are. The twelve are still the room, because what is left of the question is about the
+      *second week* of use rather than the first, and the answer is a one-line change to
+      `AppPreferences.launcherCompact`'s default or nothing.
+      ⚠️ **Their silence is not approval, and this is the one item where reading it
+      that way would be wrong.** `escapeHatchLive()` is in the same guard, so a tester who declined
+      notifications gets the full app from the icon for good, with nothing on screen saying why —
+      they are not using the default at all. Only testers who granted notifications can answer this.
 - [ ] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
       Should the phone's own brightness slider mean *"give me more light"* while Gloam is dimming?
       Phase 3 ships the cheap half — the ongoing notification now says the slider is paused, on the one
