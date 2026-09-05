@@ -107,9 +107,13 @@ the app exists to prevent:
   that is `BRIGHTNESS_OVERRIDE_OFF` — the backlight off, over a live touchscreen. Exceed the shade
   cap and the way out is behind the thing you need to get out of.
 - **The schedule window** (Phase 4). On at 22:00, off at 07:00 *crosses midnight*. Get the comparison
-  wrong and the shade never comes on, or never goes off.
+  wrong and the shade never comes on, or never goes off. **Delivered 2026-09-05 as `ScheduleTest`**,
+  which sweeps a day of minutes and the two days a year a DST zone jumps.
 - **Earlier-deadline-wins** (Phase 4). Resolving two deadlines against a clock, which the phase calls
-  load-bearing because it is the exact failure being designed out.
+  load-bearing because it is the exact failure being designed out. **Delivered 2026-09-05 as
+  `DeadlineTest`**, and the rule it asserts turned out to be stronger than this line's name for it:
+  *monotone except at a start*, four writers rather than two
+  ([ADR-0012](adr/0012-one-deadline-monotone-except-at-a-start.md)).
 - **The panel's width** (Phase 3b). *Added 2026-09-02, when `phase-3.md` was detailed.* A touchable
   window blocks every touch under it, so **its size is its safety rule** — the bound that stands in
   for `FLAG_NOT_TOUCHABLE` on the one window that does not carry it. Unlike a flag, a size is
@@ -403,10 +407,21 @@ because nothing of ours is running to do it.
   this key one writer in Phase 2; this phase adds the second. Storing an absolute instant rather than
   a countdown is load-bearing: a HyperOS kill plus a `START_STICKY` restart then resumes the right
   deadline instead of silently restarting the clock, which is the exact failure being designed out.
+  **The rule that came out of building it is stronger than "earlier wins" and is recorded as
+  [ADR-0012](adr/0012-one-deadline-monotone-except-at-a-start.md)**: the deadline is *resolved* at two
+  moments — the hand, and the schedule's on-instant — and every other writer may only bring it
+  forward. Two writers turned out to be four.
 - **Scheduled-on** uses an **inexact `setAndAllowWhileIdle` alarm plus the battery-optimisation
   exemption** — that exemption is on Android's own list for starting a foreground service from the
   background, and `work/BatteryExemption.kt` already exists. **Not `SCHEDULE_EXACT_ALARM`**: it needs
   a Play declaration form and a dimmer does not qualify as an alarm or clock app.
+  **Measured on the phone, 2026-09-05, and it worked** — but not in the shape this bullet assumed.
+  With both grants the alarm fired and the service started; without the exemption the alarm *still
+  fired* and the service start was refused, so the exemption licenses the **service start** rather
+  than the alarm; without autostart nothing ran at all. And an inexact alarm's window is 75% of its
+  futurity capped at an hour, delivered at the far end on this ROM, so the schedule arms a chain of
+  hops toward the on-instant rather than the on-instant itself. `phase-4.md` section 1 and
+  [ADR-0003](adr/0003-two-scheduling-mechanisms.md)'s third amendment.
 - **Xiaomi autostart is re-read here, not asked for here** (rule 4). Phase 2 introduced the ask with
   reboot restore; this phase confirms the grant has not lapsed, because it does lapse on its own.
 

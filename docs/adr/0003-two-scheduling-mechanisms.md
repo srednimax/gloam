@@ -87,3 +87,46 @@ sharper statement than "requires reading the autostart state first": the app can
 denial, so what it does instead is say what a denial costs and hand the user to the screen. Read
 `PLAN.md` rule 4's "re-read, not re-asked, in Phase 4" as that host-side scrape rather than as
 anything the app performs.
+
+Amendment, 2026-09-05 (third), and the first one that adds rather than withdraws. **Gloam schedules
+something again**, and the first amendment's "Gloam schedules nothing" is now false in a narrower way
+than this ADR was written for. Phase 4 ships a nightly window: on at one time, off at another, one
+pair of times and no more.
+
+**What comes back is exactly the parts of the reasoning above that were right.** One derivation
+rather than a table of occurrences, nothing persisted per-occurrence, nothing to cancel or orphan,
+and an app that assumes nothing about the grant it was given. **What does not come back is the exact
+alarm, the `SCHEDULE_EXACT_ALARM` declaration and the sweep.** Gloam has *one* alarm, it is inexact,
+and what this ADR describes as the fallback is the whole mechanism — which is worth stating plainly,
+because a reader arriving here from the manifest will find no exact-alarm permission and should not
+go looking for the code that lost it.
+
+**The gate, and its numbers** (`phase-4.md` section 1, all three cells taken on the phone under
+`force-idle`, 2026-09-05). The question was whether an inexact alarm can start a foreground service
+at 22:00 on a Xiaomi/HyperOS device, and the verdict was *(ii), build as planned*:
+
+- **Exemption on, autostart on:** the alarm fired 90,045 ms late against a 90-second window and
+  `startForegroundService` was **allowed**. This is the shipping configuration and it works.
+- **Exemption off, autostart on:** the alarm still fired — and `startForegroundService` threw
+  `ForegroundServiceStartNotAllowedException: mAllowStartForeground false`. So the
+  battery-optimisation exemption licenses the **service start**, not the alarm. That is the sharpest
+  of the three, because it decides the copy: the shade does not come up at the time the user picked,
+  and the next process start inside the window raises it instead.
+- **Exemption on, autostart off:** nothing. Fifteen minutes of silence with the alarm still listed in
+  `dumpsys alarm`. **Armed and run are two different things**, which is what this ADR's consequences
+  claimed and what that cell measures.
+
+**One finding no verdict anticipated, and it shaped the code rather than the copy.** An inexact alarm
+is given a window of **75% of its futurity, capped at an hour**, and this ROM delivered every cell
+within 50 ms of the far end of it. A ten-hour arm therefore buys an hour of lateness in one go, which
+is why `work/ScheduleAlarm.kt` arms a *chain of hops* toward the on-instant rather than arming the
+on-instant itself. The bound is the design input: on a stock API-33 emulator (R8) delivery took 85%
+and 99.99% of two windows, so the far end is one vendor's scheduler habit and not something to build
+on, while the *width* is the platform's and is.
+
+**And one that the platform owns rather than the vendor.** A force-stopped package is in the stopped
+state, and the stopped state survives a reboot — so `BOOT_COMPLETED` is not delivered to it and the
+reboot row of `phase-4.md` section 6 does not fire. Force-stop and reboot compose in the wrong
+direction: what recovers the alarm after both is the next launch, which is the third recovery site
+and costs no code. Measured 2026-09-05: `stopped=true` and zero alarms after the reboot, one alarm
+and `stopped=false` a second after the launcher tap.
