@@ -218,6 +218,23 @@ fun DebugSettings() {
             ) {
                 Text("Arm 2-minute deadline")
             }
+            // R10's, and the length is the reading's rather than a taste: the deadline has to pass
+            // while the phone is genuinely suspended, which needs the cable **out** - a tethered
+            // phone never suspends, measured, 0.0s of 427s with the screen off. Ten minutes is long
+            // enough to unplug and let the SoC settle, short enough to stand next to.
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        val deadline = System.currentTimeMillis() + SLEEP_ARM_MILLIS
+                        preferences.beginShade(deadline)
+                        context.startShade()
+                        Log.i(TAG, "armed auto-off for $deadline (${SLEEP_ARM_MILLIS}ms out)")
+                    }
+                },
+                modifier = Modifier.padding(start = Spacing.tight),
+            ) {
+                Text("Arm 10-minute deadline")
+            }
         }
 
         Row(modifier = Modifier.padding(bottom = Spacing.base)) {
@@ -458,6 +475,13 @@ private const val ARM_MILLIS = 120_000L
  * to sit through. The forced-Doze cells R1 to R3 are all taken on this one.
  */
 private const val GATE_SOON_MILLIS = 120_000L
+
+/**
+ * R10's deadline: long enough to unplug the cable and let the phone reach real suspend before it
+ * expires, short enough to wait out. [ARM_MILLIS] cannot serve - three of its two minutes are spent
+ * getting the cable out, and a deadline that passes while the phone is still awake measures nothing.
+ */
+private const val SLEEP_ARM_MILLIS = 600_000L
 
 /**
  * R4's arm: about ten hours, which is a phone put down for the night and left to reach Doze on its
