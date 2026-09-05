@@ -22,11 +22,39 @@ arbitrary units around an origin at the mark's centre; callers fit them to their
 import re
 from dataclasses import dataclass
 
-# The identity's colours. The mark is near-white, so the ground carries all the colour: recolouring
-# means PRIMARY here *and* the matching fillColor in res/drawable/ic_launcher_background.xml, which
-# make-launcher-icon.py deliberately does not write. Changing one alone is the failure to expect.
-SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface`
-PRIMARY = (0x6E, 0x42, 0x15)  # `primary`, darkened for contrast against SURFACE at icon sizes
+# The identity's colours. The mark is near-white, so the ground carries all the colour.
+#
+# The ground used to be one flat `primary` darkened for contrast, and it read as mud: an amber hue
+# at a dark *tone* is brown, and a large flat field of it is brown at its least flattering. The fix
+# is not a different hue — the amber is the shade's own warmth and earns its place — but to stop
+# spending it as a flat field. So the ground is the app's night with the amber banked low as
+# *light*, which is the same horizon the feature graphic draws and the thing the app is actually
+# for: a moon over the last of the light.
+SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface` — the mark itself
+GROUND_NIGHT = (0x15, 0x13, 0x0E)  # the dark scheme's `background`
+GROUND_GLOW = (0xC8, 0x7A, 0x2E)  # `primary`, at the tone that reads as a light source
+
+# Where the glow sits on the 108dp adaptive canvas, as fractions of it. The centre is *below* the
+# bottom edge on purpose: only the top of the light is on the tile, which is what makes it a horizon
+# rather than a lamp. Circular rather than elliptical, because a VectorDrawable radial gradient has
+# one radius — see ground() for why that matters.
+GLOW_AT = (0.5, 1.02)
+GLOW_RADIUS = 0.85
+GLOW_FALLOFF = 1.5  # >1 keeps the bright core small and the spill long
+GLOW_STRENGTH = 0.95
+
+
+def ground(offset):
+    """The ground's colour at `offset` of the way from the glow's centre to its edge, as (r, g, b).
+
+    **This is the single source both renderings read.** The launcher icon's back layer is a
+    VectorDrawable radial gradient and the flat mipmaps are drawn by PIL, and those are two
+    different renderers that would otherwise each need their own copy of the curve above. Instead
+    the generator samples this function for the gradient's colour stops *and* calls it per pixel for
+    the raster, so the vector and the bitmap cannot drift apart.
+    """
+    t = max(0.0, 1.0 - offset) ** GLOW_FALLOFF * GLOW_STRENGTH
+    return tuple(round(n + (g - n) * t) for n, g in zip(GROUND_NIGHT, GROUND_GLOW))
 
 
 @dataclass(frozen=True)
