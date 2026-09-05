@@ -51,15 +51,24 @@ control surface in Gloam that is legible at maximum dim (1.59 nits under it agai
 measured both ways). The notification now says when the user's own brightness slider is paused.
 **What is left of the phase is not code**: the two rule-5 questions below, which outlive it.
 
-**Phase 4 is planned and open, and its detail is [`phase-4.md`](phase-4.md)** — six checkpoints,
-A–F, none started. **A is a gate and it runs before any of the phase's own code**: an inexact
-`setAndAllowWhileIdle` alarm plus the battery-optimisation exemption, read in forced Doze against a
-bare receiver under the debug seam, deciding whether this ROM will let the shade come up on its own
-at all. If it says no, scheduled-*on* is not deliverable with the mechanism `PLAN.md` chose and the
-phase closes narrower — §1 carries the three verdicts and what each one ships.
+**Phase 4 is open, and its detail is [`phase-4.md`](phase-4.md)** — seven checkpoints, 0 and A–F.
+**0, A, B and C are done; D is next.** The gate answered on 2026-09-05 and its verdict is **(ii)**,
+build as planned: the alarm fires in forced Doze with the battery exemption and autostart both
+granted, the exemption licenses the *service start* rather than the alarm, and autostart is absolute.
+So §7's Xiaomi half is load-bearing rather than a footnote, and the one finding no verdict
+anticipated — an inexact alarm is delivered at the far end of a window 75% as wide as its futurity,
+capped at an hour — is why §4 arms a chain of hops rather than `nextOn` itself. The verdict and its
+numbers are in `phase-4.md` §1; what is left is **D** (the screen, the row, the pickers, the battery
+hand-off, the launcher default and the copy), **E** (the readings, including a second night) and
+**F** (the documents).
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
 which here costs a night rather than a minute.
+⚠️ **R4 and R5 are still owed and both cost a night**, so they are the phase's long pole
+and not D's. R4 is the bare apparatus left to reach natural Doze on its own — `am kill` refuses to
+kill a process Android thinks is unsafe to kill, so *whether this ROM starts a process for a
+broadcast* has not been asked yet — and R5 is the same question against the real receiver, which
+reads preferences, writes two keys and starts a foreground service.
 
 ## The standing schema gate — parked, because there is no database
 
