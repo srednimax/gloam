@@ -1703,14 +1703,34 @@ written on `ShadeService`'s `combine`.
   on `MainActivity`; both granted lands on `ControlsActivity`. `ControlsActivity` is started and
   forwards back, and is given `STARTING_WINDOW_TYPE_NONE` because it is translucent and floating —
   so the bounce paints nothing and the flash shape iii was thought to cost does not exist.
-- **R10** — the screen-on latency, after §5's receiver: **first attempt void, 2026-09-05.** With the
-  screen off, `dumpsys battery unplug` and `status 1`, the phone spent **0.0 s of 427 s suspended** —
-  `Total run time` moved 427.2 s of realtime against 427.2 s of uptime — so `uptimeMillis` never
-  stopped, the deadline was evaluated on time (6 ms late), and the defect the receiver exists to
-  repair cannot appear. **A tethered phone does not suspend**; the same device runs 11 h realtime
-  against 2.5 h uptime on battery. The reading needs the cable **out**, which is why the debug
-  section grew a ten-minute deadline: two minutes is not long enough to unplug and let the SoC
-  settle.
+- **R10** — the screen-on latency, after §5's receiver: **taken 2026-09-05, and the receiver does
+  what the loop could not.** Cable out, ten-minute deadline armed at 09:42:31.9 for 09:52:31.9,
+  screen off by the power button at 09:44:15, phone left alone, power button again at 10:00:12.035.
+
+  ```
+  10:00:12.035  PowerManagerService: Waking up from Dozing (reason=WAKE_REASON_POWER_BUTTON)
+  10:00:12.894  ShadeService: auto-off fired 461000ms after the deadline
+  ```
+
+  **859 ms from the wake to the shade coming down**, and the same log line proves the run's own
+  premise: the deadline sat **461 seconds in the past, unevaluated**, which is only possible if the
+  process was not being scheduled at all. Had the phone stayed awake the loop would have fired at
+  09:52:31, as the void attempt below did, 6 ms late.
+
+  **What it would have been without the receiver, arithmetically rather than by assertion**: the
+  deadline was written at 09:42:31.9, so the loop's re-check boundaries are at 09:43:31.9 and
+  09:44:31.9, and the phone suspended at 09:44:15 with **16.9 s of that chunk's uptime still owed**.
+  So this run would have shown the shade for about seventeen seconds after the power button, and up
+  to sixty in the unluckiest case. It answers the one thing about §5 that documentation could not:
+  `RECEIVER_NOT_EXPORTED` does not stop the system delivering its own protected broadcast.
+
+  **First attempt void, same day, and the reason is worth keeping.** With the cable *in* — screen
+  off, `dumpsys battery unplug`, `status 1` — the phone spent **0.0 s of 427 s suspended**,
+  `Total run time` moving 427.2 s of realtime against 427.2 s of uptime. `uptimeMillis` never
+  stopped, the deadline was evaluated on time, and the defect cannot appear. **A tethered phone does
+  not suspend**; the same device runs 11 h realtime against 2.5 h uptime on battery. That is why the
+  debug section grew a ten-minute deadline — two minutes is not long enough to unplug and let the
+  SoC settle — and why every sleep-shaped reading in this phase has to be taken untethered.
 - **R11** — the reconcile paths, and Stop staying stopped: -
 
 ---
