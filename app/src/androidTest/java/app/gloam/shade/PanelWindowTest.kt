@@ -64,7 +64,12 @@ class PanelWindowTest {
         // One call takes both windows down: the panel cannot outlive the shade. The write goes with
         // it so a test leg cannot leave the next one — or the phone — believing the user asked for
         // a shade that is not there.
-        runBlocking { preferences.endShade() }
+        //
+        // `endShade` directly rather than `endShadeAt`, and `honouredAt = null` explicitly: this is
+        // a teardown putting the device back, not somebody deciding, so it must leave the schedule's
+        // marker exactly as it found it. A leg that spent a night would change what the next leg's
+        // reconcile does.
+        runBlocking { preferences.endShade(honouredAt = null) }
         context.stopShade()
         if (!overlayWasGranted) {
             shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
@@ -153,7 +158,11 @@ class PanelWindowTest {
         // is the user changing their mind, `stopShade()` is the window coming down. A test that
         // only stopped the service would leave the stored intent saying "running", and the summon
         // would then be right to restore the shade — which is the other branch, not this one.
-        runBlocking { preferences.endShade() }
+        //
+        // `ByHand` because that is what this line is standing in for. With no schedule stored it
+        // resolves to the same write as the teardown's, and saying so keeps the two lines honest
+        // about being different events rather than the same one twice.
+        runBlocking { preferences.endShadeAt(ShadeEnd.ByHand) }
         context.stopShade()
         assertTrue(
             "A window of ours was still up ${TIMEOUT_MS}ms after stopShade(), so this test could " +
