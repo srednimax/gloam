@@ -1,5 +1,23 @@
 package app.gloam.work
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import app.gloam.shade.Schedule
+import app.gloam.shade.ScheduleReceiver
+import app.gloam.shade.nextOn
+import java.time.ZoneId
+
+/**
+ * `adb logcat -s GloamSchedule:*` is how checkpoint E reads the schedule, and this file deliberately
+ * shares the receiver's tag rather than taking one of its own: an arm and the fire it produced are
+ * two halves of one story, and a reading that has to interleave two tags by timestamp is a reading
+ * nobody trusts. The gate's `GloamGate` is the one that stays separate, for the opposite reason.
+ */
+private const val TAG = "GloamSchedule"
+
 /**
  * How wide a window the platform gives an inexact alarm: **75% of its futurity, capped at an hour.**
  *
@@ -99,3 +117,78 @@ internal fun hopFor(gap: Long): Long =
  */
 internal fun latestArrival(hop: Long): Long =
     hop + minOf(hop * WINDOW_FACTOR_NUMERATOR / WINDOW_FACTOR_DENOMINATOR, WINDOW_CAP_MS)
+
+/**
+ * Arm the next scheduled-on, or cancel if the schedule can never open. Idempotent; call it freely.
+ *
+ * **One alarm at a time, for the next transition, re-derived from the window every time anything
+ * happens.** ADR-0003's *"nothing persists a schedule; due dates are derived"* survives intact:
+ * there is no per-night enqueue, nothing to cancel, nothing to orphan, nothing to double-fire, and
+ * no state anywhere that a restore could disagree with. What is armed is a [hopFor] hop toward
+ * [Schedule.nextOn] rather than `nextOn` itself — see that function for why one long arm is not good
+ * enough on this platform.
+ *
+ * Four decisions here each have a wrong answer that compiles (`docs/phase-4.md` section 4):
+ *
+ * - **`setAndAllowWhileIdle`, not `setExact*` and not `setAlarmClock`.** Both exact forms need
+ *   `SCHEDULE_EXACT_ALARM`, which needs a Play declaration form for an app that is not a clock or a
+ *   calendar; `USE_EXACT_ALARM` is worse — auto-granted, unrevokable, and restricted by policy to
+ *   alarm-clock apps, so declaring it in a dimmer puts the listing at risk to save a settings
+ *   screen (ADR-0003).
+ * - **`RTC_WAKEUP`, not `RTC`.** A non-waking alarm fires when the device next wakes — and turning
+ *   the screen on *is* a device wake, so the race would be between this broadcast and the first
+ *   frame the user sees. Losing it is a bright flash followed by the shade, on a phone picked up in
+ *   a dark room, which is the exact experience this app exists to prevent. The cost is one wake per
+ *   hop.
+ * - **`FLAG_IMMUTABLE`**, required from API 31 and correct anyway: nothing outside this app has any
+ *   business filling in fields on an intent that raises the shade.
+ * - **`FLAG_UPDATE_CURRENT`**, which is what makes re-arming idempotent. A `PendingIntent`'s
+ *   identity is its request code and component, so `set` replaces rather than stacks and section 6's
+ *   several re-arm sites cannot produce several alarms.
+ *
+ * **Cancelling is the same call**, which is why no caller needs a branch: a `nextOn` of null — the
+ * schedule disabled, or the degenerate `onAt == offAt` window — cancels rather than arming, so there
+ * is no second entry point that can be forgotten.
+ *
+ * **No new permission.** `setAndAllowWhileIdle` needs none, and the receiver is `exported="false"`,
+ * reached only by the `PendingIntent` below. `scripts/aab-permissions.py` proves that on the built
+ * artifact rather than in the diff.
+ *
+ * Kotlin/Android note: a `PendingIntent` is a token handed to another process — here to the system's
+ * alarm service — that lets it perform this action *as us*, later, whether or not we are alive. It
+ * has no JS analogue; the nearest thing is a capability handed to a service worker, except that it
+ * outlives the process rather than the page.
+ */
+fun Context.armScheduleAlarm(
+    schedule: Schedule,
+    now: Long = System.currentTimeMillis(),
+) {
+    val alarms = getSystemService(AlarmManager::class.java) ?: return
+    val pending = schedulePendingIntent()
+
+    val nextOn = schedule.nextOn(now, ZoneId.systemDefault())
+    if (nextOn == null) {
+        alarms.cancel(pending)
+        Log.i(TAG, "no window will open; alarm cancelled")
+        return
+    }
+
+    val target = now + hopFor(nextOn - now)
+    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, target, pending)
+    Log.i(TAG, "armed for $target, a ${target - now}ms hop toward the on-instant $nextOn")
+}
+
+/**
+ * The one token, and every call site gets the same one.
+ *
+ * Same request code and same component means the same identity, which is what
+ * [PendingIntent.FLAG_UPDATE_CURRENT] and [AlarmManager.cancel] both work from — arming twice
+ * replaces, and cancelling reaches the alarm that arming created.
+ */
+private fun Context.schedulePendingIntent(): PendingIntent =
+    PendingIntent.getBroadcast(
+        this,
+        0,
+        Intent(this, ScheduleReceiver::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )

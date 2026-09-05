@@ -5,9 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import app.gloam.MainApplication
+import app.gloam.work.armScheduleAlarm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -135,4 +137,15 @@ private suspend fun MainApplication.restoreShade(action: String) {
             Log.i(TAG, "$action: shade restored, deadline=${intent.offAtMillis}")
         }
     }
+
+    // An `AlarmManager` alarm does not survive a reboot or an app update, so the schedule's next hop
+    // is re-armed here — and, like the schedule's own receiver, **on every branch above including
+    // the refusals**: a phone that rebooted without the overlay permission still has a schedule, and
+    // arming only on the success path would switch it off for good, silently.
+    //
+    // The night in progress is a different question and this is deliberately not where it is
+    // answered. `armScheduleAlarm` arms `nextOn`, which is strictly future, so a reboot at 22:30
+    // inside a window would leave tonight skipped. `MainApplication`'s collector reconciles that,
+    // and it runs on this path too — the process that is running this receiver started to do it.
+    armScheduleAlarm(preferences.schedule.first())
 }
