@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import app.gloam.MainApplication
 import app.gloam.data.AppPreferences
 import app.gloam.shade.AutoOff
+import app.gloam.shade.Schedule
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.ShadeStart
 import app.gloam.shade.beginShadeAt
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalTime
 
 /**
  * @param dimLevel 0–100, the one value the product is about.
@@ -35,6 +37,10 @@ import kotlinx.coroutines.launch
  * @param offAtMillis the instant the shade next comes down, or `null` for no deadline. Paired with
  *   [running] rather than derived from [autoOff]: the deadline was fixed when the shade started, and
  *   the choice can have moved since.
+ * @param schedule the nightly window, for the summary row that reports it. **Read-only here** — this
+ *   `ViewModel` has no setter for it, because the screen that edits a schedule is the schedule's
+ *   own. Whether the battery exemption puts that schedule at risk is a live `Context` read and
+ *   therefore the host's, not this one's.
  */
 data class DimUiState(
     val dimLevel: Int = 0,
@@ -43,6 +49,7 @@ data class DimUiState(
     val lowerBacklight: Boolean = true,
     val autoOff: AutoOff = AutoOff.Default,
     val offAtMillis: Long? = null,
+    val schedule: Schedule = Schedule(enabled = false, onAt = LocalTime.MIDNIGHT, offAt = LocalTime.MIDNIGHT),
 )
 
 class DimViewModel(
@@ -54,8 +61,12 @@ class DimViewModel(
             preferences.warmth,
             preferences.shadeIntent,
             preferences.lowerBacklight,
-            preferences.autoOff,
-        ) { level, warmth, intent, lowerBacklight, autoOff ->
+            // Kotlin note: `combine` is typed for two to five flows and the schedule is the sixth,
+            // so the two that already belong to one section of the screen are paired first. Nesting
+            // rather than the vararg overload, which hands back an `Array<Any?>` and a cast per
+            // field — the type checker is doing real work here and is worth keeping.
+            combine(preferences.autoOff, preferences.schedule, ::Pair),
+        ) { level, warmth, intent, lowerBacklight, (autoOff, schedule) ->
             DimUiState(
                 dimLevel = level,
                 warmth = warmth,
@@ -63,6 +74,7 @@ class DimViewModel(
                 lowerBacklight = lowerBacklight,
                 autoOff = autoOff,
                 offAtMillis = intent.offAtMillis,
+                schedule = schedule,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DimUiState())
 

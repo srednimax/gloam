@@ -12,7 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.shade.ShadeEnd
@@ -24,6 +26,7 @@ import app.gloam.theme.AppTheme
 import app.gloam.theme.Spacing
 import app.gloam.ui.dim.CompactControls
 import app.gloam.ui.dim.DimViewModel
+import app.gloam.work.isIgnoringBatteryOptimisations
 
 /**
  * **The compact controls: the same sliders in a floating window, for the shade that is already up.**
@@ -176,6 +179,14 @@ private fun ControlsBody(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    // Read once rather than on every resume, unlike `DimScreen`'s copy of the same question — and
+    // the difference is this window's lifetime rather than a different opinion about caching. The
+    // host is `noHistory`, so it is built fresh on every summon and never survives a trip to the
+    // Settings screen that could change the answer: there is no resume here for a stale value to
+    // outlive.
+    val context = LocalContext.current
+    val scheduleAtRisk = remember(context) { !context.isIgnoringBatteryOptimisations() }
+
     // Scrollable because the window's height is bounded by the display and the content is not: the
     // timer section's five chips wrap in a narrow window (R5), and a clipped safety control is worse
     // than a scrolled one. Cheaper than it was — only one section is ever open at a time — but the
@@ -186,6 +197,8 @@ private fun ControlsBody(
         running = state.running,
         autoOff = state.autoOff,
         offAtMillis = state.offAtMillis,
+        schedule = state.schedule,
+        scheduleAtRisk = scheduleAtRisk,
         onDimLevel = viewModel::setDimLevel,
         onWarmth = viewModel::setWarmth,
         onAutoOff = viewModel::setAutoOff,

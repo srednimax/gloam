@@ -20,8 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.gloam.R
 import app.gloam.shade.AutoOff
+import app.gloam.shade.Schedule
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SectionHeader
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Date
 
 /**
@@ -280,6 +284,73 @@ internal fun rememberTimeText(instant: Long): String {
             .format(Date(instant))
     }
 }
+
+/**
+ * The same formatter, for a wall-clock time the **user set** rather than an instant the app
+ * computed.
+ *
+ * A `LocalTime` has no date and no zone, and `DateFormat.getTimeFormat` formats a `Date` — so it
+ * gets there by being put on today's date, which is the one line of glue between the two and lives
+ * here rather than in each of the three callers. One weakness, recorded rather than re-discovered:
+ * on the one night a year the clock springs forward, a time inside the missing hour resolves
+ * forward, so a schedule set to 02:30 reads as 03:30 that day. That is also exactly when it will
+ * come on (`shade/Schedule.kt`), so the reading is honest on the night and merely odd in the
+ * daylight before it.
+ */
+@Composable
+internal fun rememberTimeText(time: LocalTime): String =
+    rememberTimeText(
+        remember(time) {
+            LocalDate
+                .now()
+                .atTime(time)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        },
+    )
+
+/**
+ * The schedule as one line, for the two surfaces that only *report* it.
+ *
+ * **It states the window rather than the setting** — *22:00 to 07:00*, not *On* — because the person
+ * this line exists for is the one who set a schedule three weeks ago and forgot, and the window is
+ * what they need to recognise. And when the battery exemption is missing it says *that* instead:
+ * that user is by definition not opening the schedule screen where the banner lives, so the honest
+ * state has to appear where they do go (`docs/phase-4.md` §10).
+ *
+ * @param title the row's own label, or `null` when [text] is a whole sentence that names the
+ *   schedule itself. A caller that drew both would say "Schedule" twice.
+ */
+internal data class ScheduleSummary(
+    val title: String?,
+    val text: String,
+)
+
+@Composable
+internal fun rememberScheduleSummary(
+    schedule: Schedule,
+    atRisk: Boolean,
+): ScheduleSummary =
+    when {
+        schedule.enabled && atRisk ->
+            ScheduleSummary(title = null, text = stringResource(R.string.dim_schedule_at_risk))
+        schedule.enabled ->
+            ScheduleSummary(
+                title = stringResource(R.string.dim_schedule_row),
+                text =
+                    stringResource(
+                        R.string.dim_schedule_window,
+                        rememberTimeText(schedule.onAt),
+                        rememberTimeText(schedule.offAt),
+                    ),
+            )
+        else ->
+            ScheduleSummary(
+                title = stringResource(R.string.dim_schedule_row),
+                text = stringResource(R.string.dim_schedule_off),
+            )
+    }
 
 /**
  * Kotlin note: an extension on the enum rather than a field in it. The resource ids belong to the UI

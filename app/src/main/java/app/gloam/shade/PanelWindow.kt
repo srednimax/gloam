@@ -261,6 +261,11 @@ data class PanelState(
     val running: Boolean,
     val autoOff: AutoOff,
     val offAtMillis: Long?,
+    val schedule: Schedule,
+    // Read once when the panel is built rather than collected with the rest: the battery exemption
+    // only changes on a Settings screen, and going there takes this window down long before it could
+    // come back to a stale value.
+    val scheduleAtRisk: Boolean,
     val themeMode: ThemeMode,
     val materialYou: Boolean,
 )
@@ -316,6 +321,8 @@ internal fun PanelContent(
                     running = current.running,
                     autoOff = current.autoOff,
                     offAtMillis = current.offAtMillis,
+                    schedule = current.schedule,
+                    scheduleAtRisk = current.scheduleAtRisk,
                     onDimLevel = onDimLevel,
                     onWarmth = onWarmth,
                     onAutoOff = onAutoOff,
