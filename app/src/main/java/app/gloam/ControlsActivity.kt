@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
 import app.gloam.shade.startShade
@@ -190,7 +191,7 @@ private fun ControlsBody(
         onAutoOff = viewModel::setAutoOff,
         onToggleRunning = {
             if (state.running) {
-                viewModel.endShade()
+                viewModel.endShade(ShadeEnd.ByHand)
                 onStop()
             } else {
                 viewModel.beginShade()

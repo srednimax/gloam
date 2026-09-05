@@ -415,7 +415,7 @@ class ShadeService : Service() {
                 // phone and is not timestamped, and logging is not developer *surface*, so it lives
                 // here rather than behind the debug seam.
                 Log.i(TAG, "auto-off fired ${-remaining}ms after the deadline")
-                withContext(NonCancellable) { preferences.endShade() }
+                withContext(NonCancellable) { preferences.endShadeAt(ShadeEnd.ByDeadline) }
                 stopSelf()
                 return
             }
@@ -457,7 +457,7 @@ class ShadeService : Service() {
      */
     private fun stopFromWithin() {
         scope.launch {
-            preferences.endShade()
+            preferences.endShadeAt(ShadeEnd.ByHand)
             stopSelf()
         }
     }
@@ -814,8 +814,10 @@ class ShadeService : Service() {
     private fun setPanelAutoOff(choice: AutoOff) {
         scope.launch {
             preferences.setAutoOff(choice)
+            // The same guard `DimViewModel.setAutoOff` carries, and for the same reason: the pair
+            // that writes the deadline also writes `running = true`.
             if (preferences.shadeIntent.first().running) {
-                preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
+                preferences.beginShadeAt(ShadeStart.ByHand)
             }
         }
     }
@@ -846,10 +848,7 @@ class ShadeService : Service() {
      */
     private fun togglePanelRunning() {
         if (panelState?.value?.running == false) {
-            scope.launch {
-                val choice = preferences.autoOff.first()
-                preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
-            }
+            scope.launch { preferences.beginShadeAt(ShadeStart.ByHand) }
         } else {
             stopFromWithin()
         }

@@ -77,10 +77,17 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * **Absolute rather than a countdown, and that is load-bearing rather than tidy.** HyperOS kills the
  * service and `START_STICKY` restarts it; a restarted service has no idea how long it was dead, so a
  * stored *duration* would silently restart the clock while a stored *instant* resumes the deadline
- * the user was actually promised. Phase 4 adds the schedule as a second writer of the same value and
- * has nothing to rework, which is the other reason for this shape.
+ * the user was actually promised.
+ *
+ * **This is one candidate now, not the answer.** It was `deadlineFor` until the schedule arrived
+ * with a second promise about the same stored value, and the rename is deliberate rather than
+ * cosmetic: [app.gloam.shade.deadlineFor] is the function that resolves *every* live deadline, and
+ * leaving a two-argument overload beside the five-argument one is the single most likely way that
+ * rule gets broken later. A new call site takes the shorter signature, compiles, passes every test,
+ * and quietly ships a shade the schedule cannot bound. An overload here is not a convenience, it is
+ * a trap with the same name as the safe thing — so this one is `internal` and differently named.
  */
-fun deadlineFor(
+internal fun autoOffDeadline(
     startedAt: Long,
     choice: AutoOff,
 ): Long? = if (choice == AutoOff.Never) null else startedAt + choice.minutes * MILLIS_PER_MINUTE

@@ -51,7 +51,7 @@ private const val TAG = "GloamBoot"
  * - **A deadline that passed while the phone was off means the shade was never coming back.** This
  *   is the one place auto-off and reboot restore meet: without the check, a phone switched off at
  *   23:00 with a two-hour deadline puts a shade back at 09:00 the next morning that the user had
- *   already asked to end. `endShade()` clears both keys together, so the next launch
+ *   already asked to end. `endShadeAt()` clears both keys together, so the next launch
  *   reads a clean state rather than a stale one.
  * - **No overlay permission means no window.** The service guards `addShadeWindow` on
  *   `canDrawShade()`, so starting anyway would not crash — it would post a *Screen dimmed*
@@ -121,7 +121,9 @@ private suspend fun MainApplication.restoreShade(action: String) {
         !intent.running -> Log.i(TAG, "$action: the shade was not running, nothing to put back")
 
         isDue(System.currentTimeMillis(), intent.offAtMillis) -> {
-            preferences.endShade()
+            // `Reaped`, which is the one ending that leaves the schedule's marker alone: nobody
+            // decided anything here, so a window open right now has not been spent by this.
+            preferences.endShadeAt(ShadeEnd.Reaped)
             Log.i(TAG, "$action: the deadline (${intent.offAtMillis}) passed while the phone was off")
         }
 
