@@ -325,6 +325,52 @@ autostart manager, and the copy says the ROM decides. This is the outcome ADR-00
 
 Whichever it is, **A produces a reading and not a commit.** The `chore:` is the apparatus.
 
+### The verdict, taken 2026-09-05: **(ii)**, and one finding neither verdict anticipated
+
+**R2 fired and R3 did not**, which is the outcome ADR-0003 predicts and the second of the three
+verdicts written above. Build as planned; the Xiaomi half of section 7 is load-bearing rather than a
+footnote. The numbers are in the readings block, and the three cells say this between them:
+
+- **The alarm fires in forced deep Doze** with the exemption and autostart both granted (R2), 90 s
+  late.
+- **The exemption is load-bearing, and R1 says exactly which half it buys.** Without it the alarm
+  still *fires* - the broadcast is delivered, the process runs, the receiver's first log line lands -
+  and then `startForegroundService` throws
+  `ForegroundServiceStartNotAllowedException: ... mAllowStartForeground false`. So the power
+  allowlist licenses the *service start* and not the *alarm*, which is the split this section's
+  second question guessed at and now does not have to.
+- **Autostart is the other gate and it is absolute.** R3 - exemption granted, autostart denied - did
+  not fire at all in fifteen minutes, and was still armed in `dumpsys alarm` at the end. Armed and
+  run remain ADR-0003's two different things.
+
+⚠️ **The finding neither verdict anticipated: the lateness is the platform's batching
+window, and it is much wider than the rate limit this section was written about.** Every cell fired
+at `maxWhenElapsed` *exactly* - 90,017 ms, 90,045 ms and 90,049 ms late across awake,
+Doze-with-exemption and Doze-without - and `dumpsys alarm` says why: an inexact alarm is given a
+window of **75% of its futurity, clamped to one hour**, and this ROM delivers at the far end of it
+rather than at the near one.
+
+| Armed | `window=` | Delivered |
+| --- | --- | --- |
+| 2 minutes out | `+1m29s997ms` - 75% of 120 s | at `maxWhenElapsed`, 90 s late |
+| 10 hours out | `+1h0m0s0ms` - the cap | *(R4 reads this one; the window allows up to an hour)* |
+
+**That is a fact about `AlarmManager` rather than about HyperOS**, and it is worth being exact that
+it was measured rather than read off documentation: the window is visible in `dumpsys alarm` the
+instant an alarm is armed, so the ten-hour figure cost seconds rather than the night R4 still owes.
+
+**What it does to section 4 is a design change, and section 4 carries it.** `armScheduleAlarm` as
+specified arms `nextOn` directly, which for a schedule set the morning before is an alarm armed a
+long way out - so the shade would come up somewhere in an hour-wide window after 22:00, and section
+11's *within a few minutes* would be false copy. The chain that fixes it is in section 4; it is
+cheap, it is inside the mechanism the plan already chose, and finding it before checkpoint C was
+written is what the gate was for.
+
+**One thing the forced-Doze cells could not test, and it is still R4's.** `am kill` refuses to kill
+an app Android considers unsafe to kill, so the process was alive in every cell when its alarm
+arrived - which means *whether this ROM starts a process for a broadcast* has not been asked yet.
+Only a night against a process the ROM has already reaped can ask it.
+
 ---
 
 ## 2. The window — one pair of times, midnight, and daylight saving
@@ -636,6 +682,31 @@ private fun Context.schedulePendingIntent(): PendingIntent =
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 ```
+
+⚠️ **`nextOn` is the target and not the arm, and checkpoint A's readings are why.** An inexact
+alarm is delivered inside a window of **75% of its futurity, capped at one hour**, at the far end of
+it - measured three times in section 1. So arming `nextOn` directly means a schedule set at breakfast
+puts the shade up somewhere in the hour after 22:00, which is not a nightly reading window anybody
+would accept and is not what section 11's copy says.
+
+**The fix is a chain of hops rather than one arm**, and it needs nothing the mechanism does not
+already have. Let `gap = nextOn - now`. An alarm armed for `now + x` is delivered no later than
+`now + x + min(0.75x, 1h)`, so it cannot overshoot the on-instant as long as
+
+```
+x + min(0.75x, 1h) <= gap    ->    x = if (gap >= 2h20m) gap - 1h else gap / 1.75
+```
+
+Each hop lands strictly inside the last 43% of the remaining gap and never past it, so the gap
+shrinks geometrically: a 24-hour gap closes to under five minutes in about five hops. Five wakeups a
+night, rather than the one this section first assumed - and rather than the every-ten-minutes poll
+that the obvious fix would have been.
+
+**Every hop is already a branch this receiver has.** A hop fires *before* the window opens, so
+`contains(now)` is false, the receiver's second refusal logs *outside the window* and declines, and
+the re-arm at the bottom of the `when` arms the next hop. The chain is therefore a change to
+`armScheduleAlarm` and one constant, with nothing new in the receiver at all - and section 14 gains
+one property to sweep: **no hop overshoots**, for every gap and every schedule.
 
 Four decisions inside those few lines, each of which has a wrong answer that compiles:
 
@@ -1269,13 +1340,17 @@ wrong trade, and the forgot-I-set-it case this row exists for is a **read**.
   convenience rather than the only thing standing between the user and a shade that never lifts.
 - **A short window is warned about and not refused**, which is the opposite treatment and follows from
   the same reasoning. §4's second refusal exists because an inexact alarm can be minutes late, and the
-  rate limit is roughly nine minutes — so **a window shorter than the rate limit cannot reliably fire
-  at all**, every night, while the screen shows the schedule as on. §10 currently refuses only the
-  exactly-equal case, and `onAt + 5 min` sails through. It gets a line rather than a refusal because
-  the failure it produces is the *visible, harmless* one this section already says it prefers: a
-  schedule that does nothing, not a shade that never lifts. **The threshold comes from R2 and R4's
-  measured lateness rather than from a number invented here**, which is one more reason the overnight
-  run moved into A. Worth noting against §13: R7 asks for a five-minute test window, which sits inside
+  rate limit is roughly nine minutes — so **a short window can be missed entirely**, every night,
+  while the screen shows the schedule as on. §10 currently refuses only the exactly-equal case, and
+  `onAt + 5 min` sails through. It gets a line rather than a refusal because the failure it produces
+  is the *visible, harmless* one this section already says it prefers: a schedule that does nothing,
+  not a shade that never lifts.
+  **The threshold is measured rather than invented, and A moved where it comes from.** It is not the
+  nine-minute rate limit this paragraph was written about — no cell ever met that limit. It is the
+  **batching window**, which is 75% of the futurity of the *last hop the chain arms* (§4). With the
+  chain closing to a final hop of a few minutes, the worst arrival is a few minutes past `onAt`, so
+  **a window under about ten minutes is the zone to warn about**, and R4 is what confirms the final
+  hop behaves overnight the way the three forced-Doze cells behaved. Worth noting against §13: R7 asks for a five-minute test window, which sits inside
   exactly this zone and should say so rather than be debugged as a mystery.
 - **The battery banner** (§7), when enabled and unexempted.
 - **One line about the ROM** on phones where `hasAutostartSettings()` is true, pointing at Settings.
@@ -1320,13 +1395,20 @@ translated once rather than against draft wording and again after review.
 | `schedule_rom_note` | This phone can also stop apps from starting in the background. If the shade does not start on its own, it will still come up when you open Gloam — and After a restart in Settings is where you can change that. |
 | `dim_schedule_at_risk` | Schedule - may not start on its own |
 
-**Three drafts for one string, and A picks.** `schedule_battery_body_late`, `_delegated` and `_never`
-are §7's three states; exactly one ships and the other two are deleted before the copy is translated,
-which is the whole reason the readings are a checkpoint before the `feat:` rather than after it. The
-middle one is the likely ship and it is the only one of the three that names something the user can do
-tonight. `_never` is kept in this table only until a reading either finds that state or rules it out —
-§6's reconcile is what makes it doubtful, and a string nobody can reach is a string that gets
-translated for nothing.
+**Three drafts for one string, and A has picked: `_delegated`.** Taken 2026-09-05, and R1 is what
+decides it — without the exemption the alarm *fires* and `startForegroundService` is refused, so the
+shade does not come up at the time the user picked, and §6's reconcile raises it the next time they
+open Gloam inside the window. That is precisely what `_delegated` says and precisely what the other
+two get wrong: `_late` describes a delay when the truth is a refusal, and `_never` describes a dead
+feature when the reconcile still works. **`_late` and `_never` are deleted before the copy is
+translated**, which is the whole reason the readings were a checkpoint before the `feat:` rather than
+after it.
+
+**One word in `_delegated` earns its place from the same reading: *Android*, not *this phone*.** The
+refusal is `ForegroundServiceStartNotAllowedException`, which is the platform's, and the sentence
+would be wrong on a Pixel if it blamed the vendor. What the vendor owns is autostart, which is
+`schedule_rom_note`'s subject and stays a separate string — R3 measured that denying autostart stops
+the alarm *running at all*, which is a different failure from this one and wants different words.
 
 **No health claims, in the copy or anywhere near it** — *eye strain*, *sleep*, *blue light* — because
 App content was answered health-No and this is the phase most likely to reach for the word "night".
@@ -1580,11 +1662,38 @@ written on `ShadeService`'s `combine`.
 
 *Filled in as they are taken. A dash is a reading not yet taken; a phase does not close with one left.*
 
-- **R1** — inexact alarm, no exemption, autostart on, forced Doze: -
-- **R2** — **the gate**: -
-- **R3** — exemption on, autostart off: -
+- **R0** — the awake cell, taken first because it is cheap and proves the code path: **taken
+  2026-09-05**, HyperOS, `…gloam.debug`, exemption on, autostart off, screen on, device `ACTIVE`.
+  Armed 09:50:30 for 09:52:30; **fired 90,017 ms late**, `startForegroundService: allowed`, and the
+  app's own `exempt=true` agreed with the state set from the host. Not in the matrix as planned, and
+  it earned its place twice over: the first attempt read the log 31 s after the target, found
+  nothing, and force-stopped — cancelling the alarm it was measuring. **The lateness is the reading;
+  a window shorter than the lateness answers a different question.**
+- **R1** — inexact alarm, no exemption, autostart on, forced Doze: **taken 2026-09-05**. Armed
+  09:32:51 for 09:34:50, device stepped to deep `IDLE`. **The alarm fired**, 90,049 ms late — and
+  then `startForegroundService` threw
+  `ForegroundServiceStartNotAllowedException: … mAllowStartForeground false`. So the exemption is
+  load-bearing for the **service start** and buys nothing for the **alarm**, which is the sharpest
+  single answer of the three cells: without it the schedule's receiver runs, decides to raise the
+  shade, and cannot. `isIgnoringBatteryOptimisations()` read `false`, agreeing with the host.
+- **R2** — **the gate**: **taken 2026-09-05, and it fired.** Exemption on, autostart on, device
+  stepped to deep `IDLE`, armed 09:16:53 for 09:18:52. **Fired 90,045 ms late**,
+  `startForegroundService: allowed`, `exempt=true`. The shipping configuration works on this ROM
+  under forced Doze. Verdict **(ii)**.
+- **R3** — exemption on, autostart off: **taken 2026-09-05, and it did not fire.** Armed 08:55:28
+  for 08:57:27, device stepped to deep `IDLE`, watched for **fifteen minutes** — nothing in
+  `GloamGate` at all, and the alarm still listed in `dumpsys alarm` at the end. Armed and run are
+  two different things, measured. This is the cell that makes section 7's Xiaomi half load-bearing.
 - **R4** — the overnight run, natural Doze. In **A** against the bare apparatus: - . In **E** against
   the real receiver: -
+  **Half of what R4 was going to cost has already been paid without waiting**: the window an alarm
+  is given is visible in `dumpsys alarm` the instant it is armed, and a ten-hour arm reads
+  `window=+1h0m0s0ms` against a two-minute arm's `+1m29s997ms`. So the batching window is 75% of the
+  futurity **capped at one hour**, and since every cell above was delivered at `maxWhenElapsed`
+  exactly, an hour is what a single long arm would cost. What the night still owes is the part no
+  dump can answer: whether this ROM starts a **dead** process for the broadcast — `am kill` refused
+  to kill the app in every cell above, so the process was alive each time and question three has not
+  been asked yet.
 - **R5** — one alarm armed after each of the five loss paths: -
 - **R6** — the hand-started shade adopted at the on-instant: -
 - **R7** — the midnight crossing, on the device: -
@@ -1594,7 +1703,14 @@ written on `ShadeService`'s `combine`.
   on `MainActivity`; both granted lands on `ControlsActivity`. `ControlsActivity` is started and
   forwards back, and is given `STARTING_WINDOW_TYPE_NONE` because it is translucent and floating —
   so the bounce paints nothing and the flash shape iii was thought to cost does not exist.
-- **R10** — the screen-on latency, after §5's receiver: -
+- **R10** — the screen-on latency, after §5's receiver: **first attempt void, 2026-09-05.** With the
+  screen off, `dumpsys battery unplug` and `status 1`, the phone spent **0.0 s of 427 s suspended** —
+  `Total run time` moved 427.2 s of realtime against 427.2 s of uptime — so `uptimeMillis` never
+  stopped, the deadline was evaluated on time (6 ms late), and the defect the receiver exists to
+  repair cannot appear. **A tethered phone does not suspend**; the same device runs 11 h realtime
+  against 2.5 h uptime on battery. The reading needs the cable **out**, which is why the debug
+  section grew a ten-minute deadline: two minutes is not long enough to unplug and let the SoC
+  settle.
 - **R11** — the reconcile paths, and Stop staying stopped: -
 
 ---
