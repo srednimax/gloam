@@ -4,8 +4,10 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.IBinder
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 
@@ -71,7 +74,14 @@ private const val TAG = "ShadeService"
  * to re-read the wall clock at most a minute at a time bounds the error to a minute *of CPU-awake
  * time*, which is the most any mechanism without an alarm can promise — and it costs nothing while
  * the phone is asleep, because `postDelayed` sets no alarm and holds no wakelock. The message is
- * simply overdue when the device next wakes for some other reason, and the loop notices immediately.
+ * simply overdue when the device next wakes for some other reason.
+ *
+ * **What it cannot promise is the wake itself**, and that is [screenOns] rather than this constant. A
+ * deadline that passes at 07:00 on a sleeping phone is not evaluated late, it is not evaluated at all
+ * — so the message is still owed up to a minute of *uptime* when the user presses the power button,
+ * and for that minute the first thing they see is the shade. Shortening this constant fixes none of
+ * it, because the process is not scheduled either way; it only costs a wakeup a minute on an awake
+ * device.
  */
 private const val DEADLINE_RECHECK_MS = 60_000L
 
@@ -236,6 +246,51 @@ class ShadeService : Service() {
      */
     private var backlightAnnounced = false
 
+    /**
+     * A screen coming on, as something [awaitDeadline] can wait on.
+     *
+     * **What it repairs, which is a defect and not a nicety.** The deadline loop re-reads the wall
+     * clock, so it can never fire early or drift — but nothing in this process is *scheduled* while
+     * the CPU is asleep, so a deadline that passes overnight is not evaluated late, it is not
+     * evaluated. The user picks the phone up at 08:14, the screen turning on wakes the device, and
+     * the pending `postDelayed` still owes up to sixty seconds of uptime: for that minute the first
+     * thing they see is the shade, at the dim level, with the backlight override still on. That is
+     * the app's own named fear reached through the feature built to prevent it.
+     *
+     * `replay = 0` with `DROP_OLDEST` over a buffer of one, for [panelTouches]' reason: this is a
+     * wake signal rather than a queue, and `tryEmit` from the main thread must never suspend. An
+     * emission landing while the loop is between waits is dropped and costs nothing — at that
+     * instant the loop is performing the very wall-clock comparison the signal would have asked for.
+     */
+    private val screenOns =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
+    /**
+     * `ACTION_SCREEN_ON`, registered at runtime — because the platform will not accept it any other
+     * way, and because that refusal is what makes this cheap.
+     *
+     * **A protected broadcast cannot be declared in a manifest at all.** So there is no manifest
+     * entry, no permission, and **no further entry point for a vendor ROM to decline** — which is
+     * the whole cost a second alarm for the same job would have carried. The receiver exists only
+     * while this service does, which is exactly when there is a shade to take down, and it rides a
+     * wake that has already happened rather than causing one, so it costs no battery.
+     *
+     * `RECEIVER_NOT_EXPORTED` because the only sender that matters is the system, and the system is
+     * not subject to the export check for its own protected broadcasts.
+     */
+    private val screenOnReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                screenOns.tryEmit(Unit)
+            }
+        }
+
     /** The panel's root view while it is up, and the thing [removePanelWindow] takes down. */
     private var panelView: View? = null
 
@@ -327,6 +382,12 @@ class ShadeService : Service() {
                 .distinctUntilChanged()
                 .collectLatest { offAt -> awaitDeadline(offAt) }
         }
+
+        // What wakes that loop when the phone does. Registered here rather than only while a
+        // deadline is live, because the registration is one binder call for the life of a service
+        // that exists only while the shade is up, and a filter that came and went with the deadline
+        // would be a second thing to keep in step with it.
+        registerReceiver(screenOnReceiver, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
     }
 
     /**
@@ -358,7 +419,10 @@ class ShadeService : Service() {
                 stopSelf()
                 return
             }
-            delay(min(remaining, DEADLINE_RECHECK_MS))
+            // Sleep until the next re-check **or the screen coming on**, whichever arrives first.
+            // The timeout is the awake case and is unchanged; [screenOns] is the sleeping one, and
+            // it is the only half that can observe the deadline the instant the user can.
+            withTimeoutOrNull(min(remaining, DEADLINE_RECHECK_MS)) { screenOns.first() }
         }
     }
 
@@ -399,6 +463,8 @@ class ShadeService : Service() {
     }
 
     override fun onDestroy() {
+        // Before the scope, because the only thing the receiver does is feed a flow collected on it.
+        unregisterReceiver(screenOnReceiver)
         scope.cancel()
         // Before the shade, because the panel is a child of the shade's lifetime rather than a peer
         // of it: there is no state in which the panel is up and the shade is not. This is the third
