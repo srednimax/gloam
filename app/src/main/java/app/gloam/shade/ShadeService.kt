@@ -23,6 +23,7 @@ import app.gloam.R
 import app.gloam.data.AppPreferences
 import app.gloam.work.AppChannel
 import app.gloam.work.ensureNotificationChannels
+import app.gloam.work.isIgnoringBatteryOptimisations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -234,17 +235,29 @@ class ShadeService : Service() {
     private var backlightTop: Float? = null
 
     /**
-     * Whether the notification on screen right now carries the line about the paused brightness
-     * slider.
+     * What the notification on screen right now says: whether it carries the line about the paused
+     * brightness slider, and which deadline it names.
      *
      * Remembered rather than recomputed at the post site, because it is the *transition* that is
-     * worth a `notify()` and there is no flow operator that can see this one: it depends on
+     * worth a `notify()` and there is no flow operator that can see the first half: it depends on
      * [shadeParams] and on what [readBacklightTop] agreed to give us, neither of which is a
      * preference. `DimScreen`'s slider writes on every integer step, so re-posting per value would
      * be a binder call per slider pixel — and Android throttles sustained notification updates, so
      * the update that matters would be a good candidate for the one it drops.
+     *
+     * `null` before the first post, which is not the same as "nothing announced": it is what makes
+     * the first `startForeground` the baseline rather than a change to be re-posted over.
      */
-    private var backlightAnnounced = false
+    private var announced: NotificationFacts? = null
+
+    /**
+     * The deadline [buildNotification] should name — the value, not the announcement.
+     *
+     * Kept beside the flow that owns it rather than read with `.first()` inside the builder, because
+     * `buildNotification` is called from `onStartCommand` on the main thread and a suspending read
+     * there is a start-up the foreground contract does not have time for.
+     */
+    private var currentDeadline: Long? = null
 
     /**
      * A screen coming on, as something [awaitDeadline] can wait on.
@@ -380,7 +393,13 @@ class ShadeService : Service() {
             preferences.shadeIntent
                 .map { it.offAtMillis }
                 .distinctUntilChanged()
-                .collectLatest { offAt -> awaitDeadline(offAt) }
+                .collectLatest { offAt ->
+                    // The notification names this, so it is posted from the same emission that
+                    // re-arms the loop — one place where the deadline moves, one place that says so.
+                    currentDeadline = offAt
+                    syncNotificationText()
+                    awaitDeadline(offAt)
+                }
         }
 
         // What wakes that loop when the phone does. Registered here rather than only while a
@@ -621,6 +640,8 @@ class ShadeService : Service() {
             running = intent.running,
             autoOff = preferences.autoOff.first(),
             offAtMillis = intent.offAtMillis,
+            schedule = preferences.schedule.first(),
+            scheduleAtRisk = !isIgnoringBatteryOptimisations(),
             themeMode = preferences.themeMode.first(),
             materialYou = preferences.materialYou.first(),
         )
@@ -779,6 +800,7 @@ class ShadeService : Service() {
             preferences.dimLevel.onEach { v -> state.update { it.copy(dimLevel = v) } }.launchIn(this)
             preferences.warmth.onEach { v -> state.update { it.copy(warmth = v) } }.launchIn(this)
             preferences.autoOff.onEach { v -> state.update { it.copy(autoOff = v) } }.launchIn(this)
+            preferences.schedule.onEach { v -> state.update { it.copy(schedule = v) } }.launchIn(this)
             // One collector for both halves of the intent, because they are written together — the
             // panel's timer section shows the deadline beside the button that owns it, and two
             // collectors could leave those disagreeing for a frame.
@@ -902,7 +924,7 @@ class ShadeService : Service() {
     }
 
     /**
-     * Re-post the notification when [backlightOverrideLive] flips, and on nothing else.
+     * Re-post the notification when what it says changes, and on nothing else.
      *
      * `notify` rather than a second `startForeground`: this notification is already the foreground
      * one, and posting under the same id replaces it in place rather than adding a second row.
@@ -910,12 +932,24 @@ class ShadeService : Service() {
      * `onDestroy`, where the notification is going away with the service.
      */
     private fun syncNotificationText() {
-        val live = backlightOverrideLive()
-        if (live == backlightAnnounced) return
-        backlightAnnounced = live
+        val facts = NotificationFacts(backlightOverrideLive(), currentDeadline)
+        if (facts == announced) return
+        announced = facts
         val manager = getSystemService(NotificationManager::class.java) ?: return
         manager.notify(NOTIFICATION_ID, buildNotification())
     }
+
+    /**
+     * A clock time for the notification, the platform's way.
+     *
+     * `DateFormat.getTimeFormat` follows the phone's own 12- or 24-hour setting and its locale, which
+     * a hand-built pattern cannot — and it is the same call `rememberTimeText` makes in the app, so
+     * the notification and the screen underneath it cannot format the same instant differently.
+     */
+    private fun formatTime(instant: Long): String =
+        android.text.format.DateFormat
+            .getTimeFormat(this)
+            .format(java.util.Date(instant))
 
     /**
      * Push the window's brightness override, or release it.
@@ -933,6 +967,19 @@ class ShadeService : Service() {
         // Guarded for the same reason `addView` is: the window can be gone underneath us.
         runCatching { windowManager?.updateViewLayout(view, params) }
     }
+
+    /**
+     * What the notification on screen right now says, so a re-post only happens when it would
+     * change.
+     *
+     * Both halves in one value rather than two fields, because they are compared together and a
+     * second flag is a second thing to forget: `notify` is a binder call, and Android throttles a
+     * notification updated too often.
+     */
+    private data class NotificationFacts(
+        val backlightLive: Boolean,
+        val offAtMillis: Long?,
+    )
 
     private fun buildNotification(): Notification {
         // **The row's plain tap summons the panel, and launches no Activity at all.** Phase 1's R8
@@ -984,6 +1031,14 @@ class ShadeService : Service() {
         if (backlightOverrideLive()) {
             builder.setContentText(getString(R.string.shade_notification_text_backlight))
         }
+        // **The deadline goes in the subtext, and the surface matters more than the string does.**
+        // The one moment a deadline moves *outward* is the schedule taking over an episode the hand
+        // started (`docs/phase-4.md` §3) — and at 22:00 the user is in a reading app, not on the
+        // screen that shows *"Turns off at 23:40"*. This notification is the surface that is on
+        // their screen. `setSubText` rather than `setContentText` so it does not displace Phase 1's
+        // backlight sentence, which would otherwise be lost on nearly every episode that has a
+        // deadline; absent rather than empty when there is none.
+        currentDeadline?.let { builder.setSubText(getString(R.string.shade_notification_until, formatTime(it))) }
         return builder.build()
     }
 }

@@ -23,6 +23,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.gloam.ui.dim.DimScreen
+import app.gloam.ui.schedule.ScheduleScreen
 import app.gloam.ui.settings.SettingsScreen
 import app.gloam.ui.support.LicenceTextScreen
 import app.gloam.ui.support.LicencesScreen
@@ -110,13 +111,16 @@ fun MainNavigation(modifier: Modifier = Modifier) {
             entryProvider =
                 entryProvider {
                     entry<Dim> {
-                        DimScreen()
+                        DimScreen(onOpenSchedule = { backStack.add(Schedule) })
                     }
                     entry<Settings> {
                         SettingsScreen(
                             onOpenSupport = { backStack.add(Support) },
                             onOpenLicences = { backStack.add(Licences) },
                         )
+                    }
+                    entry<Schedule> {
+                        ScheduleScreen(onBack = { backStack.removeLastOrNull() })
                     }
                     entry<Support> {
                         SupportScreen(onBack = { backStack.removeLastOrNull() })

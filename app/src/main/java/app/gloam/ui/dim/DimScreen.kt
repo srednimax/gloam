@@ -3,18 +3,21 @@ package app.gloam.ui.dim
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -32,6 +36,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
+import app.gloam.shade.Schedule
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
@@ -42,8 +47,10 @@ import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
+import app.gloam.ui.common.WarningBanner
 import app.gloam.work.AppChannel
 import app.gloam.work.NotificationPermissionOutcome
+import app.gloam.work.isIgnoringBatteryOptimisations
 import app.gloam.work.notificationRationaleAvailable
 import app.gloam.work.notificationsAllowed
 import app.gloam.work.openAppNotificationSettings
@@ -100,6 +107,7 @@ private enum class ShadeWarning {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DimScreen(
+    onOpenSchedule: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DimViewModel =
         viewModel(factory = DimViewModel.Factory, extras = appViewModelExtras()),
@@ -132,6 +140,12 @@ fun DimScreen(
     // can change their brightness mode on a settings screen and come back.
     var backlightAvailable by remember { mutableStateOf(readBacklightTop(context) != null) }
 
+    // The fourth switch on a settings screen we hand people off to, and the only one of the plan's
+    // four asks besides the two above that the app can read at all. It is here rather than only on
+    // the schedule screen because the user who forgot they set a schedule is by definition not
+    // opening the schedule screen — so the summary row below has to be able to say it.
+    var exempt by remember { mutableStateOf(context.isIgnoringBatteryOptimisations()) }
+
     // **Session state, deliberately not a DataStore key.** The only thing a stored flag would buy is
     // telling "never asked" apart from "asked twice and refused", and those two want the same
     // behaviour anyway — fire the launcher and let it answer. It flips the moment the launcher comes
@@ -144,6 +158,7 @@ fun DimScreen(
         notificationsOn = context.notificationsAllowed()
         rationaleLeft = activity.notificationRationaleAvailable()
         backlightAvailable = readBacklightTop(context) != null
+        exempt = context.isIgnoringBatteryOptimisations()
     }
 
     /**
@@ -328,7 +343,65 @@ fun DimScreen(
                 running = state.running,
                 onAutoOff = viewModel::setAutoOff,
             )
+
+            // **A summary row, not a section**, and it is under the auto-off chips because those are
+            // the app's other control over when the shade ends. It states the window rather than the
+            // setting, so somebody who set a schedule three weeks ago and forgot finds out on the
+            // screen they already open — which is the whole reason it is here and not two taps into
+            // Settings (`docs/phase-4.md` §10).
+            ScheduleRow(
+                schedule = state.schedule,
+                atRisk = !exempt,
+                onClick = onOpenSchedule,
+            )
         }
+    }
+}
+
+/**
+ * The one line the dim screen gives the schedule, and the way to the screen that owns it.
+ *
+ * The trailing chevron rather than a switch: this row reports, and everything that *changes* a
+ * schedule is two time pickers and a toggle that would not fit here in any language.
+ */
+@Composable
+private fun ScheduleRow(
+    schedule: Schedule,
+    atRisk: Boolean,
+    onClick: () -> Unit,
+) {
+    val summary = rememberScheduleSummary(schedule, atRisk)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = Spacing.base, vertical = Spacing.snug),
+    ) {
+        // Null when the text is a whole sentence that names the schedule itself — the at-risk line —
+        // because a row drawing both would say "Schedule" twice.
+        if (summary.title != null) {
+            Text(
+                text = summary.title,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Text(text = summary.text, style = MaterialTheme.typography.bodyLarge)
+        } else {
+            Text(
+                text = summary.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            // Null rather than a description: the row's own text is its name, and a screen reader
+            // announcing "chevron" after it adds nothing a user can act on.
+            contentDescription = null,
+        )
     }
 }
 
@@ -344,45 +417,26 @@ private fun NotificationWarning(
     warning: ShadeWarning,
     onAct: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = Spacing.base, end = Spacing.base, top = Spacing.base),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.base)) {
-            Text(
-                text = stringResource(R.string.dim_notification_warning_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text =
-                    stringResource(
-                        if (warning == ShadeWarning.OpenChannelSettings) {
-                            R.string.dim_notification_warning_channel_body
-                        } else {
-                            R.string.dim_notification_warning_body
-                        },
-                    ),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = Spacing.tight),
-            )
-            TextButton(onClick = onAct, modifier = Modifier.padding(top = Spacing.tight)) {
-                Text(
-                    stringResource(
-                        if (warning == ShadeWarning.AskPermission) {
-                            R.string.dim_notification_warning_ask
-                        } else {
-                            R.string.dim_notification_warning_settings
-                        },
-                    ),
-                )
-            }
-        }
-    }
+    WarningBanner(
+        title = stringResource(R.string.dim_notification_warning_title),
+        body =
+            stringResource(
+                if (warning == ShadeWarning.OpenChannelSettings) {
+                    R.string.dim_notification_warning_channel_body
+                } else {
+                    R.string.dim_notification_warning_body
+                },
+            ),
+        actionLabel =
+            stringResource(
+                if (warning == ShadeWarning.AskPermission) {
+                    R.string.dim_notification_warning_ask
+                } else {
+                    R.string.dim_notification_warning_settings
+                },
+            ),
+        onAct = onAct,
+    )
 }
 
 @Composable

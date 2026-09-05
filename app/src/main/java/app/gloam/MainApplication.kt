@@ -85,7 +85,7 @@ class MainApplication : Application() {
      * the previous one is a reader that ran before the user's tap.
      */
     @Volatile
-    var launcherCompact: Boolean = false
+    var launcherCompact: Boolean = true
         private set
 
     val container: AppContainer by lazy { AppContainer(this, preferences, applicationScope) }

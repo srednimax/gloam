@@ -143,12 +143,69 @@
     <!-- Licences -->
     <string name="licence_text_missing">The text of this licence is not bundled with the app.</string>
 
+    <!-- The schedule (docs/phase-4.md §11). "Schedule", not "timer" or "alarm": CONTEXT.md reserves
+         both — auto-off is not a timer because the schedule sets deadlines too, and nothing here is
+         an alarm because nothing rings and the app claims no exact-alarm permission. No health
+         claims anywhere near this copy — no *eye strain*, no *sleep*, no *blue light* — because App
+         content was answered health-No and this is the feature most likely to reach for the word
+         "night". The two times are never built by hand: DateFormat.getTimeFormat does it, so 12- or
+         24-hour follows the phone and the locale for free. -->
+    <string name="schedule_title">Schedule</string>
+    <string name="schedule_enable">Dim on a schedule</string>
+    <string name="schedule_enable_hint">Gloam puts the shade up and takes it down at the times below, every night.</string>
+    <string name="schedule_on_at">Turns on</string>
+    <string name="schedule_off_at">Turns off</string>
+    <!-- Shown only when the pair crosses midnight. It is one derived fact and it is the single most
+         common way a person mis-reads two times. -->
+    <string name="schedule_overnight">Overnight — the shade comes down the next morning.</string>
+    <!-- The degenerate window is refused at the picker rather than stored and explained afterwards:
+         on at 22:00 and off at 22:00 read as a full day is a shade that never comes down. -->
+    <string name="schedule_same_time">Pick two different times. A window that starts and ends at the same moment never opens.</string>
+    <!-- A short window is warned about and *not* refused, which is the opposite treatment and the
+         same reasoning: an inexact alarm arrives at the far end of a batching window, so a window of
+         a few minutes can be missed entirely — and a schedule that does nothing is the visible,
+         harmless failure this feature prefers. -->
+    <string name="schedule_short_window">This window is very short. Android may start Gloam a few minutes late, so a window this short can be missed.</string>
+
+    <!-- The battery-optimisation banner, shown only while the schedule is on and the exemption is
+         missing. **One of three drafts, and R1 picked this one** (docs/phase-4.md §11): without the
+         exemption the alarm still fires and startForegroundService is refused, so the shade does not
+         come up at the time the user picked and the reconcile raises it the next time they open
+         Gloam inside the window. The key keeps its `_delegated` suffix as the record of which draft
+         shipped. "Android", not "this phone": the refusal is the platform's
+         (ForegroundServiceStartNotAllowedException) and the sentence would be wrong on a Pixel if it
+         blamed the vendor. What the vendor owns is autostart, which is schedule_rom_note below. -->
+    <string name="schedule_battery_title">Battery optimisation is on for Gloam</string>
+    <string name="schedule_battery_body_delegated">Android will not let Gloam start itself at the time you picked. The shade still comes up when you next open Gloam inside the window. Turn battery optimisation off for Gloam to have it start on its own.</string>
+    <string name="schedule_battery_action">Battery settings</string>
+    <!-- Shown only where an autostart screen exists. It points at the row in Settings rather than
+         growing a second hand-off for one grant, and it promises nothing about the outcome — the app
+         cannot read that setting back (ADR-0003). -->
+    <string name="schedule_rom_note">This phone can also stop apps from starting in the background. If the shade does not start on its own, it will still come up when you open Gloam — and After a restart in Settings is where you can change that.</string>
+
+    <!-- The summary row on the dim screen, and the compact controls' read-only section. It states
+         the window rather than the setting, so a user who set a schedule three weeks ago and forgot
+         finds out on the screen they already open. When the exemption is missing it says that
+         instead: the person who forgot is by definition not opening the schedule screen, so the
+         honest state has to live where they do go. -->
+    <string name="dim_schedule_row">Schedule</string>
+    <!-- %1$s and %2$s are times of day, formatted for the phone's own locale and 12/24-hour setting. -->
+    <string name="dim_schedule_window">%1$s to %2$s</string>
+    <string name="dim_schedule_off">Off</string>
+    <string name="dim_schedule_at_risk">Schedule — may not start on its own</string>
+
     <!-- Notification channels. The convention `channel_<id>_name` / `channel_<id>_description` is
          asserted by ReminderChannelsTest, so a new channel cannot ship with no name. -->
     <string name="channel_shade_name">Dimming</string>
     <string name="channel_shade_description">Shown while the screen is dimmed, so the shade can be turned off from anywhere.</string>
     <string name="shade_notification_title">Screen dimmed</string>
     <string name="shade_notification_stop">Stop</string>
+    <!-- The deadline, on the notification rather than in the app, because the moment it moves
+         *outward* — the schedule taking over an episode the hand started — the user is in a reading
+         app and not on our screen (docs/phase-4.md §3). setSubText, so it does not displace the
+         backlight sentence below, and absent rather than empty when there is no deadline.
+         %1$s is a time of day, formatted by the platform. -->
+    <string name="shade_notification_until">Until %1$s</string>
     <!-- Carried only while the backlight override is actually live. It is the one line of copy in
          this app that gets read on a screen at 6.64 nits, because the notification is drawn above
          the shade and dim_backlight_hint is in the app underneath it - so it is short, and it names

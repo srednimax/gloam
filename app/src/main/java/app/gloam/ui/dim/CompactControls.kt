@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
@@ -32,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import app.gloam.R
 import app.gloam.shade.AutoOff
+import app.gloam.shade.Schedule
 import app.gloam.theme.Spacing
 
 /**
@@ -50,6 +51,16 @@ private enum class CompactSection {
     None,
     Timer,
     Warmth,
+
+    /**
+     * **Read-only, and that is the panel's constraint rather than a size one.** A Material 3
+     * `TimePicker` in a `Dialog` needs an Activity's window token and `PanelWindow` has no Activity
+     * under it; `TimeInput`'s fields need an IME, which `PANEL_WINDOW_FLAGS`' `FLAG_NOT_FOCUSABLE`
+     * refuses by design and for the shade's own reason. An inline dial would work in both — and a
+     * dial dragged at 1.59 nits, to set a time that is set once and read often, is the wrong trade.
+     * The case this section exists for is a **read**: *did I leave a schedule on?*
+     */
+    Schedule,
 }
 
 /** Tapping the open section's own button closes it; tapping another's swaps to it. */
@@ -105,6 +116,8 @@ fun CompactControls(
     running: Boolean,
     autoOff: AutoOff,
     offAtMillis: Long?,
+    schedule: Schedule,
+    scheduleAtRisk: Boolean,
     onDimLevel: (Int) -> Unit,
     onWarmth: (Int) -> Unit,
     onAutoOff: (AutoOff) -> Unit,
@@ -129,12 +142,17 @@ fun CompactControls(
             modifier = Modifier.padding(horizontal = Spacing.base),
         )
 
-        // **The three action buttons are centred as a group, and close is not one of them.** With
+        // **The three action buttons are centred as a group, and neither edge is one of them.** With
         // `SpaceEvenly` over all four the start/stop button drifted off-centre in the panel and sat
         // centred in the compact host — the same control in two places on two surfaces the user
-        // meets as one thing. The weighted spacers pin the trio to the middle of the window whether
-        // or not there is a close button, so the toggle is *the middle icon* in both hosts and the
-        // one that closes the window stays out at the edge where a dismissal belongs.
+        // meets as one thing. The weighted boxes pin the trio to the middle of the window whether or
+        // not there is a close button, so the toggle is *the middle icon* in both hosts and the one
+        // that closes the window stays out at the edge where a dismissal belongs.
+        //
+        // **The schedule took the leading edge for exactly that reason.** It is a fourth icon, and
+        // dropping it into the trio would have made the toggle the second of four — so the two
+        // things that are not actions live at the two edges, one reporting a fact and one dismissing
+        // the window, and the centre stays the three controls it was measured as.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
@@ -142,7 +160,17 @@ fun CompactControls(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.tight),
         ) {
-            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                IconButton(onClick = { section = section.toggling(CompactSection.Schedule) }) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = stringResource(R.string.dim_schedule_row),
+                    )
+                }
+            }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.snug),
@@ -217,6 +245,8 @@ fun CompactControls(
                     onWarmth = onWarmth,
                     modifier = Modifier.padding(horizontal = Spacing.base),
                 )
+            CompactSection.Schedule ->
+                ScheduleSection(schedule = schedule, atRisk = scheduleAtRisk)
             CompactSection.None -> Unit
         }
 
@@ -292,6 +322,44 @@ private fun TimerSection(
                 modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
             )
         }
+    }
+}
+
+/**
+ * The schedule, stated and not editable — *22:00 to 07:00*, or *Off*, with the cog as the way to
+ * change it.
+ *
+ * **The one line in this host that can carry the at-risk fact.** The launcher default now makes this
+ * the surface most users land on, and `docs/phase-3.md` is explicit that it has no explainer and no
+ * room for a banner — so when the battery exemption is missing this says the schedule may not start
+ * on its own, instead of naming a window it might not keep to.
+ */
+@Composable
+private fun ScheduleSection(
+    schedule: Schedule,
+    atRisk: Boolean,
+) {
+    val summary = rememberScheduleSummary(schedule, atRisk)
+    Column {
+        if (summary.title != null) {
+            Text(
+                text = summary.title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.hair),
+            )
+        }
+        Text(
+            text = summary.text,
+            style = MaterialTheme.typography.bodyMedium,
+            color =
+                if (summary.title == null) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
+        )
     }
 }
 

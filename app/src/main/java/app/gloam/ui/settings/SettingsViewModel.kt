@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val materialYou: Boolean = false,
-    val launcherCompact: Boolean = false,
+    val launcherCompact: Boolean = true,
 )
 
 class SettingsViewModel(

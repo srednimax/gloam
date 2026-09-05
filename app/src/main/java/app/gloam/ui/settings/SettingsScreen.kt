@@ -12,13 +12,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,6 +27,7 @@ import app.gloam.data.ThemeMode
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.SectionHeader
+import app.gloam.ui.common.SwitchRow
 import app.gloam.work.hasAutostartSettings
 import app.gloam.work.openAutostartSettings
 
@@ -61,7 +60,7 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsSwitch(
+            SwitchRow(
                 title = stringResource(R.string.settings_material_you),
                 subtitle = stringResource(R.string.settings_material_you_hint),
                 checked = state.materialYou,
@@ -73,7 +72,7 @@ fun SettingsScreen(
             // names the routes it does **not** move, because the preference only moves one of
             // three — the notification and the tile reach the small controls either way.
             SectionHeader(stringResource(R.string.settings_controls))
-            SettingsSwitch(
+            SwitchRow(
                 title = stringResource(R.string.settings_launcher_compact),
                 subtitle = stringResource(R.string.settings_launcher_compact_hint),
                 checked = state.launcherCompact,
@@ -173,35 +172,6 @@ private fun LanguageRow() {
                 modifier = Modifier.padding(end = Spacing.tight),
             )
         }
-    }
-}
-
-@Composable
-private fun SettingsSwitch(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                // The whole row toggles, not just the switch: a 48dp target the width of the screen
-                // is far easier to hit than a 32dp one at the edge of it.
-                .clickable { onChange(!checked) }
-                .padding(horizontal = Spacing.base, vertical = Spacing.snug),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

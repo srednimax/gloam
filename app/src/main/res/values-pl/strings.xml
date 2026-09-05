@@ -83,10 +83,30 @@
 
     <string name="licence_text_missing">Treść tej licencji nie jest dołączona do aplikacji.</string>
 
+    <string name="schedule_title">Harmonogram</string>
+    <string name="schedule_enable">Przyciemniaj według harmonogramu</string>
+    <string name="schedule_enable_hint">Gloam zaciąga i zdejmuje zasłonę o poniższych godzinach, każdej nocy.</string>
+    <string name="schedule_on_at">Włącza się</string>
+    <string name="schedule_off_at">Wyłącza się</string>
+    <string name="schedule_overnight">Przez noc — zasłona znika następnego ranka.</string>
+    <string name="schedule_same_time">Wybierz dwie różne godziny. Okno, które zaczyna się i kończy w tej samej chwili, nigdy się nie otwiera.</string>
+    <string name="schedule_short_window">To okno jest bardzo krótkie. Android może uruchomić Gloam kilka minut później, więc tak krótkie okno może zostać pominięte.</string>
+
+    <string name="schedule_battery_title">Optymalizacja baterii jest włączona dla Gloam</string>
+    <string name="schedule_battery_body_delegated">Android nie pozwala Gloam uruchomić się samemu o wybranej godzinie. Zasłona i tak pojawi się przy następnym otwarciu Gloam w trakcie okna. Wyłącz optymalizację baterii dla Gloam, aby uruchamiał się sam.</string>
+    <string name="schedule_battery_action">Ustawienia baterii</string>
+    <string name="schedule_rom_note">Ten telefon może też blokować uruchamianie aplikacji w tle. Jeśli zasłona nie pojawi się sama, nadal pojawi się po otwarciu Gloam — a ustawienie Po ponownym uruchomieniu w Ustawieniach jest miejscem, w którym można to zmienić.</string>
+
+    <string name="dim_schedule_row">Harmonogram</string>
+    <string name="dim_schedule_window">od %1$s do %2$s</string>
+    <string name="dim_schedule_off">Wyłączony</string>
+    <string name="dim_schedule_at_risk">Harmonogram — może nie włączyć się sam</string>
+
     <string name="channel_shade_name">Przyciemnianie</string>
     <string name="channel_shade_description">Widoczne, gdy ekran jest przyciemniony, aby zasłonę można było wyłączyć z dowolnego miejsca.</string>
     <string name="shade_notification_title">Ekran przyciemniony</string>
     <string name="shade_notification_stop">Zatrzymaj</string>
+    <string name="shade_notification_until">Do %1$s</string>
     <string name="shade_notification_text_backlight">Suwak jasności telefonu nic nie zmienia, gdy Gloam przyciemnia</string>
 
 </resources>

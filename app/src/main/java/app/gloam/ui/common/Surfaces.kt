@@ -1,8 +1,11 @@
 package app.gloam.ui.common
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,7 +14,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -87,6 +93,86 @@ fun EmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+/**
+ * **The notification-warning idiom, now that it has a second caller.**
+ *
+ * A live read that went wrong, said as what the user has lost, with one button that goes to the
+ * screen where they can fix it. `DimScreen`'s "No Stop button outside Gloam" is the original and the
+ * schedule's battery banner is the second — same shape, same colours, and both self-clear on the
+ * resume after the user comes back, because both are re-read rather than remembered.
+ *
+ * It is deliberately *not* the other Phase 2 idiom. The autostart row is permanent, makes no claim
+ * and remembers nothing, because the app cannot read that grant back; this one appears only while
+ * the state is actually wrong, which it can only do for a state the app can actually read
+ * (ADR-0003, `docs/phase-4.md` §7).
+ */
+@Composable
+fun WarningBanner(
+    title: String,
+    body: String,
+    actionLabel: String,
+    onAct: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.base, end = Spacing.base, top = Spacing.base),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.base)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = Spacing.tight),
+            )
+            TextButton(onClick = onAct, modifier = Modifier.padding(top = Spacing.tight)) {
+                Text(actionLabel)
+            }
+        }
+    }
+}
+
+/**
+ * A title, a line of supporting text, and a switch — **and the whole row is the target**.
+ *
+ * A 48dp strip the width of the screen is far easier to hit than a 32dp control at the edge of it,
+ * which is the reason this is a `Row` with a `clickable` on it rather than a `Switch` with a label
+ * beside it. Settings owned it while it had one caller; the schedule's own toggle is the second, and
+ * two hand-built versions of this row is how the padding drifts (see [DetailScaffold]).
+ */
+@Composable
+fun SwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable { onChange(!checked) }
+                .padding(horizontal = Spacing.base, vertical = Spacing.snug),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

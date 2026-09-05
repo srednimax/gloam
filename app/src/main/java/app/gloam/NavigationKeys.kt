@@ -31,6 +31,19 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Licences : NavKey
 
+/**
+ * The nightly window: on at one time, off at another. **A detail screen, not a tab** — somewhere you
+ * go once, rather than a place the bottom bar switches to — reached from the summary row on the dim
+ * screen rather than from Settings, because when the shade is on is not a property of the app, it is
+ * the thing the app does (`docs/phase-4.md` §10).
+ *
+ * Kotlin note: this is a *route*, and `app.gloam.shade.Schedule` is the *value* it edits. Two things
+ * named for one idea in two packages, which Kotlin resolves by an explicit import beating a
+ * same-package declaration — so a file in this package that means the value has to import it, and
+ * `MainApplication` does.
+ */
+@Serializable data object Schedule : NavKey
+
 @Serializable
 data class LicenceText(
     val spdxId: String,

@@ -179,17 +179,26 @@ class AppPreferences(
      * Whether a tap on the launcher icon opens the **compact controls** instead of the full app
      * (`docs/phase-3.md` §2, shape iii).
      *
-     * **Defaults off, and that is the whole design rather than caution.** A stranger's first launch
-     * has to be the full app — the overlay explainer, the notification warning and both hand-offs
-     * live there and nowhere else — so the launcher opens the full app until somebody decides
-     * otherwise. The notification and, from Phase 2b, the tile are the routes that reach the compact
-     * host without this key, because those are the two surfaces reachable while the shade is up.
+     * **It shipped `false` in Phase 3a and defaults `true` from Phase 4, and R9 is why.** The
+     * argument that kept it off was that a first launcher tap landing on a dialog over another app
+     * is a bad first meeting with an app nobody has used yet — and on the device it cannot happen.
+     * `ControlsActivity.forwardIfUnusable()` returns to `MainActivity` whenever `canDrawShade()` or
+     * `escapeHatchLive()` is false, and on a genuine first run both are, so the tap lands on the full
+     * app with its explainer. The same reading killed the cost nobody had named: a translucent,
+     * floating activity is given no starting window at all, so the bounce paints nothing.
+     *
+     * **One row that reading found, and it is not a bug to fix here.** `escapeHatchLive()` is in the
+     * same guard, so a user who denied notifications gets the full app from the icon for good, with
+     * nothing on screen saying why. The compact host is not an escape hatch (`docs/phase-2.md` §2),
+     * and sending somebody to a dialog they cannot escape from is the worse failure. Its consequence
+     * is `DOD.md`'s: the rule-5 question about this default is answerable only by testers who
+     * granted notifications.
      *
      * **Named for the one route it moves, not for a mode.** There is no compact mode: the compact
      * host is always available from the other doors, and a name like `compact_mode` is one a later
      * phase reads as permission to branch the whole app on it.
      */
-    val launcherCompact: Flow<Boolean> = store.data.map { it[Keys.LAUNCHER_COMPACT] ?: false }
+    val launcherCompact: Flow<Boolean> = store.data.map { it[Keys.LAUNCHER_COMPACT] ?: true }
 
     /**
      * The nightly window, as one value (CONTEXT.md: **schedule**).
