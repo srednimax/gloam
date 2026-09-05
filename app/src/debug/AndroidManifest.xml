@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The debug build's own manifest, and it exists for one reason: a `<receiver>` is read by the OS
+    before any code of ours runs, so an entry point cannot be hidden behind an `if`.
+
+    `CLAUDE.md`'s rule is that developer-only surface lives in `app/src/debug/` rather than in
+    `main/` behind `BuildConfig.DEBUG`, because with `isMinifyEnabled = false` a statically-false
+    branch is still compiled into the release AAB — a hide, not a strip. A manifest entry is the case
+    where that matters most: the branch would be dead code, but the entry beside it would be a live
+    entry point in the shipped app that any `if` is downstream of. So the receiver checkpoint A
+    measures is declared here, in a manifest AGP merges into the debug artifact only.
+
+    `scripts/aab-permissions.py` and `aab-reflection.py` read the built release artifact, and are the
+    check that it stayed out rather than the promise that it did.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+
+        <!--
+            Checkpoint A's bare receiver. `exported="false"` because the only thing that ever sends
+            to it is this app's own PendingIntent, held by AlarmManager on our behalf.
+        -->
+        <receiver
+            android:name=".shade.GateReceiver"
+            android:exported="false" />
+    </application>
+</manifest>
