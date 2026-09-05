@@ -38,6 +38,22 @@ The template's data layer is gone ([ADR-0007](docs/adr/0007-gloam-stores-setting
 Gloam stores settings, not records, so there is no database. The release pipeline and quality gates
 are real. Nothing is on Play yet, and the feature set beyond "it dims" is still being decided.
 
+## Screenshots
+
+Light and dark, captured on a Xiaomi/HyperOS device by `scripts/screenshots.py` and padded to Play's
+9:16 by `art/pad-screenshot.py`. Regenerate them rather than replacing them by hand — the walk is the
+asset, not the pixels.
+
+| Dim | Settings | Help and feedback |
+| --- | --- | --- |
+| <img src="docs/screenshots/light-1_dim-en.png" width="220" alt="The Dim screen: a dim level slider at 40%, a warmth slider, and a Start dimming button"> | <img src="docs/screenshots/light-3_settings-en.png" width="220" alt="Settings: appearance, controls, language and after-a-restart sections"> | <img src="docs/screenshots/light-4_support-en.png" width="220" alt="Help and feedback: report a problem, suggest a feature"> |
+| <img src="docs/screenshots/dark-1_dim-en.png" width="220" alt="The Dim screen in dark theme"> | <img src="docs/screenshots/dark-3_settings-en.png" width="220" alt="Settings in dark theme"> | <img src="docs/screenshots/dark-4_support-en.png" width="220" alt="Help and feedback in dark theme"> |
+
+These are Gloam's own screens. **There is deliberately no screenshot of the shade actually down** —
+the shade is an overlay owned by a foreground service, so it cannot be reached by tapping through the
+app, and a photograph of a dimmed screen is a photograph of a dark rectangle. What the shade does is
+the one thing the listing has to describe in words.
+
 ## Contributing
 
 Gloam is source-available, not open source: read it, verify it, file issues. Pull requests are not

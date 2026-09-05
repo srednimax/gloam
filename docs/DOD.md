@@ -308,8 +308,8 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       **Part-done 2026-08-30, and the remainder is named rather than implied:**
       - [x] English short (74/80) and full (2571/4000) descriptions.
       - [x] App name, both locales — `Gloam`, untranslated on purpose, and the file says why.
-      - [x] Two phone screenshots, 1452×2582. **Placeholders taken by hand**, because
-            `scripts/screenshots.py` still walks the template app's `[SCENES]`. They unblock an
+      - [x] Three phone screenshots, 1452×2582. **Real, taken 2026-09-05** by
+            `scripts/screenshots.py` against Gloam's own `[SCENES]`. The placeholders unblocked an
             upload; they do not sell anything.
       - [x] Icon (512²) and feature graphic (1024×500), regenerated 2026-09-05 off the real mark.
             **The graphic is no longer the template's**: the weight-chart motif it inherited from
@@ -320,7 +320,13 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
             trap recorded in `store-listing.md`: `play-metadata.py` emits *zero-byte* pl-PL files
             rather than skipping the locale, which is harmless by hand and not harmless once the
             publish workflow runs.
-      - [ ] Real screenshots off a real mark, and the `[SCENES]` rewrite behind them.
+      - [x] Real screenshots off a real mark. Done 2026-09-05: the `[SCENES]` rewrite had already
+            landed in Phase 2's checkpoint F, so this was the capture rather than the walk. Light set
+            in `art/play-screenshots/`, both themes in `docs/screenshots/`.
+      - [ ] A screenshot of the shade actually *down*. Every shot above is of Gloam's own screens,
+            which is a picture of the settings rather than of the product. The shade is an overlay
+            owned by a service, so `[SCENES]` cannot reach it by tapping — it needs the service
+            started and a host app underneath. Phase 5's call, not a blocker for the door.
 - [x] **The three emulator CI legs are vacuously green.** Closed — Phase 2 checkpoint F, both ways
       at once. The API 26 leg is cut (it could never have installed a `minSdk` 33 app), leaving
       33 + 36 on `aosp_atd`; and `app/src/androidTest` has its first test. `ShadeWindowTest` starts
@@ -348,8 +354,9 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       entirely (ADR-0007), and `ui/dim/` is the app's one screen over `AppPreferences`.
 - [x] **Choose the palette.** Done: dusk amber, warm taupe, twilight violet and warm grey, seeded in
       `scripts/gen_scheme.py`. All 22 contrast checks pass in both schemes. Re-read the stderr report
-      if you touch a seed — and remember the icon's ground is a *second* copy of `mark.PRIMARY`,
-      which `make-launcher-icon.py` now checks rather than trusting.
+      if you touch a seed. The icon's ground is no longer a second copy of anything: it is a
+      gradient generated from `mark.ground()`, and `ic_launcher_background.xml` is written by
+      `make-launcher-icon.py` rather than checked by it.
 
 ## Before the polish half — Phase 5
 
