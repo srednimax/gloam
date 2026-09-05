@@ -9,10 +9,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.gloam.shade.AutoOff
 import app.gloam.shade.NO_DEADLINE
+import app.gloam.shade.Schedule
 import app.gloam.shade.deadlineOrNull
+import app.gloam.shade.minutesOf
+import app.gloam.shade.timeOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.time.LocalTime
 
 /**
  * The two values that say what the shade should be doing, read together because they are written
@@ -72,6 +76,10 @@ class AppPreferences(
         val AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
         val OFF_AT_MILLIS = longPreferencesKey("off_at_millis")
         val LAUNCHER_COMPACT = booleanPreferencesKey("launcher_compact")
+        val SCHEDULE_ENABLED = booleanPreferencesKey("schedule_enabled")
+        val SCHEDULE_ON_MINUTES = intPreferencesKey("schedule_on_minutes")
+        val SCHEDULE_OFF_MINUTES = intPreferencesKey("schedule_off_minutes")
+        val SCHEDULE_HONOURED_AT = longPreferencesKey("schedule_honoured_at")
     }
 
     /**
@@ -184,6 +192,55 @@ class AppPreferences(
     val launcherCompact: Flow<Boolean> = store.data.map { it[Keys.LAUNCHER_COMPACT] ?: false }
 
     /**
+     * The nightly window, as one value (CONTEXT.md: **schedule**).
+     *
+     * **One `Flow` for the three keys, like [shadeIntent] and for a related reason.** A reader that
+     * could take them apart is a reader that can see the old on-time beside the new off-time — a
+     * torn window, briefly inverted, at the exact moment something is arming an alarm from it. They
+     * are *not* written in one transaction the way [beginShade]'s pair is, because the picker writes
+     * one edge at a time, which makes the single read more necessary rather than less.
+     *
+     * **Minutes since local midnight, as an `Int`**, the same shape and the same reasoning as
+     * `auto_off_minutes`: storage holds a number and the domain holds a type. A `LocalTime`
+     * serialised as `"22:00"` would be a string to parse on every read, with a locale-shaped hazard
+     * (`22:00` against `10:00 PM`) in a file that must survive an in-app language change, and a
+     * parse failure with nothing sensible to do about it.
+     *
+     * **Defaults: off, 22:00, 07:00.** Off, because a screen dimmer that starts dimming on a night
+     * the user did not ask about is indistinguishable from a broken phone — the same argument that
+     * makes [DEFAULT_DIM_LEVEL] modest and warmth zero. The two times are defaults for a *disabled*
+     * schedule, so they cost nothing and exist only so the picker opens on something plausible
+     * rather than on midnight.
+     */
+    val schedule: Flow<Schedule> =
+        store.data.map { prefs ->
+            Schedule(
+                enabled = prefs[Keys.SCHEDULE_ENABLED] ?: false,
+                onAt = timeOf(prefs[Keys.SCHEDULE_ON_MINUTES] ?: DEFAULT_SCHEDULE_ON_MINUTES),
+                offAt = timeOf(prefs[Keys.SCHEDULE_OFF_MINUTES] ?: DEFAULT_SCHEDULE_OFF_MINUTES),
+            )
+        }
+
+    /**
+     * The on-instant of the night most recently acted on, or `0L` for none.
+     *
+     * **The one preference in this file that records what the app did rather than what the person
+     * asked for**, and it is what makes raising the shade for a window found already open safe.
+     * Without it, *the window is open and the shade is down* is indistinguishable from *the user
+     * pressed Stop ten minutes ago* — and a reconcile that cannot tell those apart is a Stop button
+     * that undoes itself at the next process start.
+     *
+     * **Deliberately not part of [schedule], and that placement is load-bearing rather than tidy.**
+     * The reconcile writes it and the schedule's own collector is what triggers the reconcile, so
+     * folding it in would re-emit that flow on every write and re-arm the alarm a second time. It
+     * terminates — the second reconcile is a no-op — but it doubles every arm, and the reading that
+     * asks whether exactly one alarm is armed reads that log.
+     *
+     * `0L` is no window and therefore reconcilable, which is the right answer on a fresh install.
+     */
+    val scheduleHonouredAt: Flow<Long> = store.data.map { it[Keys.SCHEDULE_HONOURED_AT] ?: 0L }
+
+    /**
      * The theme mode, read once, before any Activity exists.
      *
      * The one place a `suspend` read is worth its cost: `MainApplication.onCreate` needs the answer
@@ -262,16 +319,26 @@ class AppPreferences(
     }
 
     /**
-     * The shade is down, however it got there — the user, the notification's Stop action, or the
-     * deadline arriving.
+     * The shade is down, however it got there — the user, the notification's Stop action, the
+     * deadline arriving, or the boot receiver tidying up after a deadline that passed while the
+     * phone was off.
      *
      * Clears the deadline with the flag, so the next read cannot find one belonging to a shade that
      * is no longer up.
+     *
+     * @param honouredAt the on-instant of the night this ending spends, or `null` to leave the
+     *   marker alone. **It is a parameter rather than a decision made here, and it has no default**:
+     *   which endings spend a night is the shade's policy and lives in `Deadlines.kt` beside the
+     *   pure function that answers it, while this file is keys, defaults and transactions. A default
+     *   of `null` would be the trap — the one call site that must not spend a night is the one that
+     *   looks most like it wants the short form. It is written in the *same* transaction as the two
+     *   keys above so that a crash between them cannot leave a night unspent after a Stop.
      */
-    suspend fun endShade() {
+    suspend fun endShade(honouredAt: Long?) {
         store.edit {
             it[Keys.SHADE_RUNNING] = false
             it[Keys.OFF_AT_MILLIS] = NO_DEADLINE
+            if (honouredAt != null) it[Keys.SCHEDULE_HONOURED_AT] = honouredAt
         }
     }
 
@@ -286,6 +353,35 @@ class AppPreferences(
     suspend fun setLauncherCompact(enabled: Boolean) {
         store.edit { it[Keys.LAUNCHER_COMPACT] = enabled }
     }
+
+    suspend fun setScheduleEnabled(enabled: Boolean) {
+        store.edit { it[Keys.SCHEDULE_ENABLED] = enabled }
+    }
+
+    /**
+     * **The window is written as a pair, in one `edit`**, and there is deliberately no setter for
+     * one edge.
+     *
+     * The three shapes a window can have are properties of the *pair*, so a caller that could move
+     * one edge without the other is a caller that can transiently create the degenerate
+     * `onAt == offAt` window — which answers *never* — while the user is halfway through a picker.
+     * The screen picks one time at a time; this writes both. It is the same rule [beginShade]
+     * follows for the flag and the deadline, for the same reason.
+     */
+    suspend fun setScheduleWindow(
+        onAt: LocalTime,
+        offAt: LocalTime,
+    ) {
+        store.edit {
+            it[Keys.SCHEDULE_ON_MINUTES] = minutesOf(onAt)
+            it[Keys.SCHEDULE_OFF_MINUTES] = minutesOf(offAt)
+        }
+    }
+
+    /** Records that a night has been acted on. No screen calls this; see [scheduleHonouredAt]. */
+    suspend fun setScheduleHonouredAt(onInstant: Long) {
+        store.edit { it[Keys.SCHEDULE_HONOURED_AT] = onInstant }
+    }
 }
 
 /**
@@ -296,3 +392,9 @@ class AppPreferences(
  * no longer see.
  */
 const val DEFAULT_DIM_LEVEL = 40
+
+/** 22:00, in minutes since local midnight. The plan's own example, and the shape of the thing. */
+const val DEFAULT_SCHEDULE_ON_MINUTES = 22 * 60
+
+/** 07:00, in minutes since local midnight. */
+const val DEFAULT_SCHEDULE_OFF_MINUTES = 7 * 60

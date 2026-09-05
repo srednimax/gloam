@@ -30,7 +30,7 @@ class AutoOffTest {
     @Test
     fun `every choice but Never lands its own number of minutes ahead`() {
         for (choice in AutoOff.entries) {
-            val deadline = deadlineFor(now, choice)
+            val deadline = autoOffDeadline(now, choice)
             if (choice == AutoOff.Never) {
                 assertNull("Never has no deadline", deadline)
             } else {
@@ -46,7 +46,7 @@ class AutoOffTest {
     /** The one case with no deadline is the one case the enum names, not a duration of zero. */
     @Test
     fun `Never is the only choice without a deadline`() {
-        assertEquals(listOf(AutoOff.Never), AutoOff.entries.filter { deadlineFor(now, it) == null })
+        assertEquals(listOf(AutoOff.Never), AutoOff.entries.filter { autoOffDeadline(now, it) == null })
     }
 
     /** The span the product promises: half an hour to four hours, and nothing longer by accident. */
@@ -59,7 +59,7 @@ class AutoOffTest {
 
     @Test
     fun `a deadline is due at the instant and after it, not before`() {
-        val deadline = deadlineFor(now, AutoOff.Hours2)
+        val deadline = autoOffDeadline(now, AutoOff.Hours2)
         assertFalse("a millisecond early is not due", isDue(deadline!! - 1, deadline))
         assertTrue("exactly the deadline is due", isDue(deadline, deadline))
         assertTrue("a millisecond late is due", isDue(deadline + 1, deadline))
@@ -93,7 +93,7 @@ class AutoOffTest {
 
     @Test
     fun `a stored instant survives the round trip`() {
-        val deadline = deadlineFor(now, AutoOff.Minutes30)!!
+        val deadline = autoOffDeadline(now, AutoOff.Minutes30)!!
         assertEquals(deadline, deadlineOrNull(deadline))
     }
 

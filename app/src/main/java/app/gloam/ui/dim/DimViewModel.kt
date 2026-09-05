@@ -9,7 +9,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import app.gloam.MainApplication
 import app.gloam.data.AppPreferences
 import app.gloam.shade.AutoOff
-import app.gloam.shade.deadlineFor
+import app.gloam.shade.ShadeEnd
+import app.gloam.shade.ShadeStart
+import app.gloam.shade.beginShadeAt
+import app.gloam.shade.endShadeAt
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -89,19 +92,25 @@ class DimViewModel(
      * to start one with, and giving it one is how a `ViewModel` starts outliving the thing it was
      * scoped to. The deadline is this one's, because it is arithmetic over a stored preference.
      *
-     * The choice is read from the `Flow` rather than from [state]: `state` holds a default until its
-     * first emission arrives, and the shade can be started from a cold launch before that lands.
+     * The settings are read from their `Flow`s rather than from [state]: `state` holds defaults
+     * until its first emission arrives, and the shade can be started from a cold launch before that
+     * lands. [beginShadeAt] does that reading, resolves every deadline that is live, and stores the
+     * earliest with the flag.
      */
     fun beginShade() {
-        viewModelScope.launch {
-            val choice = preferences.autoOff.first()
-            preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
-        }
+        viewModelScope.launch { preferences.beginShadeAt(ShadeStart.ByHand) }
     }
 
-    /** The shade is down, by the button or because its deadline turned out to have passed. */
-    fun endShade() {
-        viewModelScope.launch { preferences.endShade() }
+    /**
+     * The shade is down, by the button or because its deadline turned out to have passed.
+     *
+     * **The reason is a parameter because the two callers are not the same event**, even though both
+     * spend the night: the Stop button is somebody deciding, and the resume reconcile is a deadline
+     * they were already promised arriving late. A single `endShade()` here would have made the
+     * distinction invisible at exactly the layer that knows it.
+     */
+    fun endShade(reason: ShadeEnd) {
+        viewModelScope.launch { preferences.endShadeAt(reason) }
     }
 
     /**
@@ -116,8 +125,11 @@ class DimViewModel(
     fun setAutoOff(choice: AutoOff) {
         viewModelScope.launch {
             preferences.setAutoOff(choice)
+            // The guard is load-bearing rather than an optimisation: `beginShadeAt` writes
+            // `running = true` in the same transaction as the deadline, so without it a chip tap
+            // would turn the shade **on** while it is off.
             if (preferences.shadeIntent.first().running) {
-                preferences.beginShade(deadlineFor(System.currentTimeMillis(), choice))
+                preferences.beginShadeAt(ShadeStart.ByHand)
             }
         }
     }

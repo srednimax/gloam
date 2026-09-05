@@ -32,6 +32,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
+import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
 import app.gloam.shade.isDue
@@ -165,7 +166,7 @@ fun DimScreen(
      */
     fun endShadeIfDue() {
         if (state.running && isDue(System.currentTimeMillis(), state.offAtMillis)) {
-            viewModel.endShade()
+            viewModel.endShade(ShadeEnd.ByDeadline)
             context.stopShade()
         }
     }
@@ -305,7 +306,7 @@ fun DimScreen(
                 onToggleRunning = {
                     when {
                         state.running -> {
-                            viewModel.endShade()
+                            viewModel.endShade(ShadeEnd.ByHand)
                             context.stopShade()
                         }
                         // Granted, or one denial already spent. Android permits two denials before
