@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import app.gloam.ControlsActivity
 import app.gloam.MainApplication
+import app.gloam.shade.armGateAlarm
 import app.gloam.shade.readBacklight
 import app.gloam.shade.showShadePanel
 import app.gloam.shade.startShade
@@ -72,6 +73,20 @@ import kotlinx.coroutines.launch
  *
  * So the same justification the sweep above carries applies here: **only the app can do this to
  * itself**, which is why the button is in the app and behind the seam rather than in a script.
+ *
+ * ## The gate alarm — Phase 4, checkpoint A
+ *
+ * The same justification a fifth time, and this one is the sharpest: **only the app can arm an alarm
+ * as itself**. `adb shell cmd alarm` does not exist, `am broadcast` reaches the receiver as the
+ * shell's uid rather than through `AlarmManager`, and a broadcast sent by hand to a process the ROM
+ * has already started answers none of the three questions the gate asks — whether the alarm fires in
+ * Doze, whether the foreground-service start is allowed from it, and whether HyperOS starts the
+ * process for it at all.
+ *
+ * Two durations because the gate is taken twice. The short one is for the forced-Doze cells, which
+ * are cheap and prove the code path; the long one is R4, the overnight run against natural Doze —
+ * and `docs/phase-4.md` is explicit that `force-idle` is a simulation, so the verdict is taken on
+ * the second.
  *
  * ## Opening the compact controls — Phase 3, checkpoint C
  *
@@ -202,6 +217,21 @@ fun DebugSettings() {
                 },
             ) {
                 Text("Arm 2-minute deadline")
+            }
+        }
+
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            // Checkpoint A's two arms. Both go through the same `setAndAllowWhileIdle` the real
+            // schedule would use; the only difference between them is how long the phone gets to
+            // decide what it thinks of us.
+            Button(
+                onClick = { context.armGateAlarm(GATE_SOON_MILLIS) },
+                modifier = Modifier.padding(end = Spacing.tight),
+            ) {
+                Text("Gate alarm 2 min")
+            }
+            OutlinedButton(onClick = { context.armGateAlarm(GATE_OVERNIGHT_MILLIS) }) {
+                Text("Gate alarm 10 h")
             }
         }
 
@@ -422,6 +452,20 @@ private const val STEP_MILLIS = 2500L
  * `delay` that happened to be shorter than the cap.
  */
 private const val ARM_MILLIS = 120_000L
+
+/**
+ * Long enough to unplug, force Doze and step the state machine by hand before it fires; short enough
+ * to sit through. The forced-Doze cells R1 to R3 are all taken on this one.
+ */
+private const val GATE_SOON_MILLIS = 120_000L
+
+/**
+ * R4's arm: about ten hours, which is a phone put down for the night and left to reach Doze on its
+ * own rather than being pushed into it. It is the reading the verdict is taken on, because
+ * `force-idle` skips whatever the ROM does between 23:00 and 07:00 — which on this phone is the
+ * entire question.
+ */
+private const val GATE_OVERNIGHT_MILLIS = 10L * 60 * 60 * 1000
 
 /** Big enough to see and to land a `screencap` on, small enough to obscure nothing that matters. */
 private const val SIDE_DP = 200
