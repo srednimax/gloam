@@ -1,12 +1,14 @@
-"""The placeholder mark: the single definition of this app's identity.
+"""The mark: the single definition of this app's identity.
 
-**Replace this file.** It draws a rounded triangle with a hole punched through it — deliberately
-generic, deliberately obviously a placeholder. Both generators import it (`make-launcher-icon.py`
-emits it as `VectorDrawable` path data, `make-feature-graphic.py` rasterises it with PIL), so
-whatever you put here cannot drift into being two different marks.
+A disc with a crescent bitten out of it — the moon, which is the hour Gloam is for. Both
+generators import this file (`make-launcher-icon.py` emits it as `VectorDrawable` path data,
+`make-feature-graphic.py` rasterises it with PIL), so the launcher icon, the notification icon
+and the listing graphic cannot drift into being different marks.
 
-The way to replace it: draw or generate a concept image, run `python3 art/trace-mark.py <image>`,
-and paste the curves it prints over MARK and EYE below. Nothing else in the pipeline changes.
+Traced from `art/concept.png` by `trace-mark.py` on 2026-09-05; provenance is recorded in
+`art/README.md`. To replace it: draw or generate a new concept image, run
+`python3 art/trace-mark.py <image>`, and paste the curves it prints over MARK and CRESCENT
+below. Nothing else in the pipeline changes.
 
 **Use art you have the right to ship.** An icon traced from an emoji font, a stock icon or someone
 else's mark is a licence obligation at best and a rejected Play upload at worst. Art you generated
@@ -25,7 +27,6 @@ from dataclasses import dataclass
 # make-launcher-icon.py deliberately does not write. Changing one alone is the failure to expect.
 SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface`
 PRIMARY = (0x6E, 0x42, 0x15)  # `primary`, darkened for contrast against SURFACE at icon sizes
-PRIMARY_DARK = (0x3A, 0x22, 0x08)  # second stop of the feature graphic's gradient
 
 
 @dataclass(frozen=True)
@@ -43,26 +44,47 @@ class Subpath:
     hole: bool = False
 
 
-# A rounded triangle pointing right. One outer contour.
+# The moon's disc. One outer contour, near-circular but traced rather than drawn, so it keeps
+# the concept's slight irregularity instead of becoming a perfect PIL ellipse.
 MARK = (
-    "M-27.48,-73.6"
-        "C-39.92,-80.78 -50,-74.96 -50,-60.6C-50,-20.2 -50,20.2 -50,60.6"
-        "C-50,74.96 -39.92,80.78 -27.48,73.6C7.51,53.4 42.49,33.2 77.48,13"
-        "C89.92,5.82 89.92,-5.82 77.48,-13C42.49,-33.2 7.51,-53.4 -27.48,-73.6"
+    "M-14.37,-135.39"
+        "C8.23,-136.22 30.81,-133.48 51.43,-123.55"
+        "C67.41,-115.84 82.16,-105.6 93.96,-92.23"
+        "C103.12,-81.85 110.68,-70.75 116.52,-58.19"
+        "C140,-7.61 130.49,52.93 92.33,93.82"
+        "C81.1,105.87 67.75,115.61 52.94,122.79"
+        "C37.13,130.45 19.11,135.27 1.51,135.75"
+        "C-15.99,136.22 -33.42,133.52 -49.92,127.4"
+        "C-65.28,121.7 -79.23,112.98 -91.52,102.2"
+        "C-100.74,94.11 -109.23,84.59 -115.72,74.16"
+        "C-127.71,54.9 -135.74,32.67 -137.09,9.88"
+        "C-140,-39.54 -116.96,-87.81 -75.22,-114.91"
+        "C-56.61,-127 -36.14,-132.65 -14.37,-135.39"
         "Z"
 )
 
-# The hole punched through it.
-EYE = (
-    "M20,0"
-        "C20,14.36 8.36,26 -6,26C-20.36,26 -32,14.36 -32,0"
-        "C-32,-14.36 -20.36,-26 -6,-26C8.36,-26 20,-14.36 20,0"
+# The night side, bitten out of the disc. A real hole in the path — see Subpath.
+CRESCENT = (
+    "M18.68,-81.64"
+        "C6.91,-73.19 -2.2,-65.23 -9.19,-52.14"
+        "C-27.48,-17.89 -13.58,23.7 18.15,44.18"
+        "C29,51.18 41.68,54.44 54.45,55.46"
+        "C65.25,56.31 61.19,52.73 64.48,56.01"
+        "C56.95,63.93 49.56,69.69 39.32,74.47"
+        "C29.12,79.25 18.04,81.71 6.8,82.14"
+        "C-28.76,83.51 -60.97,60.73 -73.68,28.03"
+        "C-78.36,16 -79.54,2.2 -78.22,-10.55"
+        "C-77.17,-20.7 -73.83,-32.64 -68.35,-41.55"
+        "C-56.7,-60.51 -39.43,-75.66 -17.4,-81.25"
+        "C-11.84,-82.66 -6.09,-83.2 -0.4,-83.91"
+        "C4.81,-84.55 9.17,-84.3 14.37,-83.59"
+        "C18.33,-83.05 17.64,-83.75 18.68,-81.64"
         "Z"
 )
 
 PARTS = (
     Subpath(MARK),
-    Subpath(EYE, hole=True),
+    Subpath(CRESCENT, hole=True),
 )
 
 _NUM = re.compile(r"-?\d*\.?\d+(?:e-?\d+)?")

@@ -283,9 +283,13 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       something the system never promised, on a screen that does not name the app responsible. That is
       a taste argued in a room with one person in it, which is what the twelve are for. The answer is a
       small, already-measured piece of work or nothing.
-- [ ] **Replace the placeholder mark.** `art/mark.py`, then `python3 art/make-launcher-icon.py` and
-      `make-feature-graphic.py`. Record the provenance in `art/README.md` — where the art came from is
-      the thing most likely to block a first upload, and it is discovered late.
+- [x] **Replace the placeholder mark.** Done 2026-09-05. The moon: a disc with a crescent bitten
+      out of it, traced from `art/concept.png` into `art/mark.py` and both generators re-run.
+      Provenance is recorded in `art/README.md` — an image model, the owner's own prompt — and the
+      concept file is committed beside the mark so the claim is checkable rather than remembered.
+      **`ART_SIZE` went 50 → 60dp with it**: the mark is a disc, so its reach from the centre *is*
+      its radius, and 60dp is Android's keyline for a full-bleed circular icon. The script's own
+      check reports 30.1dp against a 33dp safe radius, so no circular mask can bite it.
 - [ ] **Write the listing, and shoot the feature graphic and screenshots.** *Moved here from Phase 5
       on 2026-08-30.* Play will not let a **closed** test open without a complete store listing, and
       the closed test is what the 12-tester window runs on — so these three cannot be polish. The
@@ -299,8 +303,11 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       - [x] Two phone screenshots, 1452×2582. **Placeholders taken by hand**, because
             `scripts/screenshots.py` still walks the template app's `[SCENES]`. They unblock an
             upload; they do not sell anything.
-      - [x] Icon (512²) and feature graphic (1024×500) exist at the right sizes — but both derive
-            from the **placeholder mark**, so the item above still owns them.
+      - [x] Icon (512²) and feature graphic (1024×500), regenerated 2026-09-05 off the real mark.
+            **The graphic is no longer the template's**: the weight-chart motif it inherited from
+            the other app is gone, the tagline is Gloam's own line, and its three colours are
+            *read out of* `theme/Color.kt`'s dark scheme at render time rather than pasted — so a
+            regenerated palette reaches the listing art by re-running one script.
       - [ ] **Polish short and full descriptions.** Deliberately deferred, English first. Note the
             trap recorded in `store-listing.md`: `play-metadata.py` emits *zero-byte* pl-PL files
             rather than skipping the locale, which is harmless by hand and not harmless once the
