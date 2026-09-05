@@ -1697,7 +1697,48 @@ written on `ShadeService`'s `combine`.
 - **R5** — one alarm armed after each of the five loss paths: -
 - **R6** — the hand-started shade adopted at the on-instant: -
 - **R7** — the midnight crossing, on the device: -
-- **R8** — the API-33 emulator pass: -
+- **R8** — the API-33 emulator pass: **taken 2026-09-05**, `gloam-api33` headless
+  (`-no-window -gpu swiftshader_indirect`), 1080x2400, and in **Polish**, so section 11's copy was
+  read in `pl` rather than in the language it was written in. The phase's behaviours, on the floor
+  API:
+  - **Both ends of the run, twice.** A window set 4m42s out armed the on-instant itself —
+    `hopFor`'s `FINAL_HOP_MS` branch, since the gap was under five minutes — fired **212,073 ms
+    after it** against a `window=+3m32s52ms`, wrote the off-instant as the deadline (`scheduled shade
+    up until 14:35:00`) and took the shade down **26 ms** after it. A second window, run across
+    midnight, fired 134,691 ms after 23:55:00 and came down **46 ms** after a deadline of
+    **2026-09-06 00:05:00**. The crossing resolves onto the next day on a device, not only in section
+    14's sweep, and the zone the device handed us was the zone the test assumed.
+  - ⚠️ **The far end is this ROM's habit rather than the platform's promise, and that is a
+    correction to what section 1 concluded.** Its three cells each landed within 50 ms of
+    `maxWhenElapsed`, and `ScheduleAlarm.kt` records that as *"the window is not a distribution to be
+    optimistic about; it is the lateness"*. On stock API 33 one fire took **99.99%** of its window and
+    the other **85%** — 23 seconds early. Nothing downstream moves: every hop is chosen against the
+    *bound*, and section 4 already says delivering early is harmless by construction, a hop that
+    simply re-arms sooner. What changes is which sentence is load-bearing — the bound is the design
+    input, and the far end is one vendor's scheduler rather than something to build on.
+  - **Four of section 6's five loss paths leave exactly one alarm** — fire, edit, reboot and app
+    update. The reboot armed **twice, 3 ms apart** (14:42:06.707 and .710) and `dumpsys alarm` still
+    listed one: `FLAG_UPDATE_CURRENT` doing exactly what section 4's fourth decision claims, which is
+    the thing R5 counts rather than assumes. **Force-stop is the fifth and it cancels**: zero alarms
+    afterwards, `stopped=true`, and the on-instant passed with nothing on screen and nothing in the
+    log.
+  - **What pays for that path is the reconcile**, and it is section 7's banner promise proven rather
+    than asserted: opening the app 77 seconds into an unspent window logged `reconciled: window open
+    since 14:40:00 and unspent, shade up`, and raised it. **Stop stays stopped** across an `am kill`
+    and a relaunch inside the same window — and a *later* window still opens, which is the half
+    worth naming: a night stopped by hand is spent, the schedule is not.
+  - **The battery banner is read on resume, not observed.** Revoking the exemption from the host with
+    the schedule screen open changed nothing on screen; backgrounding and returning brought the banner
+    up, and granting it again cleared it the same way. That is the "live read rather than a remembered
+    outcome" the phase asks for — the platform offers no broadcast for this state — and it is
+    recorded here so a later reader does not file the delay as staleness.
+  - **Section 3's adoption row, exercised here ahead of R6's turn on the phone.** A shade hand-started
+    at 15:05:14 under a 30-minute auto-off carried a deadline of 15:35:14. The on-instant arrived at
+    15:13:13.611 — 15 ms past the `maxWhenElapsed` of a 193.6 s window — and logged `scheduled
+    shade up until 15:45:00`: the deadline moved **outward**, which is the one exception ADR-0012
+    names, and the ongoing notification's sub-text read **"Do 15:45"** at the same moment. That is the
+    visibility obligation section 3 pairs with the exception, met rather than promised. R6 is still
+    owed on the phone, where the vendor's notification is the half this cannot answer.
 - **R9** — the launcher default at `true`, first run: **taken 2026-09-04**, HyperOS, debug build. A
   `pm clear`ed install lands on `MainActivity`; overlay granted with notifications denied also lands
   on `MainActivity`; both granted lands on `ControlsActivity`. `ControlsActivity` is started and
