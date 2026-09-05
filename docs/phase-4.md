@@ -1509,6 +1509,14 @@ would produce a green result meaning nothing:
   R4 exists because `force-idle` is itself a simulation.
 - **A green `connectedAndroidTest`.** It proves the app *schedules* an alarm. `device-gate.py`'s
   opening paragraph is about precisely this: it cannot prove the phone will run it.
+- **"Nothing was armed after the reboot."** *Added by E, which produced this false negative twice
+  before recognising it.* `sys.boot_completed` going to `1` is not `BOOT_COMPLETED` being delivered:
+  on this ROM the broadcast reached the app **49 seconds later** (19:59:36 against 20:00:24.798), so
+  a reading taken 45 seconds in reports zero alarms and looks exactly like a ROM refusing to start
+  the app. Wait for the app's own log line, not for the property. **And a force-stopped package
+  never gets the broadcast at all** — the stopped state survives a reboot, so `am force-stop`
+  followed by `adb reboot` measures the composition of two loss paths rather than the reboot row,
+  and the recovery is the next launch.
 
 ⚠️ **Before every one of R1 to R7: `python3 scripts/device-gate.py`.** The autostart grant lapses on
 its own (§8), and a run against an unknown one is a wasted night rather than a weak result.
@@ -1694,8 +1702,53 @@ written on `ShadeService`'s `combine`.
   dump can answer: whether this ROM starts a **dead** process for the broadcast — `am kill` refused
   to kill the app in every cell above, so the process was alive each time and question three has not
   been asked yet.
-- **R5** — one alarm armed after each of the five loss paths: -
-- **R6** — the hand-started shade adopted at the on-instant: -
+- **R5** — one alarm armed after each of the five loss paths: **taken 2026-09-05 on the phone**,
+  HyperOS, `…gloam.debug`, exemption and autostart both granted and re-read first. Every count below
+  is off `dumpsys alarm`'s *pending* entries, never off a notification.
+  - **Edit.** Setting 19:40-to-20:40 at 19:34:46 left **one**, `origWhen=19:37:45.712
+    window=+2m14s284ms` — a 179,049 ms hop, which is `gap/1.75` and not the on-instant. The arm
+    before it, three seconds earlier, had been replaced rather than joined.
+  - **Force-stop.** `am force-stop` left **zero**, and the on-instant then passed with no process and
+    no alarm — which is what made R11's first cell possible.
+  - **The launch after a force-stop.** **One**, armed at 19:41:07.947 and again at .950, three
+    milliseconds apart, and `dumpsys alarm` still listed one. `FLAG_UPDATE_CURRENT` replacing rather
+    than stacking, which is the thing this reading counts rather than assumes.
+  - **Reboot.** **One** — and the lateness is the finding. `sys.boot_completed` went to `1` at
+    19:59:36; `BOOT_COMPLETED` reached the app at **20:00:24.798**, forty-nine seconds later, which
+    is long enough for a reading taken at forty-five to report zero and look like a refusal.
+    `GloamBoot: shade restored, deadline=` 20:40 on the same pass, so Phase 2's restore and this
+    phase's arm both ran off the one broadcast.
+  - **App update.** `adb install -r` at 20:01:16 delivered `MY_PACKAGE_REPLACED` at 20:01:18.339 —
+    **two seconds**, against the reboot's forty-nine — and left **one**, again armed twice, 52 ms
+    apart. The shade came back with the same deadline it went down with.
+  - **Fire.** Read with R6 below, because a fire needs a window to open and R6 is the run that opens
+    one.
+  - **And the composition nobody wrote down**: force-stop *then* reboot leaves **zero**. The stopped
+    state survives the reboot, so `BOOT_COMPLETED` is never delivered, and the recovery is the next
+    launch rather than the boot. Section 6's table is right about each path and silent about the two
+    together; the third recovery site is what covers it, at no cost, which is the argument that put
+    it there.
+- **R6** — the hand-started shade adopted at the on-instant: **taken 2026-09-05 on the phone**, and
+  it is the one reading the emulator could not finish, because the notification is the half that
+  belongs to the vendor. A shade started **by hand** at 20:03:02 under a 30-minute auto-off, a window
+  of 20:10 to 21:00, and the ongoing notification reading **"Until 20:32"** before the on-instant.
+  - **The intermediate hop fired early and refused**, which is section 4 working rather than failing:
+    at 20:09:18.946, forty-one seconds *before* the on-instant, `fired at ..., outside the window; too
+    late to open it`, and it re-armed for **the on-instant itself** — the `FINAL_HOP_MS` branch,
+    41,054 ms out.
+  - **The fire landed at 20:10:30.867**, 30.87 s past the on-instant against a window of 30.75 s.
+    The far end again, and a hair beyond it: three cells in section 1, this one, and the same habit.
+  - `scheduled shade up until 1788634800000` — **21:00:00**, so the deadline moved **outward** from
+    20:32, and the notification's sub-text moved with it to **"Until 21:00"** at the same moment.
+    That is [ADR-0012](adr/0012-one-deadline-monotone-except-at-a-start.md)'s one exception paired
+    with its obligation, discharged on the surface that stays readable under the shade.
+  - **One alarm afterwards**, `origWhen=2026-09-06 19:10:00` — tomorrow's hop. That is **R5's fire
+    row**, read here because a fire needs a window and this is the run that opened one.
+  - **One log line is imprecise, and the hop chain makes it the common case.** *"outside the window;
+    too late to open it"* describes a fire *after* a window closed, and every intermediate hop takes
+    that branch by arriving *early*. Both are `windowStart == null`, so the behaviour is right and
+    only the sentence is wrong. Left as an observation rather than fixed mid-reading, so that the
+    build the overnight run is taken on is the build the rest of E was taken on.
 - **R7** — the midnight crossing, on the device: -
 - **R8** — the API-33 emulator pass: **taken 2026-09-05**, `gloam-api33` headless
   (`-no-window -gpu swiftshader_indirect`), 1080x2400, and in **Polish**, so section 11's copy was
@@ -1772,7 +1825,22 @@ written on `ShadeService`'s `combine`.
   not suspend**; the same device runs 11 h realtime against 2.5 h uptime on battery. That is why the
   debug section grew a ten-minute deadline — two minutes is not long enough to unplug and let the
   SoC settle — and why every sleep-shaped reading in this phase has to be taken untethered.
-- **R11** — the reconcile paths, and Stop staying stopped: -
+- **R11** — the reconcile paths, and Stop staying stopped: **taken 2026-09-05 on the phone**, and
+  the reconcile is what carried every path the alarm did not.
+  - **A window that opened with nothing running.** Force-stopped at 19:35:29 with the on-instant at
+    19:40; at 19:41:07 the window had been open for 67 seconds with zero services and zero alarms.
+    The launcher tap logged `reconciled: window open since 1788630000000 and unspent, shade up`
+    — 1788630000000 is 19:40:00 — and raised it. This is section 1's third verdict in miniature: the
+    on-*edge* is what an alarm buys, and losing it is not losing the feature.
+  - **Again after a reboot that delivered nothing**, 19:53:42.468, same line, same shape. Two
+    different causes, one recovery.
+  - **Stop stays stopped.** Stop at 19:42, then `am force-stop`, then a relaunch **inside the same
+    window**: the alarm was re-armed and there was **no reconcile line at all**, with the service
+    count at zero. The marker had spent the night and the person's decision outlived the process that
+    took it. A *later* window still opens — the night is spent, the schedule is not.
+  - **Reboot restore is a different mechanism and both ran off one broadcast**: `GloamBoot: shade
+    restored, deadline=1788633600000` (20:40:00) put back a shade that was up when the phone went
+    down, while the schedule's collector armed beside it.
 
 ---
 

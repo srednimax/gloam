@@ -247,6 +247,14 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
       The twelve are the room. Recorded here rather than in `phase-2.md` so the question outlives
       the phase that raised it; the answer is a one-line change to `AutoOff.Default` or nothing.
+- [ ] **Put the two edges of an episode to the testers** (`PLAN.md` rule 5). *Raised by Phase 4's
+      section 3, and it is one question rather than two.* A shade the hand starts **inside** a window
+      is bounded by the window's end, and a shade that **ends** inside one — Stop at 01:00, or a
+      promised deadline expiring — spends that night, so opening the phone at 01:05 does not put the
+      shade back. Both edges err toward light and both are defensible the other way; the difference
+      only shows up in somebody who lives with it for a week, which is what the twelve are.
+      [ADR-0012](adr/0012-one-deadline-monotone-except-at-a-start.md) is the rule, and the answer is
+      a one-line change to `nightSpentBy` or nothing.
 - [ ] **Ultra dark has a ceiling the platform holds, and 2b has to price it before it starts.**
       *Found by Phase 3's R13, 2026-09-03.* An app overlay that **passes touches** may not obscure
       more than `maximum_obscuring_opacity_for_touch` — unset on the phone and on the API-33
@@ -385,6 +393,13 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
       with the `tools:node="remove"` surgery that used to hold it back.
       **The hazard is not gone with it, only this instance of it** — which is why the check is a
       standing one.
+      **Run again on the Phase 4 bundle, 2026-09-05: still six, still all accounted for**, none of
+      the five forbidden ones present, no `uses-feature`. That is worth a line because the phase that
+      adds a schedule is the one where a reader assumes a permission came with it. None did: an
+      inexact alarm needs none, and the battery-optimisation exemption is a hand-off to Settings
+      rather than the system dialog, which is what `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` would have
+      been for. **"No new permissions" is a claim to read off the artifact, not off the diff** — the
+      diff cannot see what a dependency merged in.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
       **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
       2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the

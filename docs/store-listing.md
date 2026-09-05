@@ -302,3 +302,41 @@ Ikonę aplikacji możesz też skierować na kompaktową wersję sterowania — w
 
 Powiadomienie mówi teraz również, kiedy suwak jasności telefonu jest wstrzymany, a jest przez cały czas przyciemniania.
 ```
+
+### 0.6.0 — it turns itself on and off
+
+Phase 4 in one release, and the note leads with the schedule because it is the only thing here a
+reader has been waiting for. **Two of the three other changes are named and one is not.** The
+screen-on fix is named because a user who met the defect would otherwise never learn it was theirs;
+the launcher default is named because their icon now does something different, and a change to what
+an icon does is not something to discover by accident. The icon itself gets four words — it is
+visible on their home screen the moment they update, so saying nothing would be odd, and saying more
+would be a designer talking to themselves.
+
+**The battery-optimisation ask is deliberately not in the note.** It is asked at the moment the
+schedule is switched on, on the screen that explains it, and a release note that mentions it out of
+that context reads as a warning about a feature nobody has tried yet.
+
+**English** — 472/500:
+
+```
+Gloam can now dim on a schedule. Pick the time it turns on and the time it turns off, and it does both by itself, every night — including windows that run across midnight.
+
+Tapping the icon now opens the small controls. The full app is one tap further in, and Settings can swap the two back.
+
+Fixed: with the phone asleep, the shade could stay up for up to a minute past the time it was meant to come down. It now goes as the screen comes on.
+
+And Gloam has a proper icon.
+```
+
+**Polish** — 488/500:
+
+```
+Gloam może teraz przyciemniać ekran według harmonogramu. Wybierz godzinę włączenia i wyłączenia, a zrobi jedno i drugie sam, każdej nocy — także gdy przedział przechodzi przez północ.
+
+Dotknięcie ikony otwiera teraz małe sterowanie. Pełna aplikacja jest o jedno dotknięcie dalej, a w Ustawieniach można to zamienić z powrotem.
+
+Poprawka: przy uśpionym telefonie zasłona mogła zostać nawet minutę dłużej, niż powinna. Teraz znika w chwili, gdy ekran się włącza.
+
+Gloam ma też własną ikonę.
+```

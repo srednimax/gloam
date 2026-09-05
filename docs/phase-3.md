@@ -281,6 +281,19 @@ that this one is safe to ship wrong: the preference is off by default, so the ar
 decision is the *lower*-risk of the two, and flipping the default later is a one-line change with no
 stored state behind it.
 
+**Correction, 2026-09-05 — the default is `true` from Phase 4 D, and the paragraph above is why it
+took a reading to move it.** Two arguments set it `false` and R9 (`phase-4.md`) answered both. *A
+first launch has to be the full app*: it still is, and not because of the default — the guard below
+returns to `MainActivity` whenever `canDrawShade()` or `escapeHatchLive()` is false, and on a genuine
+first run both are, measured on a `pm clear`ed install. *Shape iii costs a flash*: it does not,
+because `ControlsActivity` is translucent and floating and the system gives it
+`STARTING_WINDOW_TYPE_NONE`, so the bounce paints nothing at all. **The shape stands, the default
+does not** — the same correction R7 and R8 took, and it is a note rather than a rewrite because the
+argument above is what a later reader needs in order to see what the reading overturned. What is left
+of the question is about the *second* week of use rather than the first, so it stays a rule-5 item in
+`DOD.md`, with the caveat R9 added: only a tester who granted notifications is using the default at
+all.
+
 ### The guard, which is not polish
 
 ```kotlin
