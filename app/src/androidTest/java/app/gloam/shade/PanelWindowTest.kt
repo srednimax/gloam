@@ -71,8 +71,28 @@ class PanelWindowTest {
         // reconcile does.
         runBlocking { preferences.endShade(honouredAt = null) }
         context.stopShade()
+        awaitNoOverlayWindows()
         if (!overlayWasGranted) {
             shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
+        }
+    }
+
+    /**
+     * Block until neither of our overlay windows is left in the dump.
+     *
+     * `stopShade()` takes both windows down, but not synchronously: it stops the service, and the
+     * window manager removes the windows some time afterwards. Returning before that leaves the
+     * next test — this class's second one, or `ShadeWindowTest` — reading a dump that still holds
+     * this one's windows, and failing for the previous test's reasons.
+     *
+     * Best-effort rather than asserted, so a window that outlives its timeout does not fail the run
+     * from tear-down. The wait is the point; the guarantees belong to the tests.
+     */
+    private fun awaitNoOverlayWindows() {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (ourOverlayWindows().isEmpty()) return
+            Thread.sleep(POLL_MS)
         }
     }
 

@@ -75,8 +75,33 @@ class ShadeWindowTest {
     @After
     fun putTheDeviceBack() {
         context.stopShade()
+        awaitNoOverlayWindows()
         if (!overlayWasGranted) {
             shell("appops set $packageName SYSTEM_ALERT_WINDOW default")
+        }
+    }
+
+    /**
+     * Block until no `TYPE_APPLICATION_OVERLAY` window of ours is left in the dump.
+     *
+     * `stopShade()` is not synchronous with the screen: it stops the service, and the window
+     * manager removes the window some time afterwards. Returning from tear-down before that has
+     * happened leaves the *next* test polling a dump that still contains this one's windows — which
+     * is a test failing for the previous test's reasons, the hardest kind to read.
+     *
+     * Best-effort rather than asserted: a tear-down that fails the run for a window that outlived
+     * its timeout would replace a rare flake with a rarer, more confusing one. The wait is the
+     * point; the guarantee belongs to the assertions in the tests themselves.
+     */
+    private fun awaitNoOverlayWindows() {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            val ours =
+                shell("dumpsys window windows")
+                    .split("Window #")
+                    .any { packageName in it && "ty=APPLICATION_OVERLAY" in it }
+            if (!ours) return
+            Thread.sleep(POLL_MS)
         }
     }
 
@@ -87,9 +112,10 @@ class ShadeWindowTest {
         val window =
             awaitShadeWindow()
                 ?: throw AssertionError(
-                    "No APPLICATION_OVERLAY window for $packageName appeared within " +
-                        "${TIMEOUT_MS}ms of startShade(). The service never added its view, or " +
-                        "dumpsys no longer prints windows the way this test reads them.",
+                    "No full-screen ($SHADE_LAYOUT) APPLICATION_OVERLAY window for $packageName " +
+                        "appeared within ${TIMEOUT_MS}ms of startShade(). The service never added " +
+                        "its view, the shade stopped asking for MATCH_PARENT, or dumpsys no longer " +
+                        "prints windows the way this test reads them.",
                 )
 
         assertTrue(
@@ -123,17 +149,30 @@ class ShadeWindowTest {
     }
 
     /**
-     * The one `dumpsys window windows` block that is ours, or null.
+     * The `dumpsys window windows` block describing the **shade**, or null.
      *
      * The output is a sequence of `Window #N Window{…}` blocks, so splitting on that header is the
-     * whole of the parsing. Ours is identified by two things together — the package name *and*
-     * `ty=APPLICATION_OVERLAY` — because the app's own activity has windows in this dump too and
-     * asserting flags against one of those would pass while proving nothing.
+     * whole of the parsing. Ours is identified by three things together — the package name,
+     * `ty=APPLICATION_OVERLAY`, and the shade's own full-screen layout. The first two are because
+     * the app's activities have windows in this dump too and asserting flags against one of those
+     * would pass while proving nothing.
+     *
+     * **The third is not belt-and-braces, it is the whole correctness of this test now.** Since
+     * Phase 3b the panel is *also* `TYPE_APPLICATION_OVERLAY` from this same uid, and it
+     * deliberately does not carry `NOT_TOUCHABLE` — that is ADR-0011, not a defect. So "the first
+     * overlay window we own", which is what this used to take, can be the panel, and the assertion
+     * below then reports the panel's missing flag as the shade's. That failure has actually
+     * happened on a CI leg: `PanelWindowTest` sorts first, its teardown does not wait for the
+     * window manager to finish removing what it put up, and this test matched the outgoing panel.
+     *
+     * `fillxfill` is `MATCH_PARENT` x `MATCH_PARENT`, which only the shade asks for — the same
+     * discrimination `PanelWindowTest.OverlayWindow` already makes, and the reason a
+     * `MATCH_PARENT` in the panel's `LayoutParams` is a bug rather than a simplification.
      */
     private fun shadeWindowBlock(): String? =
         shell("dumpsys window windows")
             .split("Window #")
-            .firstOrNull { packageName in it && "ty=APPLICATION_OVERLAY" in it }
+            .firstOrNull { packageName in it && "ty=APPLICATION_OVERLAY" in it && SHADE_LAYOUT in it }
 
     /**
      * Run a shell command as the shell user and return everything it printed.
@@ -151,5 +190,8 @@ class ShadeWindowTest {
     private companion object {
         const val TIMEOUT_MS = 15_000L
         const val POLL_MS = 250L
+
+        /** `MATCH_PARENT` x `MATCH_PARENT` as `dumpsys` prints it. Only the shade asks for it. */
+        const val SHADE_LAYOUT = "fillxfill"
     }
 }
