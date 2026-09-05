@@ -206,6 +206,25 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!--
+            The nightly schedule's alarm lands here. **`exported="false"` and no `<intent-filter>`,
+            which is the opposite of the receiver above and for the opposite reason**: nothing but
+            this app's own `PendingIntent` — held by `AlarmManager` on our behalf — ever sends to it,
+            and a receiver that can raise a window over every other app should be reachable by
+            nothing else.
+
+            It starts a foreground service from the background like `BootReceiver` does, but it is
+            not one of the three broadcasts that are documented exemptions from the ban. What
+            licenses it is the user's battery-optimisation exemption putting Gloam on the power
+            allowlist — measured rather than assumed, in `docs/phase-4.md` section 1 — which is why
+            section 7 asks for that grant and `shade/ScheduleReceiver.kt` names the exception it
+            throws without it.
+        -->
+        <receiver
+            android:name=".shade.ScheduleReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 
 </manifest>

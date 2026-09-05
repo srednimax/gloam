@@ -1,15 +1,33 @@
 package app.gloam
 
 import android.app.Application
+import android.util.Log
 import app.gloam.data.AppPreferences
 import app.gloam.data.ThemeMode
+import app.gloam.shade.Schedule
+import app.gloam.shade.ShadeStart
+import app.gloam.shade.beginShadeAt
+import app.gloam.shade.canDrawShade
+import app.gloam.shade.startShade
+import app.gloam.shade.tightenToWindow
+import app.gloam.shade.windowStart
 import app.gloam.theme.applyThemeMode
+import app.gloam.work.armScheduleAlarm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
+import java.time.ZoneId
+
+/**
+ * The schedule's own tag, shared with `shade/ScheduleReceiver.kt` and `work/ScheduleAlarm.kt` so
+ * that `adb logcat -s GloamSchedule:*` shows the arm, the fire and the reconcile as one sequence.
+ */
+private const val TAG = "GloamSchedule"
 
 /**
  * Holds the one [AppContainer] for the process.
@@ -97,5 +115,74 @@ class MainApplication : Application() {
         preferences.launcherCompact
             .onEach { launcherCompact = it }
             .launchIn(applicationScope)
+
+        // **The schedule's one call site, and it covers three of the five ways an alarm is lost**
+        // (`docs/phase-4.md` section 6). An `AlarmManager` alarm is not durable: a reboot and an app
+        // update are `BootReceiver`'s, firing is the receiver's own re-arm, and the two left — the
+        // user editing the schedule, and a force-stop — are both here. The second costs no code at
+        // all, because a collector's first emission arrives on every process start, and a force-stop
+        // is followed by a process start or by nothing that matters.
+        //
+        // **In `MainApplication` rather than in a ViewModel, and that is not the house rule being
+        // bent.** `CLAUDE.md` says a `ViewModel` never holds a `Context` and that starting the
+        // service is therefore the screen's job — which would make arming the screen's job too.
+        // It works and it is wrong: the screen that wrote the preference can be gone before the
+        // write lands, and an alarm whose existence depends on somebody looking at a screen is not
+        // an alarm. The thing whose lifetime matches an alarm's is the process.
+        //
+        // Kotlin note: `distinctUntilChanged` on a data class compares by `equals`, so the three
+        // schedule keys re-emit only when the window itself changed — without it, every unrelated
+        // DataStore write (a dim level, a marker) would re-arm and reconcile. The nearest JS
+        // analogue is a selector that memoises on deep equality rather than on reference.
+        preferences.schedule
+            .distinctUntilChanged()
+            .onEach { schedule ->
+                armScheduleAlarm(schedule) // the alarm
+                preferences.tightenToWindow(schedule) // the deadline, forward only
+                reconcileWindow(schedule) // the night, if one is open and unspent
+            }.launchIn(applicationScope)
     }
+}
+
+/**
+ * Raise the shade if a window is open, has not been acted on, and nothing is up.
+ *
+ * **This is what stops a lost alarm from costing the whole night**, and it is why checkpoint A's
+ * verdict could only ever have vetoed one file rather than the feature: every recovery site arms
+ * `nextOn`, which is *strictly future*, so recovering the alarm after a force-stop at 21:50 arms it
+ * for tomorrow and tonight is skipped in silence while the screen still says the schedule is on.
+ * Losing the alarm and losing the night are different failures, and on HyperOS the second is the
+ * ordinary one — swiping Gloam out of recents force-stops it.
+ *
+ * **The marker is the whole of why this is safe.** The naive version — *window open, shade down,
+ * raise it* — breaks the Stop button: the user stops at 23:00 inside a 22:00-to-07:00 window and the
+ * next process start puts the shade straight back. Comparing against the on-instant already acted on
+ * tells *never opened this window* from *opened, and ended by the person*, so an episode that ends
+ * inside a window spends that night and Stop stays Stop until morning. `ShadeEnd` is the other half
+ * of that: `Reaped` is the one ending that leaves the marker alone.
+ *
+ * **The overlay refusal is [ScheduleReceiver]'s third refusal, here for the same reason** and not in
+ * section 6's sketch of this function: starting the service without the permission posts a *Screen
+ * dimmed* notification over an undimmed screen. It leaves the marker alone too, so a night refused
+ * for a missing permission is still reconcilable the moment the user grants it.
+ */
+private suspend fun MainApplication.reconcileWindow(schedule: Schedule) {
+    val now = System.currentTimeMillis()
+    val zone = ZoneId.systemDefault()
+
+    // Null is *outside the window*, and inside it this is the night's identity — constant across
+    // every minute of one window, which is what makes the comparison below stable.
+    val windowStart = schedule.windowStart(now, zone) ?: return
+
+    if (preferences.scheduleHonouredAt.first() == windowStart) return
+    if (preferences.shadeIntentNow().running) return
+    if (!canDrawShade()) {
+        Log.i(TAG, "window open since $windowStart, but no overlay permission")
+        return
+    }
+
+    preferences.beginShadeAt(ShadeStart.BySchedule, now, zone)
+    preferences.setScheduleHonouredAt(windowStart)
+    startShade()
+    Log.i(TAG, "reconciled: window open since $windowStart and unspent, shade up")
 }
