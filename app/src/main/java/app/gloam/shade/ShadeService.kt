@@ -260,6 +260,24 @@ class ShadeService : Service() {
     private var currentDeadline: Long? = null
 
     /**
+     * True from the moment this service has decided to stop, and it exists because of a platform
+     * rule rather than a preference of ours.
+     *
+     * The foreground notification belongs to the *service* only while the service is foreground:
+     * Android takes it down when the service goes. A `notify()` under the same id that lands after
+     * that moment is an ordinary notification again — and an ordinary `ongoing` notification with
+     * no service behind it is one nothing will ever remove, short of a force-stop. Measured on the
+     * phone in checkpoint E: the auto-off wrote its own deadline away, the write came back through
+     * [AppPreferences.shadeIntent] as a *changed* deadline, and [syncNotificationText] re-posted
+     * **263 ms after the shade was already down**, leaving "Screen dimmed" over a screen that was
+     * not, with a Stop action for a service that no longer existed.
+     *
+     * So the last write on the way down must not be announced. Reset in [onStartCommand], because
+     * a start command arriving at a service that was stopping means it lives after all.
+     */
+    private var stopping = false
+
+    /**
      * A screen coming on, as something [awaitDeadline] can wait on.
      *
      * **What it repairs, which is a defect and not a nicety.** The deadline loop re-reads the wall
@@ -434,6 +452,9 @@ class ShadeService : Service() {
                 // phone and is not timestamped, and logging is not developer *surface*, so it lives
                 // here rather than behind the debug seam.
                 Log.i(TAG, "auto-off fired ${-remaining}ms after the deadline")
+                // Before the write, not before `stopSelf`: the write is what emits, and the
+                // emission is what would re-post the notification into an orphan.
+                stopping = true
                 withContext(NonCancellable) { preferences.endShadeAt(ShadeEnd.ByDeadline) }
                 stopSelf()
                 return
@@ -454,6 +475,9 @@ class ShadeService : Service() {
             stopFromWithin()
             return START_NOT_STICKY
         }
+        // A service that was on its way out and is started again is not on its way out any more —
+        // `stopSelf` is a request Android drops the moment a new start command arrives.
+        stopping = false
         // Unconditionally, and before the panel branch below: `startForegroundService` carries a
         // hard contract — call `startForeground` within a few seconds or Android kills the process
         // — and a summon delivered to a service the ROM had killed and restarted arrives here too.
@@ -476,6 +500,7 @@ class ShadeService : Service() {
      */
     private fun stopFromWithin() {
         scope.launch {
+            stopping = true
             preferences.endShadeAt(ShadeEnd.ByHand)
             stopSelf()
         }
@@ -490,6 +515,12 @@ class ShadeService : Service() {
         // of the panel's three ways out, and the only one the user does not ask for.
         removePanelWindow()
         removeShadeWindow()
+        // Beside [stopping] rather than instead of it: the flag stops a re-post being made, and
+        // this removes one that was already made. Android removes the notification with the service
+        // by itself in the ordinary case, so this costs one binder call to make the invariant
+        // local — the notification does not outlive the service — rather than something to be
+        // inferred from the framework's timing.
+        getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 
@@ -607,6 +638,7 @@ class ShadeService : Service() {
             // reason to stay alive.
             if (!state.running) {
                 Log.i(TAG, "summoned with the shade stopped; nothing to open over")
+                stopping = true
                 stopSelf()
                 return@launch
             }
@@ -928,10 +960,16 @@ class ShadeService : Service() {
      *
      * `notify` rather than a second `startForeground`: this notification is already the foreground
      * one, and posting under the same id replaces it in place rather than adding a second row.
-     * There is no transition to catch on the way down through [removeShadeWindow] — it runs from
-     * `onDestroy`, where the notification is going away with the service.
+     *
+     * **There is a transition on the way down, and it was measured rather than reasoned about.**
+     * This comment used to say there was none — that [removeShadeWindow] runs from `onDestroy`,
+     * where the notification goes with the service. What it missed is that the deadline is a
+     * *preference*: the write that ends the shade emits, the emission sets [currentDeadline] to
+     * null, and this function is called from that emission while the service is already on its way
+     * out. [stopping] is what closes it.
      */
     private fun syncNotificationText() {
+        if (stopping) return
         val facts = NotificationFacts(backlightOverrideLive(), currentDeadline)
         if (facts == announced) return
         announced = facts
