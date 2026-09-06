@@ -2,31 +2,25 @@ package app.gloam
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Gravity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.gloam.shade.PANEL_BOTTOM_MARGIN_DP
+import app.gloam.shade.PANEL_SIDE_MARGIN_DP
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
 import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
 import app.gloam.theme.AppTheme
-import app.gloam.theme.Spacing
 import app.gloam.ui.dim.CompactControls
 import app.gloam.ui.dim.DimViewModel
-import app.gloam.work.isIgnoringBatteryOptimisations
 
 /**
  * **The compact controls: the same sliders in a floating window, for the shade that is already up.**
@@ -73,30 +67,36 @@ class ControlsActivity : AppCompatActivity() {
 
         val app = application as MainApplication
 
+        // **The same corner the panel uses, for the same reason.** These two surfaces are one thing
+        // to the user — the notification opens whichever the shade's state allows — so the bar has
+        // to be in the same place in both. A floating window's `x`/`y` are offsets from the edges
+        // its gravity names, not absolute coordinates.
+        val density = resources.displayMetrics.density
+        window.setGravity(Gravity.BOTTOM or Gravity.END)
+        window.attributes =
+            window.attributes.apply {
+                x = (PANEL_SIDE_MARGIN_DP * density).toInt()
+                y = (PANEL_BOTTOM_MARGIN_DP * density).toInt()
+            }
+
         setContent {
             val materialYou by app.preferences.materialYou.collectAsStateWithLifecycle(initialValue = false)
             val themeMode by
                 app.preferences.themeMode.collectAsStateWithLifecycle(initialValue = app.startupThemeMode)
 
             AppTheme(themeMode = themeMode, dynamicColor = materialYou) {
-                // `fillMaxWidth` and **not** `fillMaxSize`: the window's height is wrap-content, so
-                // filling it would grow the dialog to whatever the window manager allows and hand
-                // back a full screen with rounded corners.
-                // The same `extraLarge` radius the panel uses, so the two surfaces the user meets
-                // as one thing are shaped alike. It needs `Theme.App.Controls` to have made the
-                // window background transparent — a shape here over an opaque window is a rounded
-                // card with square corners painted behind it.
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.background,
-                    shape = MaterialTheme.shapes.extraLarge,
-                ) {
-                    ControlsBody(
-                        onStart = ::startShade,
-                        onStop = ::stopShade,
-                        onOpenApp = ::openFullApp,
-                    )
-                }
+                // **No `Surface` behind it.** The edge bar paints its own shape on a window
+                // `Theme.App.Controls` already made transparent; a surface here would be a
+                // rectangle of theme colour around a control designed to float. `fillMaxSize` is
+                // safe for the same reason it was not before: the window is floating and wrapped to
+                // the size the theme's minimum-width items allow, and what fills it is a
+                // transparent box that aligns the bar into its bottom corner.
+                ControlsBody(
+                    onStart = ::startShade,
+                    onStop = ::stopShade,
+                    onOpenApp = ::openFullApp,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }
@@ -175,30 +175,16 @@ private fun ControlsBody(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onOpenApp: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: DimViewModel = viewModel(factory = DimViewModel.Factory),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Read once rather than on every resume, unlike `DimScreen`'s copy of the same question — and
-    // the difference is this window's lifetime rather than a different opinion about caching. The
-    // host is `noHistory`, so it is built fresh on every summon and never survives a trip to the
-    // Settings screen that could change the answer: there is no resume here for a stale value to
-    // outlive.
-    val context = LocalContext.current
-    val scheduleAtRisk = remember(context) { !context.isIgnoringBatteryOptimisations() }
-
-    // Scrollable because the window's height is bounded by the display and the content is not: the
-    // timer section's five chips wrap in a narrow window (R5), and a clipped safety control is worse
-    // than a scrolled one. Cheaper than it was — only one section is ever open at a time — but the
-    // bound is the display's, not ours, so it stays.
     CompactControls(
         dimLevel = state.dimLevel,
         warmth = state.warmth,
         running = state.running,
         autoOff = state.autoOff,
-        offAtMillis = state.offAtMillis,
-        schedule = state.schedule,
-        scheduleAtRisk = scheduleAtRisk,
         onDimLevel = viewModel::setDimLevel,
         onWarmth = viewModel::setWarmth,
         onAutoOff = viewModel::setAutoOff,
@@ -212,9 +198,6 @@ private fun ControlsBody(
             }
         },
         onOpenApp = onOpenApp,
-        modifier =
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = Spacing.base),
+        modifier = modifier,
     )
 }

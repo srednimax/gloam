@@ -3,18 +3,12 @@ package app.gloam.ui.dim
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -36,7 +29,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
-import app.gloam.shade.Schedule
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
 import app.gloam.shade.escapeHatchLive
@@ -312,12 +304,9 @@ fun DimScreen(
             DimControls(
                 dimLevel = state.dimLevel,
                 warmth = state.warmth,
-                lowerBacklight = state.lowerBacklight,
-                backlightAvailable = backlightAvailable,
                 running = state.running,
                 onDimLevel = viewModel::setDimLevel,
                 onWarmth = viewModel::setWarmth,
-                onLowerBacklight = viewModel::setLowerBacklight,
                 onToggleRunning = {
                     when {
                         state.running -> {
@@ -334,74 +323,32 @@ fun DimScreen(
                 },
             )
 
-            // A second composable rather than a block inside the first, so that whether the deadline
-            // travels to a floating host stays a one-line decision *per host* — the question Phase 2
-            // handed forward and the twelve answer.
-            AutoOffControls(
+            // **Everything that is not the dim level, in one card.** The redesign's column takes
+            // the height two sliders and a hint used to have, so the backlight switch moved in here
+            // beside the auto-off chips, and the schedule keeps the summary row it had — stating the
+            // window rather than the setting, so somebody who set a schedule three weeks ago and
+            // forgot finds out on the screen they already open rather than two taps into Settings
+            // (`docs/phase-4.md` §10).
+            AutoOffCard(
                 autoOff = state.autoOff,
                 offAtMillis = state.offAtMillis,
                 running = state.running,
                 onAutoOff = viewModel::setAutoOff,
-            )
-
-            // **A summary row, not a section**, and it is under the auto-off chips because those are
-            // the app's other control over when the shade ends. It states the window rather than the
-            // setting, so somebody who set a schedule three weeks ago and forgot finds out on the
-            // screen they already open — which is the whole reason it is here and not two taps into
-            // Settings (`docs/phase-4.md` §10).
-            ScheduleRow(
+                lowerBacklight = state.lowerBacklight,
+                backlightAvailable = backlightAvailable,
+                onLowerBacklight = viewModel::setLowerBacklight,
                 schedule = state.schedule,
-                atRisk = !exempt,
-                onClick = onOpenSchedule,
+                scheduleAtRisk = !exempt,
+                onOpenSchedule = onOpenSchedule,
+                modifier =
+                    Modifier.padding(
+                        start = Spacing.base,
+                        end = Spacing.base,
+                        top = Spacing.section,
+                        bottom = Spacing.section,
+                    ),
             )
         }
-    }
-}
-
-/**
- * The one line the dim screen gives the schedule, and the way to the screen that owns it.
- *
- * The trailing chevron rather than a switch: this row reports, and everything that *changes* a
- * schedule is two time pickers and a toggle that would not fit here in any language.
- */
-@Composable
-private fun ScheduleRow(
-    schedule: Schedule,
-    atRisk: Boolean,
-    onClick: () -> Unit,
-) {
-    val summary = rememberScheduleSummary(schedule, atRisk)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = Spacing.base, vertical = Spacing.snug),
-    ) {
-        // Null when the text is a whole sentence that names the schedule itself — the at-risk line —
-        // because a row drawing both would say "Schedule" twice.
-        if (summary.title != null) {
-            Text(
-                text = summary.title,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Text(text = summary.text, style = MaterialTheme.typography.bodyLarge)
-        } else {
-            Text(
-                text = summary.text,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            // Null rather than a description: the row's own text is its name, and a screen reader
-            // announcing "chevron" after it adds nothing a user can act on.
-            contentDescription = null,
-        )
     }
 }
 

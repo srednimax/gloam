@@ -153,7 +153,15 @@ class PanelWindowTest {
         assertEquals(
             "The panel's width did not come from panelWidthPx(), so the swept bound is not the " +
                 "one the window manager got",
-            panelWidthPx(displayWidth),
+            // Closed: a summon opens the bar with no disclosure showing, and the width the service
+            // asks for is the bar's own. What the *open* states widen to is swept on the JVM by
+            // `PanelWidthTest`; what this reads off the phone is that the number in the window
+            // manager came from that function rather than from a layout.
+            panelWidthPx(
+                displayWidthPx = displayWidth,
+                density = context.resources.displayMetrics.density,
+                sectionOpen = false,
+            ),
             requested,
         )
     }

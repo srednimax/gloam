@@ -147,6 +147,12 @@ fun WarningBanner(
  * which is the reason this is a `Row` with a `clickable` on it rather than a `Switch` with a label
  * beside it. Settings owned it while it had one caller; the schedule's own toggle is the second, and
  * two hand-built versions of this row is how the padding drifts (see [DetailScaffold]).
+ *
+ * `enabled = false` is for the third caller, the dim screen's backlight switch on a device that
+ * cannot honour it: the row is drawn and inert rather than absent, because a control that is simply
+ * missing leaves the user unable to tell Gloam from a Gloam that behaves differently on their phone
+ * than on someone else's. It disables the row's own `clickable` as well as the switch — a row that
+ * still took taps and did nothing would be worse than one that says no.
  */
 @Composable
 fun SwitchRow(
@@ -155,12 +161,13 @@ fun SwitchRow(
     checked: Boolean,
     onChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable { onChange(!checked) }
+                .clickable(enabled = enabled) { onChange(!checked) }
                 .padding(horizontal = Spacing.base, vertical = Spacing.snug),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -172,7 +179,7 @@ fun SwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 

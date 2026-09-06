@@ -1,26 +1,30 @@
 package app.gloam.ui.dim
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,20 +32,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import app.gloam.R
 import app.gloam.shade.AutoOff
-import app.gloam.shade.Schedule
 import app.gloam.theme.Spacing
+import kotlin.math.roundToInt
 
 /**
  * Which disclosure is open, if any — **one at a time, and that is a size bound rather than taste.**
  *
- * Both compact hosts are windows sized to their own content: the panel's is `WRAP_CONTENT` in
- * height, and the compact host's dialog grows until the display stops it. Two sections open at once
- * is a window a third taller than the design, over somebody else's app, at 1.59 nits. One at a time
- * makes the tallest possible state something that can be reasoned about instead of measured.
+ * Both compact hosts are windows sized to their own content, and the panel's is a *touchable* window
+ * over somebody else's app: every pixel it claims is a pixel of the app underneath that stops
+ * answering to a finger (ADR-0011). Two sections open at once is a window half again as wide as the
+ * design, at 1.59 nits, blocking touches nobody can see it blocking. One at a time makes the widest
+ * possible state a number the window can be *added with* rather than one that has to be measured.
  *
  * Kotlin note for a JS reader: an `enum class` used purely as a closed set of states — the
  * discriminated union you would write as `'none' | 'timer' | 'warmth'`, except the compiler checks
@@ -51,16 +64,6 @@ private enum class CompactSection {
     None,
     Timer,
     Warmth,
-
-    /**
-     * **Read-only, and that is the panel's constraint rather than a size one.** A Material 3
-     * `TimePicker` in a `Dialog` needs an Activity's window token and `PanelWindow` has no Activity
-     * under it; `TimeInput`'s fields need an IME, which `PANEL_WINDOW_FLAGS`' `FLAG_NOT_FOCUSABLE`
-     * refuses by design and for the shade's own reason. An inline dial would work in both — and a
-     * dial dragged at 1.59 nits, to set a time that is set once and read often, is the wrong trade.
-     * The case this section exists for is a **read**: *did I leave a schedule on?*
-     */
-    Schedule,
 }
 
 /** Tapping the open section's own button closes it; tapping another's swaps to it. */
@@ -68,46 +71,46 @@ private fun CompactSection.toggling(target: CompactSection): CompactSection =
     if (this == target) CompactSection.None else target
 
 /**
- * **The controls as they are met in the dark: one bar, and a row of buttons under it.**
+ * **The controls as they are met in the dark: an edge bar under the thumb, and two buttons under
+ * it.**
  *
- * The shared body of both compact surfaces — `ControlsActivity`'s floating dialog *below* the shade
- * and `PanelWindow`'s overlay *above* it. `DimControls` remains the full screen's; this is not a
- * smaller version of it but a different chrome around the same two sliders (see [DimLevelSlider]),
- * which is the seam that lets a change to what dim *means* still land once.
+ * The shared body of both compact surfaces — `ControlsActivity`'s floating window *below* the shade
+ * and `PanelWindow`'s overlay *above* it. It is not a smaller [DimControls]; it is a different
+ * chrome around the same dim level, which is the seam that lets a change to what dim *means* still
+ * land once. What both hosts now draw is the design's edge bar (4a / 6b), replacing the full-width
+ * sheet that came before it.
  *
- * ## What is here, and the rule that decides it
+ * ## Why a bar at the edge rather than a sheet across the bottom
  *
- * A dim bar with no percentage over it, then timer / start-stop / open-app, then a warmth
- * disclosure. **Everything else is the full app's.** The backlight switch is the visible casualty
- * and it is the right one: it is a setting, chosen once, and the symptom it explains — a system
- * brightness slider that moves and does nothing — is now said on the notification instead, which is
- * the surface that is already legible while the shade is up. A surface reached with one tap in the
- * dark earns its value by *not* accumulating, and "settings live in the full app" is the only
- * version of that rule which survives the next feature wanting a row here.
+ * The sheet was as wide as the display, which on the panel means a touchable window as wide as the
+ * display: nothing underneath it answered a finger. The bar is 84dp and anchored to one side, so
+ * what it blocks is a strip rather than a band, and the thumb that reaches it does not have to
+ * travel to the middle of the screen to find it.
  *
- * ## No percentage, deliberately
+ * ## The three gestures, and why two of them need a rule
  *
- * A numeral inside or above the bar was the alternative. Inside is unreadable where this lives: the
- * filled and unfilled halves of the track pass under the digits, and both surfaces sit at a couple
- * of nits. Above it costs a line of height to say what the fill already shows. The number is worth
- * having when you are choosing a value, which is the full screen's job, not when you are nudging one.
+ * The bar's body sets the level wherever it is touched. The **foot band** (run/stop) and the **pip
+ * row** (open the full screen) are tap targets inside that same surface, so each is a
+ * [tapOrDragZone]: press and release does its own thing, press and slide more than
+ * [BAR_TAP_SLOP_DP] becomes a level drag on the same track. Without that rule the top and bottom of
+ * the bar would silently swallow drags that start inside them, which is exactly where a thumb lands.
  *
- * ## The timer is a disclosure, not a dialog
+ * ## What is deliberately not here
  *
- * Tapping the clock expands the presets in place. A modal was the first shape and it does not
- * survive the panel: an overlay window has no Activity to host a `Dialog`, so "show a modal" would
- * have meant a real dialog in one host and a hand-rolled scrim in the other — one design, two
- * implementations, and the harder of them in the window that must never be `MATCH_PARENT`. Expanding
- * in place is one mechanism in both, and it is the same one the warmth chevron uses.
+ * The schedule, the backlight switch and the deadline read-out. This surface is for the level, and
+ * the full screen is one tap on the pips away — a surface reached in the dark earns its value by
+ * *not* accumulating rows.
  *
+ * @param onSectionOpen fires when a disclosure opens or closes, because in the panel the window's
+ *   *width* is the safety bound and a section opening is the only thing that changes what it needs.
+ *   The Activity host ignores it: its window is laid out by the window manager around its content.
  * @param onClose the panel's way out, and **`null` in the compact host, which has no equivalent.**
  *   Closing an Activity is the system's job — the back gesture does it — but the panel carries
  *   `FLAG_NOT_FOCUSABLE`, so the Back key never reaches it and this button plus the idle timeout are
- *   its only exits that do not also take the shade down. A trailing icon rather than a fifth slot
- *   with its own meaning: it is the same *Close controls* the panel has always had.
- * @param onOpenApp the cog. Both hosts route it to the full app rather than to a settings screen —
- *   that is where Settings is, and it is also the only way to reach the explainer, the support
- *   screen and everything this surface deliberately does not carry.
+ *   its only exits that do not also take the shade down.
+ * @param onOpenApp the pips, and the long press on the foot band. Both hosts route it to the full
+ *   app rather than to a settings screen — that is where Settings is, and it is also the only way to
+ *   reach the explainer, the schedule and everything this surface deliberately does not carry.
  */
 @Composable
 fun CompactControls(
@@ -115,260 +118,411 @@ fun CompactControls(
     warmth: Int,
     running: Boolean,
     autoOff: AutoOff,
-    offAtMillis: Long?,
-    schedule: Schedule,
-    scheduleAtRisk: Boolean,
     onDimLevel: (Int) -> Unit,
     onWarmth: (Int) -> Unit,
     onAutoOff: (AutoOff) -> Unit,
     onToggleRunning: () -> Unit,
     onOpenApp: () -> Unit,
     modifier: Modifier = Modifier,
+    onSectionOpen: (Boolean) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
     // Not hoisted and not persisted: a disclosure is about the last few seconds, not about the user.
-    // Both hosts are fresh per summon anyway — the compact host is `noHistory` and the panel builds a
-    // new `PanelHost` each time — so "collapsed" is what every summon starts from by construction.
+    // Both hosts are fresh per summon anyway — the compact host is `noHistory` and the panel builds
+    // a new `PanelHost` each time — so "closed" is what every summon starts from by construction.
     //
     // Kotlin note: `by` delegation on `mutableStateOf` is `useState` with the setter hidden behind
     // assignment — `section = …` is the setter call, and reading `section` is what subscribes this
     // composable to it.
     var section by remember { mutableStateOf(CompactSection.None) }
 
-    Column(modifier = modifier) {
-        DimLevelSlider(
-            dimLevel = dimLevel,
-            onDimLevel = onDimLevel,
-            modifier = Modifier.padding(horizontal = Spacing.base),
-        )
+    fun show(target: CompactSection) {
+        section = section.toggling(target)
+        onSectionOpen(section != CompactSection.None)
+    }
 
-        // **The three action buttons are centred as a group, and neither edge is one of them.** With
-        // `SpaceEvenly` over all four the start/stop button drifted off-centre in the panel and sat
-        // centred in the compact host — the same control in two places on two surfaces the user
-        // meets as one thing. The weighted boxes pin the trio to the middle of the window whether or
-        // not there is a close button, so the toggle is *the middle icon* in both hosts and the one
-        // that closes the window stays out at the edge where a dismissal belongs.
-        //
-        // **The schedule took the leading edge for exactly that reason.** It is a fourth icon, and
-        // dropping it into the trio would have made the toggle the second of four — so the two
-        // things that are not actions live at the two edges, one reporting a fact and one dismissing
-        // the window, and the centre stays the three controls it was measured as.
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.tight),
+    // **The bar's height is measured rather than fixed.** 330dp is the design's number for a phone
+    // held upright; the same window in landscape has barely more height than that in total, and a
+    // bar that does not fit is a bar whose foot band — the control that stops the dimming — is off
+    // the bottom of the screen. `BoxWithConstraints` is the one composable that can read what its
+    // parent is offering, which in both hosts is the display.
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
+        // `hasBoundedHeight` rather than a comparison against `Dp.Infinity`: an unbounded parent —
+        // a scrolling column, or a measure pass before the window has been given a size — reports
+        // no maximum at all, and the design's own height is the right answer there.
+        val barHeight =
+            barHeightDp(
+                availableHeightDp = if (constraints.hasBoundedHeight) maxHeight.value else BAR_HEIGHT_DP,
+                // The panel's close button is a third row under the bar, and it is 62dp the bar
+                // does not get. The host that has a back gesture passes no `onClose` and keeps them.
+                buttons = if (onClose != null) 3 else 2,
+            ).dp
+
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(Spacing.tight),
         ) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                IconButton(onClick = { section = section.toggling(CompactSection.Schedule) }) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = stringResource(R.string.dim_schedule_row),
-                    )
-                }
-            }
-
+            // The bar keeps the end of the row whether or not a section is open, so it never moves out
+            // from under the thumb. A section takes the room to its left, which is room the window was
+            // widened for.
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.snug),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
+                verticalAlignment = Alignment.Bottom,
             ) {
-                IconButton(onClick = { section = section.toggling(CompactSection.Timer) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_timer),
-                        // The section header's own words, so the button and what it opens agree.
-                        // Icon buttons have no visible label, so this is the only name a screen
-                        // reader gets.
-                        contentDescription = stringResource(R.string.dim_auto_off_label),
-                    )
+                when (section) {
+                    CompactSection.Warmth ->
+                        WarmthSection(warmth = warmth, onWarmth = onWarmth)
+                    CompactSection.Timer ->
+                        TimerSection(autoOff = autoOff, onAutoOff = onAutoOff)
+                    CompactSection.None -> Unit
                 }
 
-                // Filled, and the only filled control here: it is the one button whose tap changes
-                // what the screen looks like rather than what this window shows.
-                // `FilledIconToggleButton` also carries its own state in its container colour, which
-                // matters where the glyph itself may be the only thing a half-adapted eye resolves.
-                FilledIconToggleButton(checked = running, onCheckedChange = { onToggleRunning() }) {
-                    if (running) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_stop),
-                            contentDescription = stringResource(R.string.dim_stop),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.dim_start),
-                        )
-                    }
-                }
-
-                IconButton(onClick = onOpenApp) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.controls_open_app),
-                    )
-                }
-            }
-
-            // Kotlin note: a nullable function type is the parameter *and* the feature flag. There is
-            // no separate `showClose` boolean to disagree with it — a host that passes no way to
-            // close cannot render a button that would call nothing. The `Box` is claimed either way,
-            // because it is what balances the spacer on the left.
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                if (onClose != null) {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.panel_close),
-                        )
-                    }
-                }
-            }
-        }
-
-        when (section) {
-            CompactSection.Timer ->
-                TimerSection(
-                    autoOff = autoOff,
-                    offAtMillis = offAtMillis,
+                EdgeBar(
+                    dimLevel = dimLevel,
                     running = running,
-                    onAutoOff = onAutoOff,
+                    barHeight = barHeight,
+                    onDimLevel = onDimLevel,
+                    onToggleRunning = onToggleRunning,
+                    onOpenApp = onOpenApp,
                 )
-            CompactSection.Warmth ->
-                WarmthSlider(
-                    warmth = warmth,
-                    onWarmth = onWarmth,
-                    modifier = Modifier.padding(horizontal = Spacing.base),
-                )
-            CompactSection.Schedule ->
-                ScheduleSection(schedule = schedule, atRisk = scheduleAtRisk)
-            CompactSection.None -> Unit
-        }
+            }
 
-        // The chevron row is always present, below whatever is expanded, so its position does not
-        // move when a section opens above it. Text rather than an icon because warmth has no
-        // conventional glyph and the nearest ones are wrong: a sun means *brightness*, which is the
-        // other mechanism entirely (CONTEXT.md), and putting it here would name the thing Gloam is
-        // most often mistaken for.
-        TextButton(
-            onClick = { section = section.toggling(CompactSection.Warmth) },
-            modifier = Modifier.padding(horizontal = Spacing.tight),
-        ) {
-            Text(stringResource(R.string.dim_warmth_label))
-            Icon(
-                imageVector =
-                    if (section == CompactSection.Warmth) {
-                        Icons.Default.KeyboardArrowUp
-                    } else {
-                        Icons.Default.KeyboardArrowDown
-                    },
-                // Null rather than a description: the `Text` beside it in the same button is already
-                // the button's name, and a second one would have a screen reader say it twice.
-                contentDescription = null,
-            )
+            // Centred on the bar rather than on the group: the buttons belong to the bar, and a group
+            // that grows to the left would otherwise drag them away from it when a section opens.
+            Box(modifier = Modifier.width(BAR_WIDTH_DP.dp), contentAlignment = Alignment.Center) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.tight)) {
+                    CompactIconButton(
+                        onClick = { show(CompactSection.Warmth) },
+                        selected = section == CompactSection.Warmth,
+                    ) {
+                        // The glyph is the way out of the section it opened, which is why it changes:
+                        // the button is in the same place either way, and a second tap on a sun that
+                        // still says "open me" reads as a control that did not take.
+                        if (section == CompactSection.Warmth) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.dim_warmth_label),
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_warmth),
+                                contentDescription = stringResource(R.string.dim_warmth_label),
+                            )
+                        }
+                    }
+                    CompactIconButton(
+                        onClick = { show(CompactSection.Timer) },
+                        selected = section == CompactSection.Timer,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_timer),
+                            // The section header's own words, so the button and what it opens agree.
+                            // Icon buttons have no visible label, so this is the only name a screen
+                            // reader gets.
+                            contentDescription = stringResource(R.string.dim_auto_off_label),
+                        )
+                    }
+                    if (onClose != null) {
+                        CompactIconButton(onClick = onClose, selected = false) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.panel_close),
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 /**
- * The auto-off presets, short.
+ * The bar: a column of light with a shade over it, a foot band that runs and stops it, and three
+ * pips at the top that are the way back to the whole app.
  *
- * `AutoOffControls`' chips say *After 30 minutes*; R5 read five of those wrapping in a window this
- * wide, and these two surfaces are narrower still. Same five values, same setter — only the labels
- * are different, so a value added to [AutoOff] still appears in every host without anyone
- * remembering to come here.
+ * **The draggable track is not the whole bar.** The foot band's 72dp are outside it, so the level a
+ * finger means is measured against [barTrackHeightDp] — the part above the band — and the band's own
+ * drags are offset into that same track by the height they sit below it.
+ */
+@Composable
+private fun EdgeBar(
+    dimLevel: Int,
+    running: Boolean,
+    barHeight: Dp,
+    onDimLevel: (Int) -> Unit,
+    onToggleRunning: () -> Unit,
+    onOpenApp: () -> Unit,
+) {
+    val colors = columnColors()
+    val trackHeight = barTrackHeightDp(barHeight.value).dp
+    val density = LocalDensity.current
+    val trackPx = with(density) { trackHeight.toPx() }
+    val slopPx = with(density) { BAR_TAP_SLOP_DP.dp.toPx() }
+    val covered = trackHeight * (dimLevel.coerceIn(0, 100) / 100f)
+    val openApp = stringResource(R.string.controls_open_app)
+
+    ShadeColumn(
+        level = dimLevel,
+        width = BAR_WIDTH_DP.dp,
+        height = barHeight,
+        corner = BAR_RADIUS_DP.dp,
+        handleWidth = BAR_HANDLE_WIDTH_DP.dp,
+        trackHeight = trackHeight,
+        colors = colors,
+        // `requireUnconsumed`: the pip row and the foot band consume their own presses, and without
+        // this the bar underneath would *also* read them as a level being set — a tap on Stop would
+        // slam the dim level to 100 on its way through.
+        modifier = Modifier.levelDrag(trackHeightPx = trackPx, onLevel = onDimLevel, requireUnconsumed = true),
+    ) {
+        BarValue(dimLevel = dimLevel, covered = covered, colors = colors)
+
+        PipRow(
+            covered = covered,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(BAR_PIP_ROW_DP.dp)
+                    // Three dots have nothing for a screen reader to read, and this is the only
+                    // route from the panel to the rest of the app — so the zone carries the name
+                    // and the role the pips cannot.
+                    .semantics {
+                        contentDescription = openApp
+                        role = Role.Button
+                    }.tapOrDragZone(
+                        trackHeightPx = trackPx,
+                        topOffsetPx = 0f,
+                        slopPx = slopPx,
+                        onTap = onOpenApp,
+                        onLevel = onDimLevel,
+                    ),
+        )
+
+        FootBand(
+            running = running,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(BAR_FOOT_HEIGHT_DP.dp)
+                    .tapOrDragZone(
+                        trackHeightPx = trackPx,
+                        // The band begins where the track ends, so a finger at its top edge means
+                        // "fully covered" and one dragged upward from it walks back down the track.
+                        topOffsetPx = trackPx,
+                        slopPx = slopPx,
+                        onTap = onToggleRunning,
+                        onLevel = onDimLevel,
+                        onLongPress = onOpenApp,
+                    ),
+        )
+    }
+}
+
+/**
+ * The percentage, riding the shade edge — **never half-covered.**
  *
- * **The chips do not close the section.** Staying open is what lets the *turns off at* line below
- * them redraw under the finger that just tapped — which is the only confirmation this surface gives
- * that anything happened.
+ * It sits above the edge in light ink once there is shade to sit on, and below it on the bare plate
+ * in dark ink before that, so it needs no scrim and stays legible at every level. The threshold is
+ * higher here than the bare arithmetic would need because the pip row owns the top 40dp: flipping at
+ * 48dp would print the number over the pips.
+ */
+@Composable
+private fun BoxScope.BarValue(
+    dimLevel: Int,
+    covered: Dp,
+    colors: ColumnColors,
+) {
+    val density = LocalDensity.current
+    val placement =
+        with(density) {
+            valuePlacement(
+                coveredPx = covered.toPx(),
+                flipPx = BAR_VALUE_FLIP_DP.dp.toPx(),
+                abovePx = BAR_VALUE_ABOVE_DP.dp.toPx(),
+                belowPx = BAR_VALUE_BELOW_DP.dp.toPx(),
+            )
+        }
+    val ink = if (placement.onShade) colors.shadeInk else colors.plateInk
+
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier =
+            Modifier
+                .align(Alignment.TopCenter)
+                .offset { IntOffset(x = 0, y = placement.topPx.roundToInt()) },
+    ) {
+        Text(
+            text = stringResource(R.string.dim_level_number, dimLevel),
+            style = MaterialTheme.typography.headlineSmall,
+            color = ink,
+        )
+        Text(
+            text = stringResource(R.string.dim_level_percent),
+            style = MaterialTheme.typography.labelMedium,
+            color = ink.copy(alpha = 0.75f),
+        )
+    }
+}
+
+/**
+ * Three pips at the top of the bar: **the route to the full screen, inside the control rather than
+ * beside it.**
+ *
+ * A third button would have been the obvious alternative and it is the wrong one — it grows the
+ * group downward, away from the thumb, for something used once a session. The pips read as a handle,
+ * which is what they are, and their ink flips across the shade edge the way the percentage does at
+ * a lower weight, because they name a gesture rather than carrying a value.
+ */
+@Composable
+private fun PipRow(
+    covered: Dp,
+    colors: ColumnColors,
+    modifier: Modifier = Modifier,
+) {
+    val onShade = covered >= (BAR_PIP_ROW_DP / 2).dp
+    val ink =
+        if (onShade) colors.shadeInk.copy(alpha = 0.7f) else colors.plateInk.copy(alpha = 0.55f)
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            repeat(3) {
+                Box(modifier = Modifier.size(5.dp).background(ink, RoundedCornerShape(percent = 50)))
+            }
+        }
+    }
+}
+
+/**
+ * Run and stop, at the foot of the bar and **opaque at every dim level.**
+ *
+ * It is the one control here whose contrast cannot be allowed to follow the shade, because it is the
+ * control that ends the shade. 72dp tall for the same reason: it is the target somebody finds
+ * without looking.
+ */
+@Composable
+private fun FootBand(
+    running: Boolean,
+    colors: ColumnColors,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.background(colors.foot), contentAlignment = Alignment.Center) {
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colors.footBorder),
+        )
+        if (running) {
+            Icon(
+                painter = painterResource(R.drawable.ic_stop),
+                contentDescription = stringResource(R.string.dim_stop),
+                tint = colors.plateInk,
+                modifier = Modifier.size(30.dp),
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = stringResource(R.string.dim_start),
+                tint = colors.plateInk,
+                modifier = Modifier.size(30.dp),
+            )
+        }
+    }
+}
+
+/** The warmth column, opened to the left of the bar. Up is warmer — the opposite axis, on purpose. */
+@Composable
+private fun WarmthSection(
+    warmth: Int,
+    onWarmth: (Int) -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.hair),
+    ) {
+        Text(
+            text = stringResource(R.string.dim_level_number, warmth),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        WarmthColumn(warmth = warmth, onWarmth = onWarmth)
+    }
+}
+
+/**
+ * The five auto-off values as a stack of pills, right-aligned beside the bar.
+ *
+ * **The chips do not close the section.** Staying open is what lets the selection redraw under the
+ * finger that just tapped, which is the only confirmation this surface gives that anything happened.
+ * A stack rather than a wrapped row: the window is 84dp of bar plus whatever a section is allowed,
+ * and a row would either be clipped or be the thing that decides the window's width in a language
+ * nobody tested.
  */
 @Composable
 private fun TimerSection(
     autoOff: AutoOff,
-    offAtMillis: Long?,
-    running: Boolean,
     onAutoOff: (AutoOff) -> Unit,
 ) {
-    Column {
-        Text(
-            text = stringResource(R.string.dim_auto_off_label),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.hair),
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
-            modifier = Modifier.padding(horizontal = Spacing.base),
-        ) {
-            for (choice in AutoOff.entries) {
-                FilterChip(
-                    selected = autoOff == choice,
-                    onClick = { onAutoOff(choice) },
-                    label = { Text(stringResource(choice.shortLabelRes())) },
-                )
-            }
-        }
-        // The same condition the full screen uses: `Never` has nothing to say, and a stopped shade's
-        // deadline went with the intent that owned it.
-        if (running && offAtMillis != null) {
-            Text(
-                text = stringResource(R.string.dim_auto_off_at, rememberTimeText(offAtMillis)),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(Spacing.tight),
+        modifier = Modifier.widthIn(max = BAR_SECTION_WIDTH_DP.dp),
+    ) {
+        for (choice in AutoOff.entries) {
+            FilterChip(
+                selected = autoOff == choice,
+                onClick = { onAutoOff(choice) },
+                label = { Text(stringResource(choice.shortLabelRes())) },
+                shape = RoundedCornerShape(percent = 50),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
             )
         }
     }
 }
 
 /**
- * The schedule, stated and not editable — *22:00 to 07:00*, or *Off*, with the cog as the way to
- * change it.
+ * The two (or three) round buttons under the bar.
  *
- * **The one line in this host that can carry the at-risk fact.** The launcher default now makes this
- * the surface most users land on, and `docs/phase-3.md` is explicit that it has no explainer and no
- * room for a banner — so when the battery exemption is missing this says the schedule may not start
- * on its own, instead of naming a window it might not keep to.
+ * `OutlinedIconButton` rather than the filled one: filled is reserved for the control that changes
+ * what the *screen* looks like, and on this surface that is the foot band. These open a section and
+ * close it again, so they carry their state in their container the way a chip does, and nothing else
+ * on the surface is competing for that reading.
  */
 @Composable
-private fun ScheduleSection(
-    schedule: Schedule,
-    atRisk: Boolean,
+private fun CompactIconButton(
+    onClick: () -> Unit,
+    selected: Boolean,
+    content: @Composable () -> Unit,
 ) {
-    val summary = rememberScheduleSummary(schedule, atRisk)
-    Column {
-        if (summary.title != null) {
-            Text(
-                text = summary.title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.hair),
-            )
-        }
-        Text(
-            text = summary.text,
-            style = MaterialTheme.typography.bodyMedium,
-            color =
-                if (summary.title == null) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
-        )
+    OutlinedIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(BAR_ICON_BUTTON_DP.dp),
+        shape = RoundedCornerShape(percent = 50),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors =
+            IconButtonDefaults.outlinedIconButtonColors(
+                containerColor =
+                    if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                contentColor =
+                    if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+            ),
+    ) {
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
-
-/** The short labels, beside `labelRes()`'s long ones. Same reason it is an extension: no Android in [AutoOff]. */
-private fun AutoOff.shortLabelRes(): Int =
-    when (this) {
-        AutoOff.Never -> R.string.compact_auto_off_never
-        AutoOff.Minutes30 -> R.string.compact_auto_off_30m
-        AutoOff.Hour1 -> R.string.compact_auto_off_1h
-        AutoOff.Hours2 -> R.string.compact_auto_off_2h
-        AutoOff.Hours4 -> R.string.compact_auto_off_4h
-    }

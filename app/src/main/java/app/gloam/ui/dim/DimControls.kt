@@ -1,261 +1,534 @@
 package app.gloam.ui.dim
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.gloam.R
 import app.gloam.shade.AutoOff
 import app.gloam.shade.Schedule
 import app.gloam.theme.Spacing
-import app.gloam.ui.common.SectionHeader
+import app.gloam.ui.common.SwitchRow
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
+import kotlin.math.roundToInt
 
 /**
- * The dim level, the warmth, the backlight switch and the start/stop button — **state in, callbacks
- * out, and no `Context`**.
+ * The dim level, the warmth and the start/stop button — **state in, callbacks out, and no
+ * `Context`**.
  *
- * ## Why this is a separate file now, and was not before
+ * ## What the redesign changed, and what it did not
  *
- * Phase 1 wrote the rule and kept to it: do not extract a composable with one caller, because you
- * are guessing at the second caller's shape. Phase 3 is the phase with the second caller — the
- * compact controls, and then the panel — so the guess is over and the extraction is a `refactor:`
- * with no behaviour change in it.
+ * The two M3 sliders are gone. The dim level is now [DimColumn] — a picture of the light with a
+ * shade over it — and warmth stays a slider precisely so it cannot be mistaken for a second column.
+ * The rule that made this file worth extracting has not moved: a composable that takes only values
+ * and lambdas can be rendered by **any** host, and one that reads `LocalActivity` or asks for a
+ * `ViewModel` can only be rendered where those exist — which the panel's raw `WindowManager` window
+ * is not. So no service is started here and no permission is asked here.
  *
- * ## What it may not touch, and why that is a hosting constraint rather than taste
+ * **The backlight switch left this composable**, and that is the redesign's one real loss. The
+ * column eats the space two sliders and a hint used to spend, so the switch and its explanation now
+ * live inside [AutoOffCard], which opens by default but can be closed. Somebody who closes it and
+ * never opens it again does not read why their brightness slider is inert; the shade's own
+ * notification still says so, which is what bounds the loss.
  *
- * A composable that takes only values and lambdas can be rendered by **any** host. One that calls
- * `LocalActivity.current`, or asks for a `ViewModel`, or assumes a `Scaffold` above it, can only be
- * rendered where those have been provided — and Phase 3's third host is a raw `WindowManager` window
- * with no Activity under it at all, where the failure is a crash rather than a missing value.
- *
- * So: no service is started here, no permission is asked here, and `backlightAvailable` arrives as a
- * parameter rather than being read from a `Context`. Starting the shade is the *host's* job, because
- * a host is the thing that has a `Context` (`CLAUDE.md`: a `ViewModel` never holds one either) —
- * which is why [onToggleRunning] is a callback and not a `startShade()` call.
- *
- * **Kotlin note for a JS reader:** this is props-down / events-up and nothing more. What is worth
- * saying is Compose's version of the rule about where side effects may live — a `CompositionLocal`
- * is React context, and reading one that the host never provided is not `undefined`, it is an
- * exception at composition time.
+ * **Kotlin note for a JS reader:** props-down / events-up, and nothing else. Compose's version of
+ * "where may a side effect live" is stricter than React's: a `CompositionLocal` is context, and
+ * reading one the host never provided is an exception at composition time rather than `undefined`.
  */
 @Composable
 fun DimControls(
     dimLevel: Int,
     warmth: Int,
-    lowerBacklight: Boolean,
-    backlightAvailable: Boolean,
     running: Boolean,
     onDimLevel: (Int) -> Unit,
     onWarmth: (Int) -> Unit,
-    onLowerBacklight: (Boolean) -> Unit,
     onToggleRunning: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(stringResource(R.string.dim_level_label))
-        Text(
-            text = stringResource(R.string.dim_level_value, dimLevel),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = Spacing.base),
-        )
-        DimLevelSlider(
-            dimLevel = dimLevel,
-            onDimLevel = onDimLevel,
-            modifier = Modifier.padding(horizontal = Spacing.base),
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.base),
+            // Bottom-aligned rather than centred: the column is a fixed 326dp and the text beside it
+            // is not, so aligning their *tops* would leave the caption floating halfway up a column
+            // whose bottom is the thing it is describing.
+            verticalAlignment = Alignment.Bottom,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = Spacing.base, end = Spacing.base, top = Spacing.section),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.hair),
+                // `weight` takes the room the column does not, and `widthIn(min = 0.dp)` is what
+                // lets it actually shrink — without it a long translated caption pushes the column
+                // off the right edge instead of wrapping.
+                modifier = Modifier.weight(1f).widthIn(min = 0.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.dim_level_label),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                DimLevelValue(dimLevel)
+                Text(
+                    text = stringResource(R.string.dim_level_caption),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.widthIn(max = 150.dp),
+                )
+            }
 
-        // Warmth is the second control, not a second ramp: the amber is a child of the same window
-        // and the applied tint is scaled by the headroom the dim level leaves, so this slider says
-        // what was asked for rather than what the composite ended up with. It starts at 0 — a colour
-        // cast nobody asked for is indistinguishable from a broken screen.
-        SectionHeader(stringResource(R.string.dim_warmth_label))
-        WarmthSlider(
+            DimColumn(dimLevel = dimLevel, onDimLevel = onDimLevel)
+        }
+
+        WarmthRow(
             warmth = warmth,
             onWarmth = onWarmth,
-            modifier = Modifier.padding(horizontal = Spacing.base),
+            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.base),
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.base, vertical = Spacing.tight),
-        ) {
-            Text(
-                text = stringResource(R.string.dim_backlight_label),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
-            // Visible and *disabled* rather than hidden when the device cannot honour it: a control
-            // that is simply absent leaves the user unable to tell Gloam from a Gloam that behaves
-            // differently on their phone than on someone else's.
-            Switch(
-                checked = lowerBacklight,
-                onCheckedChange = onLowerBacklight,
-                enabled = backlightAvailable,
-            )
-        }
-        // Supporting text, always present rather than a one-off dialog. The symptom it explains — a
-        // brightness slider that moves and does nothing — recurs every time the shade goes up, and a
-        // dismissed dialog is not there when it does. On a device that cannot do it at all the
-        // promise is replaced rather than left standing, which would be an explanation for a symptom
-        // that is not happening.
+        RunButton(
+            running = running,
+            onToggleRunning = onToggleRunning,
+            modifier = Modifier.padding(horizontal = Spacing.base),
+        )
+    }
+}
+
+/**
+ * The number, and the per-cent sign beside it at a third of the size.
+ *
+ * Two `Text`s rather than one, because they are two type sizes; `alignByBaseline` is what keeps them
+ * sitting on the same line rather than on their own boxes' bottoms. Both strings are
+ * `translatable="false"`: one is a bare integer placeholder and the other is a symbol, and neither
+ * has anything for a translator to decide. The consequence, recorded rather than discovered later:
+ * a locale that writes the sign *before* the number would need this composable, not a translation.
+ */
+@Composable
+private fun DimLevelValue(dimLevel: Int) {
+    Row(verticalAlignment = Alignment.Bottom) {
         Text(
-            text =
-                stringResource(
-                    if (backlightAvailable) {
-                        R.string.dim_backlight_hint
-                    } else {
-                        R.string.dim_backlight_unavailable
-                    },
+            text = stringResource(R.string.dim_level_number, dimLevel),
+            style =
+                MaterialTheme.typography.displayLarge.copy(
+                    fontSize = 86.sp,
+                    lineHeight = 78.sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = (-3).sp,
                 ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Spacing.base),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.alignByBaseline(),
         )
+        Text(
+            text = stringResource(R.string.dim_level_percent),
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Light),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.alignByBaseline(),
+        )
+    }
+}
 
-        // **The button travels, which is not obvious.** It is the one control that also needs a
-        // service started — and starting it is the host's job, so what travels is the label and the
-        // tap, never the `Context` behind them. Each host wires this to its own begin/stop pair, and
-        // the compact host's version is the shorter one because the permission ask never fires
-        // from there.
-        Button(
-            onClick = onToggleRunning,
+/**
+ * Warmth: a label, a ramp and a number — **and it stays a slider on purpose.**
+ *
+ * Two columns side by side would be two controls that look like the same control, and the one thing
+ * a user must never do by accident in the dark is set the wrong one. A horizontal track is a
+ * different gesture with a different picture.
+ */
+@Composable
+fun WarmthRow(
+    warmth: Int,
+    onWarmth: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.snug),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = stringResource(R.string.dim_warmth_label),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        WarmthTrack(warmth = warmth, onWarmth = onWarmth, modifier = Modifier.weight(1f))
+        Text(
+            text = stringResource(R.string.dim_level_number, warmth),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(28.dp),
+        )
+    }
+}
+
+/**
+ * The ramp itself: cool at the left, the theme's `primary` at the right, and a bar for a thumb.
+ *
+ * **The 10dp track sits inside a 44dp hit area.** What the finger has to find is the whole row, not
+ * the line — the same reason `SwitchRow` makes the row the target rather than the switch.
+ *
+ * The width has to be measured rather than known: the track is `weight(1f)` between a label and a
+ * readout, so nothing in the composition can say how many pixels it got until it is laid out.
+ * `onSizeChanged` reports that, and it is also the gesture's key — a stale width would keep
+ * converting a finger's x with the old number after a rotation.
+ *
+ * Kotlin note: `mutableFloatStateOf` rather than `mutableStateOf(0f)` — the specialised one avoids
+ * boxing a `Float` into an object on every layout pass. Same semantics, one fewer allocation.
+ */
+@Composable
+private fun WarmthTrack(
+    warmth: Int,
+    onWarmth: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = columnColors()
+    var widthPx by remember { mutableFloatStateOf(0f) }
+    val label = stringResource(R.string.dim_warmth_label)
+
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier =
+            modifier
+                .height(44.dp)
+                .onSizeChanged { widthPx = it.width.toFloat() }
+                .pointerInput(widthPx) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        onWarmth(alongTrack(down.position.x, widthPx))
+                        drag(down.id) { change ->
+                            change.consume()
+                            onWarmth(alongTrack(change.position.x, widthPx))
+                        }
+                    }
+                }.semantics {
+                    contentDescription = label
+                    progressBarRangeInfo = ProgressBarRangeInfo(warmth.toFloat(), 0f..100f, steps = 99)
+                    setProgress { target ->
+                        onWarmth(target.roundToInt().coerceIn(0, 100))
+                        true
+                    }
+                },
+    ) {
+        Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.base, vertical = Spacing.section),
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(colors.warmthCool, colors.warmthMid, MaterialTheme.colorScheme.primary),
+                        ),
+                    ),
+        )
+        Box(
+            modifier =
+                Modifier
+                    // Half the thumb's own width back, so it is centred on the value rather than
+                    // starting at it. Inside `offset`'s lambda the receiver is a `Density`, which is
+                    // what makes a dp convertible to pixels here without a `LocalDensity` read.
+                    .offset { IntOffset(x = handleX(warmth, widthPx) - 2.dp.roundToPx(), y = 0) }
+                    .size(4.dp, 36.dp)
+                    .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp)),
+        )
+    }
+}
+
+/** Where along the track a finger at [x] is asking for. Clamped, so the ends are reachable. */
+private fun alongTrack(
+    x: Float,
+    widthPx: Float,
+): Int {
+    if (widthPx <= 0f || !x.isFinite()) return 0
+    return ((x / widthPx) * 100f).roundToInt().coerceIn(0, 100)
+}
+
+/** The thumb's left edge, pulled back by half its own width so it is centred on the value. */
+private fun handleX(
+    warmth: Int,
+    widthPx: Float,
+): Int = (widthPx * warmth.coerceIn(0, 100) / 100f).roundToInt()
+
+/**
+ * The one control whose tap changes what the *screen* looks like rather than what this window shows,
+ * so it is the one filled thing on the surface.
+ */
+@Composable
+fun RunButton(
+    running: Boolean,
+    onToggleRunning: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onToggleRunning,
+        shape = RoundedCornerShape(percent = 50),
+        modifier = modifier.fillMaxWidth().height(60.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(if (running) R.string.dim_stop else R.string.dim_start))
+            if (running) {
+                Icon(painter = painterResource(R.drawable.ic_stop), contentDescription = null)
+            } else {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+            }
+            // The label is the button's own name, so the icon beside it takes no description — a
+            // screen reader would otherwise say "stop, Stop dimming".
+            Text(
+                text = stringResource(if (running) R.string.dim_stop else R.string.dim_start),
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
     }
 }
 
 /**
- * The dim slider on its own, with no label and no value above it.
+ * **Everything the screen is not about, in one card that opens by default.**
  *
- * ## Why the two sliders are extracted and the rest of [DimControls] is not
+ * Three rows stacked: when the shade turns itself off, whether Gloam may take the backlight down
+ * with it, and what the schedule currently says. They are together because they are all *when and
+ * whether*, against a hero that is *how much* — and the card is what lets that whole question fold
+ * away on a screen whose primary control is now 326dp tall.
  *
- * The compact surfaces do not render a smaller [DimControls]; they render a **different chrome**
- * around the same two controls — a bar and an icon row, against the full screen's headers, switch
- * and hint. Extracting along that seam is what keeps `PLAN.md`'s "one composable in every host"
- * promise where it actually pays: a change to what the dim range *means* — Phase 2b's ultra dark is
- * the one already scheduled — lands here once and reaches all three hosts. A `dense = true` flag on
- * [DimControls] would have been the other way to write this, and it is the one that rots: it makes
- * one composable answer to two layouts, and every later widget has to pick a side of the boolean.
+ * The schedule row is deliberately outside the collapsible half: it is the one line that reports a
+ * setting made on another screen, and somebody who set a schedule three weeks ago and forgot is by
+ * definition not opening a card to look for it.
  *
- * No `SectionHeader` and no percentage: both belong to a host that has room for them.
+ * Kotlin note: `rememberSaveable` rather than `remember` for the expansion. `remember` survives
+ * recomposition; `rememberSaveable` also survives the Activity being recreated — a rotation, or the
+ * theme switch this release makes more likely — by writing the boolean into the saved-state bundle.
  */
 @Composable
-fun DimLevelSlider(
-    dimLevel: Int,
-    onDimLevel: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Slider(
-        value = dimLevel.toFloat(),
-        // The `Float`-to-`Int` narrowing lives here rather than in the callback's type, so every
-        // host is handed the same whole number the preference stores.
-        onValueChange = { onDimLevel(it.toInt()) },
-        valueRange = 0f..100f,
-        modifier = modifier,
-    )
-}
-
-/**
- * The warmth slider on its own. The label is the host's, because the compact surfaces put it on the
- * disclosure row that reveals this rather than above it.
- */
-@Composable
-fun WarmthSlider(
-    warmth: Int,
-    onWarmth: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Slider(
-        value = warmth.toFloat(),
-        onValueChange = { onWarmth(it.toInt()) },
-        valueRange = 0f..100f,
-        modifier = modifier,
-    )
-}
-
-/**
- * The auto-off chips and the *turns off at* line — **rendered by whichever host wants them**.
- *
- * Its own composable rather than a block inside [DimControls], and the split is the answer to a
- * question Phase 2 handed forward: whether the deadline travels to the floating host is then a
- * one-line decision *per host* rather than an extraction to be redone when twelve testers answer it.
- *
- * **`LocalContext` is the one Local this file reads, and it is safe in every host.** A `ComposeView`
- * provides it from the `View`'s own context, so it exists in the panel's raw window as much as in an
- * Activity — unlike `LocalActivity` or `LocalLifecycleOwner`, which a raw window has to be given
- * (§7). The time formatter needs it, and nothing else here does.
- */
-@Composable
-fun AutoOffControls(
+fun AutoOffCard(
     autoOff: AutoOff,
     offAtMillis: Long?,
     running: Boolean,
     onAutoOff: (AutoOff) -> Unit,
+    lowerBacklight: Boolean,
+    backlightAvailable: Boolean,
+    onLowerBacklight: (Boolean) -> Unit,
+    schedule: Schedule,
+    scheduleAtRisk: Boolean,
+    onOpenSchedule: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        SectionHeader(stringResource(R.string.dim_auto_off_label))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
-            modifier = Modifier.padding(horizontal = Spacing.base),
-        ) {
-            // `FlowRow` rather than `Row`: five chips reading "After 30 minutes" do not fit one line
-            // on a narrow screen in any language, and a clipped safety control is worse than a
-            // wrapped one. R5 reads what that does in a floating window narrower than this one.
-            for (choice in AutoOff.entries) {
-                FilterChip(
-                    selected = autoOff == choice,
-                    onClick = { onAutoOff(choice) },
-                    label = { Text(stringResource(choice.labelRes())) },
+    var expanded by rememberSaveable { mutableStateOf(true) }
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        // A 1dp outline rather than tone alone: on the near-black ground of the dark scheme a
+        // container is barely a step off the background, and the card would otherwise read as an
+        // area of the screen where the text happens to be indented.
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded }
+                        .padding(horizontal = Spacing.base, vertical = Spacing.base),
+            ) {
+                Text(
+                    text = stringResource(R.string.dim_auto_off_label),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(autoOff.shortLabelRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = Spacing.tight),
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    // The row's own label names it; the chevron only says which way it will go.
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-        Text(
-            text = stringResource(R.string.dim_auto_off_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
-        )
 
-        // Only with a shade up and a deadline on it — `Never` has nothing to say here, and a stopped
-        // shade's deadline was cleared with the intent that owned it.
-        if (running && offAtMillis != null) {
-            Text(
-                text = stringResource(R.string.dim_auto_off_at, rememberTimeText(offAtMillis)),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier =
-                    Modifier.padding(
-                        horizontal = Spacing.base,
-                        vertical = Spacing.tight,
-                    ),
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.tight),
+                        modifier = Modifier.padding(horizontal = Spacing.base),
+                    ) {
+                        // `FlowRow` rather than `Row`: five chips do not fit one line on a narrow
+                        // screen in every language, and a clipped safety control is worse than a
+                        // wrapped one.
+                        for (choice in AutoOff.entries) {
+                            FilterChip(
+                                selected = autoOff == choice,
+                                onClick = { onAutoOff(choice) },
+                                label = { Text(stringResource(choice.shortLabelRes())) },
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.dim_auto_off_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
+                    )
+                    // Only with a shade up and a deadline on it — `Never` has nothing to say here,
+                    // and a stopped shade's deadline went with the intent that owned it.
+                    if (running && offAtMillis != null) {
+                        Text(
+                            text = stringResource(R.string.dim_auto_off_at, rememberTimeText(offAtMillis)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier =
+                                Modifier.padding(horizontal = Spacing.base, vertical = Spacing.tight),
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    // Visible and *disabled* rather than hidden where the device cannot honour it:
+                    // a control that is simply absent leaves the user unable to tell Gloam from a
+                    // Gloam that behaves differently on their phone than on someone else's.
+                    SwitchRow(
+                        title = stringResource(R.string.dim_backlight_label),
+                        subtitle =
+                            stringResource(
+                                if (backlightAvailable) {
+                                    R.string.dim_backlight_hint
+                                } else {
+                                    R.string.dim_backlight_unavailable
+                                },
+                            ),
+                        checked = lowerBacklight,
+                        onChange = onLowerBacklight,
+                        enabled = backlightAvailable,
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            ScheduleRow(
+                schedule = schedule,
+                atRisk = scheduleAtRisk,
+                onClick = onOpenSchedule,
             )
         }
+    }
+}
+
+/**
+ * The one line the dim screen gives the schedule, and the way to the screen that owns it.
+ *
+ * A trailing chevron rather than a switch: this row *reports*, and everything that changes a
+ * schedule is two time pickers and a toggle that would not fit here in any language.
+ */
+@Composable
+private fun ScheduleRow(
+    schedule: Schedule,
+    atRisk: Boolean,
+    onClick: () -> Unit,
+) {
+    val summary = rememberScheduleSummary(schedule, atRisk)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = Spacing.base, vertical = Spacing.base),
+    ) {
+        // Null when the text is a whole sentence that names the schedule itself — the at-risk line —
+        // because a row drawing both would say "Schedule" twice.
+        if (summary.title != null) {
+            Text(
+                text = summary.title,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = summary.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = Spacing.tight),
+            )
+        } else {
+            Text(
+                text = summary.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            // Null rather than a description: the row's own text is its name, and a screen reader
+            // announcing "chevron" after it adds nothing a user can act on.
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -269,8 +542,8 @@ fun AutoOffControls(
  * Its one weakness, recorded so nobody re-discovers it as a bug: four hours from 23:00 reads as
  * "03:00" with no date. At a four-hour ceiling that is unambiguous enough in context.
  *
- * `internal` rather than private because the compact controls show the same deadline in their
- * timer section, and a second copy of this would be a second place for a locale bug to live.
+ * `internal` rather than private because the compact controls show the same deadline in their timer
+ * section, and a second copy of this would be a second place for a locale bug to live.
  *
  * `DateFormat.getTimeFormat` is the platform's, so 12- or 24-hour follows the phone's own setting
  * and the locale for free — never a hand-built format string (`translator-brief.md` §4).
@@ -353,14 +626,21 @@ internal fun rememberScheduleSummary(
     }
 
 /**
+ * The auto-off labels — **one set, everywhere.**
+ *
+ * There used to be two: long ones for the full screen ("After 30 minutes") and short ones for the
+ * compact surfaces. The redesign puts the same five chips in a card the width of a phone and in a
+ * stack beside an 84dp bar, and the short labels fit both; a second set would be a second place for
+ * a value added to [AutoOff] to be forgotten.
+ *
  * Kotlin note: an extension on the enum rather than a field in it. The resource ids belong to the UI
  * layer and `AutoOff` has no Android in it at all — which is what lets `AutoOffTest` run on the JVM.
  */
-private fun AutoOff.labelRes(): Int =
+internal fun AutoOff.shortLabelRes(): Int =
     when (this) {
-        AutoOff.Never -> R.string.dim_auto_off_never
-        AutoOff.Minutes30 -> R.string.dim_auto_off_30m
-        AutoOff.Hour1 -> R.string.dim_auto_off_1h
-        AutoOff.Hours2 -> R.string.dim_auto_off_2h
-        AutoOff.Hours4 -> R.string.dim_auto_off_4h
+        AutoOff.Never -> R.string.compact_auto_off_never
+        AutoOff.Minutes30 -> R.string.compact_auto_off_30m
+        AutoOff.Hour1 -> R.string.compact_auto_off_1h
+        AutoOff.Hours2 -> R.string.compact_auto_off_2h
+        AutoOff.Hours4 -> R.string.compact_auto_off_4h
     }

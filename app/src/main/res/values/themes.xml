@@ -78,5 +78,11 @@
         <item name="android:windowNoTitle">true</item>
         <item name="windowNoTitle">true</item>
         <item name="windowActionBar">false</item>
+        <!-- The dialog parent sets a minimum width as a percentage of the display, so that a form
+             in a dialog is not a column of stubs. What this window holds is an 84dp bar in a
+             corner, and the minimum would pad it out with transparent window on the way to the
+             middle of the screen. Zero lets the window wrap what is actually in it. -->
+        <item name="android:windowMinWidthMinor">0%</item>
+        <item name="android:windowMinWidthMajor">0%</item>
     </style>
 </resources>
