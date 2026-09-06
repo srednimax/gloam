@@ -22,39 +22,24 @@ arbitrary units around an origin at the mark's centre; callers fit them to their
 import re
 from dataclasses import dataclass
 
-# The identity's colours. The mark is near-white, so the ground carries all the colour.
+# The identity's colours, all three of them out of the generated scheme (`scripts/gen_scheme.py`).
 #
-# The ground used to be one flat `primary` darkened for contrast, and it read as mud: an amber hue
-# at a dark *tone* is brown, and a large flat field of it is brown at its least flattering. The fix
-# is not a different hue — the amber is the shade's own warmth and earns its place — but to stop
-# spending it as a flat field. So the ground is the app's night with the amber banked low as
-# *light*, which is the same horizon the feature graphic draws and the thing the app is actually
-# for: a moon over the last of the light.
-SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface` — the mark itself
-GROUND_NIGHT = (0x15, 0x13, 0x0E)  # the dark scheme's `background`
-GROUND_GLOW = (0xC8, 0x7A, 0x2E)  # `primary`, at the tone that reads as a light source
-
-# Where the glow sits on the 108dp adaptive canvas, as fractions of it. The centre is *below* the
-# bottom edge on purpose: only the top of the light is on the tile, which is what makes it a horizon
-# rather than a lamp. Circular rather than elliptical, because a VectorDrawable radial gradient has
-# one radius — see ground() for why that matters.
-GLOW_AT = (0.5, 1.02)
-GLOW_RADIUS = 0.85
-GLOW_FALLOFF = 1.5  # >1 keeps the bright core small and the spill long
-GLOW_STRENGTH = 0.95
-
-
-def ground(offset):
-    """The ground's colour at `offset` of the way from the glow's centre to its edge, as (r, g, b).
-
-    **This is the single source both renderings read.** The launcher icon's back layer is a
-    VectorDrawable radial gradient and the flat mipmaps are drawn by PIL, and those are two
-    different renderers that would otherwise each need their own copy of the curve above. Instead
-    the generator samples this function for the gradient's colour stops *and* calls it per pixel for
-    the raster, so the vector and the bitmap cannot drift apart.
-    """
-    t = max(0.0, 1.0 - offset) ** GLOW_FALLOFF * GLOW_STRENGTH
-    return tuple(round(n + (g - n) * t) for n, g in zip(GROUND_NIGHT, GROUND_GLOW))
+# **The icon's ground went flat, and it is the third answer to the same question.** It was one flat
+# `primary` darkened for contrast, and it read as mud — an amber hue at a dark *tone* is brown, and
+# a large field of it is brown at its least flattering. Then it was a horizon: the night with the
+# amber banked low as light. That fixed the mud and bought a new problem, because a gradient from
+# `#BF752C` to near-black spends roughly a quarter to two thirds of the icon's area on the
+# desaturated middle of that ramp, which is most of the tile.
+#
+# A flat field removes the middle rather than re-tuning it: one edge, one hue step, and a mark that
+# loses no detail between 108dp and 44dp. It also sits on a light launcher and a dark one without a
+# halo, which the near-black horizon could not — a tile that ends in the launcher's own background
+# has no edge at all on the launcher that matches it.
+#
+# So the icon is now `primary` on `surfaceVariant`, and nothing new enters the palette to do it.
+SURFACE = (0xFF, 0xF8, 0xEF)  # the light scheme's `surface` — the feature graphic's moon and wordmark
+GROUND = (0x4D, 0x46, 0x39)  # the dark scheme's `surfaceVariant` — the icon's flat field
+MARK_INK = (0xFF, 0xB7, 0x7F)  # the dark scheme's `primary` — the mark on that field
 
 
 @dataclass(frozen=True)
