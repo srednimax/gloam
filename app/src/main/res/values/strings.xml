@@ -30,7 +30,18 @@
          backlight is Android's value and this one runs the other way. -->
     <string name="dim_title">Dim</string>
     <string name="dim_level_label">Dim level</string>
-    <string name="dim_level_value">%1$d%%</string>
+    <!-- The hero value is drawn as two pieces at two type sizes, so the number and the sign are
+         two resources rather than one formatted string. Both are translatable="false": one is a
+         bare integer placeholder and the other is a symbol. A locale that writes the sign before
+         the number would need the composable changed, not this file. -->
+    <string name="dim_level_number" translatable="false">%1$d</string>
+    <string name="dim_level_percent" translatable="false">%</string>
+    <!-- Reads on from the value above it: "40% / of the light covered." Two sentences: what the
+         number means, then what to do with the column beside it. -->
+    <string name="dim_level_caption">of the light covered. Pull the column down for less light.</string>
+    <!-- On the part of the column the shade never reaches: the dimmest the phone's own backlight
+         goes. "Floor" is CONTEXT.md's word — never "minimum brightness", which reads as ours. -->
+    <string name="dim_column_floor">FLOOR</string>
     <string name="dim_start">Start dimming</string>
     <string name="dim_stop">Stop dimming</string>
     <string name="dim_permission_title">Gloam needs permission to draw over other apps</string>
@@ -49,7 +60,7 @@
          symptom recurs and a user who meets it with no explanation reports that Gloam broke their
          phone. The unavailable line replaces the promise on a device that cannot keep it. -->
     <string name="dim_backlight_label">Also lower the screen brightness</string>
-    <string name="dim_backlight_hint">Takes your screen\'s own brightness down to its lowest before the shade starts, so Gloam has less light to cover. While it is on, your phone\'s brightness slider will not do anything until you stop dimming.</string>
+    <string name="dim_backlight_hint">Your brightness slider is paused while Gloam dims.</string>
     <string name="dim_backlight_unavailable">This phone does not report its brightness in a way Gloam can use, so Gloam dims by drawing over the screen only.</string>
 
     <!-- Auto-off (CONTEXT.md). It cannot be switched "off" — "off" is reserved for the shade not
@@ -58,18 +69,14 @@
          still dark at breakfast. "Turns off at 23:40" is a clock time formatted by the platform,
          never a countdown built out of words. -->
     <string name="dim_auto_off_label">Turn off on its own</string>
-    <string name="dim_auto_off_never">Never</string>
-    <string name="dim_auto_off_30m">After 30 minutes</string>
-    <string name="dim_auto_off_1h">After 1 hour</string>
-    <string name="dim_auto_off_2h">After 2 hours</string>
-    <string name="dim_auto_off_4h">After 4 hours</string>
     <string name="dim_auto_off_hint">Gloam takes the shade down by itself after this long, so a screen you dimmed and forgot about is not still dark tomorrow.</string>
     <!-- %1$s is a time of day, formatted for the phone's own locale and 12/24-hour setting. -->
     <string name="dim_auto_off_at">Turns off at %1$s</string>
 
-    <!-- The compact controls' auto-off chips (docs/phase-3.md §2). The same five AutoOff values the
-         full app offers, labelled short: R5 read five chips saying "After 30 minutes" wrapping in a
-         floating window, and this surface is narrower still. The duration carries no "+" because
+    <!-- The auto-off chips, on every surface that has them (docs/phase-3.md §2). They keep their
+         compact_ names because the compact controls are where the short wording was decided: R5
+         read five chips saying "After 30 minutes" wrapping in a floating window, and the redesign
+         put the same five into a card on the full screen rather than a second, longer set. The duration carries no "+" because
          the same chip means two things — while the shade is up, tapping one re-dates the deadline
          from now ("two more hours"); while it is down, it sets what the next shade will get. The
          section header above them is dim_auto_off_label, which says which of the two is happening. -->

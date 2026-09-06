@@ -23,7 +23,6 @@ import app.gloam.R
 import app.gloam.data.AppPreferences
 import app.gloam.work.AppChannel
 import app.gloam.work.ensureNotificationChannels
-import app.gloam.work.isIgnoringBatteryOptimisations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -328,6 +327,13 @@ class ShadeService : Service() {
      * edits them in place and hands them back to `updateViewLayout`.
      */
     private var panelParams: WindowManager.LayoutParams? = null
+
+    /**
+     * Whether the panel currently has a disclosure open, which is half of what its width is computed
+     * from. Reset by [removePanelWindow] rather than remembered across summons: every summon builds
+     * a new `PanelHost` and starts with everything closed.
+     */
+    private var panelSectionOpen = false
 
     /**
      * Every touch the panel receives, whether or not a control consumed it.
@@ -639,9 +645,6 @@ class ShadeService : Service() {
             warmth = preferences.warmth.first(),
             running = intent.running,
             autoOff = preferences.autoOff.first(),
-            offAtMillis = intent.offAtMillis,
-            schedule = preferences.schedule.first(),
-            scheduleAtRisk = !isIgnoringBatteryOptimisations(),
             themeMode = preferences.themeMode.first(),
             materialYou = preferences.materialYou.first(),
         )
@@ -692,10 +695,12 @@ class ShadeService : Service() {
                 onAutoOff = ::setPanelAutoOff,
                 onToggleRunning = ::togglePanelRunning,
                 onOpenApp = ::openFullAppFromPanel,
+                onSectionOpen = ::onPanelSectionOpen,
                 onClose = ::removePanelWindow,
             )
         }
 
+        val density = resources.displayMetrics.density
         val params =
             WindowManager
                 .LayoutParams(
@@ -705,14 +710,22 @@ class ShadeService : Service() {
                     PANEL_WINDOW_FLAGS,
                     PixelFormat.TRANSLUCENT,
                 ).apply {
-                    gravity = Gravity.BOTTOM
+                    // **The bottom corner rather than the bottom edge**, which is where the bar the
+                    // redesign replaced the sheet with is anchored: a thumb is already there, and a
+                    // window that only reaches into one corner leaves the rest of the app touchable.
+                    // `END` rather than `RIGHT` so a right-to-left layout mirrors it with the rest
+                    // of the UI. The known limitation, carried from the design: this assumes a right
+                    // hand in a left-to-right locale, and a left-handed user has no preference to
+                    // say so yet.
+                    gravity = Gravity.BOTTOM or Gravity.END
+                    x = (PANEL_SIDE_MARGIN_DP * density).toInt()
                     // **Measured, not assumed** (R6). Without `FLAG_LAYOUT_NO_LIMITS` — which the
                     // shade has and the panel deliberately does not — the window is laid out inside
                     // the display frame the system already keeps clear of the navigation bar, so
                     // `y` is an offset from the *top* of that bar rather than from the bottom of the
                     // display. Adding the navigation-bar inset here counted it twice and floated the
                     // panel 59 dp up instead of 12.
-                    y = (PANEL_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
+                    y = (PANEL_BOTTOM_MARGIN_DP * density).toInt()
                 }
 
         runCatching { manager.addView(host.view, params) }
@@ -730,9 +743,39 @@ class ShadeService : Service() {
             }.onFailure { host.destroy() }
     }
 
-    /** The panel's width for the display as it is *now*, which is the only input [panelWidthPx] has. */
+    /** The panel's width for the display as it is *now*, and for whatever the panel currently shows. */
     private fun currentPanelWidth(manager: WindowManager): Int =
-        panelWidthPx(manager.currentWindowMetrics.bounds.width())
+        panelWidthPx(
+            displayWidthPx = manager.currentWindowMetrics.bounds.width(),
+            density = resources.displayMetrics.density,
+            sectionOpen = panelSectionOpen,
+        )
+
+    /**
+     * **The composition telling the window how much room it now needs.**
+     *
+     * The panel is touchable, so its width is what stands in for the shade's `FLAG_NOT_TOUCHABLE`
+     * (ADR-0011) — and the edge bar's width is not constant: opening the warmth column or the timer
+     * chips needs room to the left of the bar, and closing them gives it back. A window sized for
+     * the *open* state at all times would block a strip of the app underneath that nothing is drawn
+     * in, for the whole time the panel is up.
+     *
+     * It is a callback from the composition rather than a state the service infers, because the
+     * disclosure belongs to `CompactControls` — the service has no way to know a chip was tapped.
+     * Marked with the touch that caused it, too: re-arming the idle timeout here would be wrong, and
+     * it does not need to be, because the same tap already went through `TouchReportingLayout`.
+     */
+    private fun onPanelSectionOpen(open: Boolean) {
+        if (panelSectionOpen == open) return
+        panelSectionOpen = open
+        val view = panelView ?: return
+        val params = panelParams ?: return
+        val manager = windowManager ?: return
+        val width = currentPanelWidth(manager)
+        if (params.width == width) return
+        params.width = width
+        runCatching { manager.updateViewLayout(view, params) }
+    }
 
     /**
      * Re-measure the panel when the display changes shape.
@@ -770,6 +813,7 @@ class ShadeService : Service() {
         panelJob = null
         val view = panelView ?: return
         runCatching { windowManager?.removeView(view) }
+        panelSectionOpen = false
         panelHost?.destroy()
         panelView = null
         panelHost = null
@@ -800,13 +844,12 @@ class ShadeService : Service() {
             preferences.dimLevel.onEach { v -> state.update { it.copy(dimLevel = v) } }.launchIn(this)
             preferences.warmth.onEach { v -> state.update { it.copy(warmth = v) } }.launchIn(this)
             preferences.autoOff.onEach { v -> state.update { it.copy(autoOff = v) } }.launchIn(this)
-            preferences.schedule.onEach { v -> state.update { it.copy(schedule = v) } }.launchIn(this)
-            // One collector for both halves of the intent, because they are written together — the
-            // panel's timer section shows the deadline beside the button that owns it, and two
-            // collectors could leave those disagreeing for a frame.
+            // The intent's deadline half is no longer drawn here — the edge bar shows the chips and
+            // not the time they resolve to — so this collector reads the flag and lets the rest of
+            // the value go.
             preferences
                 .shadeIntent
-                .onEach { v -> state.update { it.copy(running = v.running, offAtMillis = v.offAtMillis) } }
+                .onEach { v -> state.update { it.copy(running = v.running) } }
                 .launchIn(this)
             preferences.themeMode.onEach { v -> state.update { it.copy(themeMode = v) } }.launchIn(this)
             preferences.materialYou.onEach { v -> state.update { it.copy(materialYou = v) } }.launchIn(this)

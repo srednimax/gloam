@@ -5,14 +5,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -25,7 +19,9 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import app.gloam.data.ThemeMode
 import app.gloam.theme.AppTheme
-import app.gloam.theme.Spacing
+import app.gloam.ui.dim.BAR_GROUP_GAP_DP
+import app.gloam.ui.dim.BAR_SECTION_WIDTH_DP
+import app.gloam.ui.dim.BAR_WIDTH_DP
 import app.gloam.ui.dim.CompactControls
 import kotlinx.coroutines.flow.StateFlow
 
@@ -65,18 +61,20 @@ const val PANEL_WINDOW_FLAGS =
 const val PANEL_IDLE_TIMEOUT_MS = 30_000L
 
 /**
- * The widest the panel is ever added, whatever the display underneath it.
+ * The most of the display the panel may ever cover, whatever it is showing.
  *
- * **Taste rather than safety** — the safety bound is the inset below, which is a fraction and so
- * holds at any size. This cap only stops a tablet getting a slider a forearm wide. It is in pixels
- * because [panelWidthPx] takes one integer and has no density to convert with, so it means roughly
- * 400 dp on a three-times phone and less on a denser one; that imprecision is affordable in a number
- * whose only job is "not absurdly wide".
+ * **Taste is not what this bounds.** A touchable window blocks every touch inside it, so the panel's
+ * width is the thing standing in for the shade's `FLAG_NOT_TOUCHABLE` (ADR-0011): the app underneath
+ * stops answering a finger anywhere the window reaches. A fraction rather than a pixel count, so
+ * "there is always more display beside the panel than under it" holds at every display size.
  */
-const val PANEL_MAX_WIDTH_PX = 1200
+private const val PANEL_MAX_DISPLAY_FRACTION = 0.7f
 
-/** Taken off each side. A fraction, so *never the whole display* holds at every display size. */
-private const val PANEL_SIDE_INSET = 0.05f
+/**
+ * How far in from the display's edges the panel floats. The bar is anchored to a bottom corner —
+ * where a thumb already is — rather than centred over what the user is reading.
+ */
+internal const val PANEL_SIDE_MARGIN_DP = 16
 
 /**
  * How far above the navigation bar the panel floats.
@@ -88,30 +86,37 @@ private const val PANEL_SIDE_INSET = 0.05f
  * mode the phone is in. R6 read that off the phone after a first attempt added the inset by hand and
  * floated the panel five times too high.
  */
-internal const val PANEL_BOTTOM_MARGIN_DP = 12
+internal const val PANEL_BOTTOM_MARGIN_DP = 24
 
 /**
- * How wide to add the panel's window, given the display it is going over.
+ * How wide to add the panel's window: the bar, plus the room a disclosure needs when one is open.
  *
- * **A touchable window blocks every touch under it, so its size is its safety bound** — and unlike
- * the shade's flags, a size is a computation rather than a constant. This function is that
- * computation, kept pure so that `PanelWidthTest` can sweep it the way `ShadeRampTest` sweeps the
- * ramp: no Android under it, every plausible display width in one JVM test.
+ * **This is the redesign's biggest safety change and it reads like a layout detail.** The old panel
+ * was a sheet 90% of the display wide, so while it was up almost nothing underneath it answered a
+ * touch. The edge bar is 84dp, which is what the window is added at while nothing is open; opening
+ * the warmth column or the timer chips widens it, and closing them narrows it again
+ * (`ShadeService.onPanelSectionOpen`).
  *
- * **`WRAP_CONTENT` was the draft and it is the wrong guarantee.** The risk being bounded is a long
- * translated label growing the window until it covers the display, and `WRAP_CONTENT` is precisely
- * the value that hands that decision to the content — the bound would then live in a
- * `Modifier.widthIn(max = …)` inside the composition, which no test can see and which the window
- * manager does not enforce. A width the window is *added with* cannot be exceeded by a translation
- * at all. It is also the better layout: `WRAP_CONTENT` sizes a slider to its intrinsic minimum,
- * which for a panel that is mostly sliders is a panel of stubs.
+ * Kept pure, with no `Context` and no `Density` object, so `PanelWidthTest` can sweep it the way
+ * `ShadeRampTest` sweeps the ramp: every plausible display, every density, both states, in one JVM
+ * test. The gap it adds is [BAR_GROUP_GAP_DP], which must stay in step with the `Spacing` step the
+ * composition actually lays the group out with — they are two views of the same 8dp and only this
+ * one is testable.
  *
- * The inset is coerced to at least one pixel so that the answer is strictly narrower than the
- * display even for a display too small for the fraction to round up to anything.
+ * The fraction wins over the content when the two disagree, which on a narrow display means an open
+ * section is squeezed rather than the window growing over the app: content that does not fit wraps
+ * (`BAR_SECTION_WIDTH_DP`), and a wrapped chip is a far better failure than a phone that has stopped
+ * responding down one side.
  */
-fun panelWidthPx(displayWidthPx: Int): Int {
-    val inset = (displayWidthPx * PANEL_SIDE_INSET).toInt().coerceAtLeast(1)
-    return (displayWidthPx - 2 * inset).coerceAtMost(PANEL_MAX_WIDTH_PX).coerceAtLeast(1)
+fun panelWidthPx(
+    displayWidthPx: Int,
+    density: Float,
+    sectionOpen: Boolean,
+): Int {
+    val contentDp = BAR_WIDTH_DP + if (sectionOpen) BAR_GROUP_GAP_DP + BAR_SECTION_WIDTH_DP else 0f
+    val wanted = (contentDp * density.coerceAtLeast(0.1f)).toInt()
+    val ceiling = (displayWidthPx * PANEL_MAX_DISPLAY_FRACTION).toInt()
+    return wanted.coerceAtMost(ceiling).coerceAtLeast(1)
 }
 
 /**
@@ -247,25 +252,18 @@ private class TouchReportingLayout(
  * `{...state, warmth: 40}`. It is how each of the service's little collectors writes its one field
  * back without any of them needing to know about the others.
  *
- * **Auto-off is here now, and it was not before.** The rule that kept it out has not changed —
- * every widget in this window must stay legible at 6.64 nits, fit a window that is never
- * `MATCH_PARENT`, and be dismissible by somebody who cannot see the rest of the screen — but a
- * disclosure that is closed by default costs one icon against all three, and the deadline is the one
- * thing worth reading on the surface reached *while the shade is up*. What it replaced is the
- * backlight switch, which went the other way for the same reason: a setting chosen once does not
- * earn a permanent row in a window this size.
+ * **It carries less than it did, because the edge bar draws less.** The schedule summary, the
+ * battery-exemption warning and the deadline read-out are gone from this surface: what is left is
+ * the level, the warmth, run/stop and the auto-off chips. Everything dropped is a *read* rather than
+ * a control, and the pips at the top of the bar are one tap from the screen that has all of them.
+ * A window that must stay legible at 6.64 nits, block as little of the app underneath as it can and
+ * be dismissible by somebody who cannot see the rest of the screen cannot also be a dashboard.
  */
 data class PanelState(
     val dimLevel: Int,
     val warmth: Int,
     val running: Boolean,
     val autoOff: AutoOff,
-    val offAtMillis: Long?,
-    val schedule: Schedule,
-    // Read once when the panel is built rather than collected with the rest: the battery exemption
-    // only changes on a Settings screen, and going there takes this window down long before it could
-    // come back to a stale value.
-    val scheduleAtRisk: Boolean,
     val themeMode: ThemeMode,
     val materialYou: Boolean,
 )
@@ -283,9 +281,8 @@ data class PanelState(
  * scheme the app uses, from values read out of `AppPreferences` rather than from the configuration,
  * so the panel cannot disagree with the screen the user just left.
  *
- * The `Surface` is drawn on a shape rather than filling the window because the window is translucent
- * and sized to this content: what the user sees is a rounded card floating above their own app, not
- * a bar welded to the bottom of the display.
+ * The window is translucent and sized to this content, so what the user sees is the bar itself
+ * floating over their own app rather than a panel welded to the bottom of the display.
  */
 @Composable
 internal fun PanelContent(
@@ -295,6 +292,7 @@ internal fun PanelContent(
     onAutoOff: (AutoOff) -> Unit,
     onToggleRunning: () -> Unit,
     onOpenApp: () -> Unit,
+    onSectionOpen: (Boolean) -> Unit,
     onClose: () -> Unit,
 ) {
     // Collected here rather than passed as a value, so that a preference written from anywhere —
@@ -303,34 +301,28 @@ internal fun PanelContent(
     val current by state.collectAsStateWithLifecycle()
 
     AppTheme(themeMode = current.themeMode, dynamicColor = current.materialYou) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = Spacing.hair,
-        ) {
-            Column(modifier = Modifier.padding(vertical = Spacing.base)) {
-                // **`onClose` is not optional here, and it is the reason the parameter is nullable
-                // at all.** With `FLAG_NOT_FOCUSABLE` the Back key never reaches this window, so
-                // there is no system gesture that closes it: this button and the service's idle
-                // timeout are the only two ways out that do not also take the shade down. The
-                // compact host passes nothing, because an Activity already has a back gesture.
-                CompactControls(
-                    dimLevel = current.dimLevel,
-                    warmth = current.warmth,
-                    running = current.running,
-                    autoOff = current.autoOff,
-                    offAtMillis = current.offAtMillis,
-                    schedule = current.schedule,
-                    scheduleAtRisk = current.scheduleAtRisk,
-                    onDimLevel = onDimLevel,
-                    onWarmth = onWarmth,
-                    onAutoOff = onAutoOff,
-                    onToggleRunning = onToggleRunning,
-                    onOpenApp = onOpenApp,
-                    onClose = onClose,
-                )
-            }
-        }
+        // **No `Surface` around it any more.** The old panel was a card with controls on it, so it
+        // needed one; the edge bar paints its own shape on a translucent window, and a surface
+        // behind it would be a rectangle of theme colour standing between the bar and the app the
+        // user is actually reading.
+        //
+        // **`onClose` is not optional here, and it is the reason the parameter is nullable at all.**
+        // With `FLAG_NOT_FOCUSABLE` the Back key never reaches this window, so there is no system
+        // gesture that closes it: this button and the service's idle timeout are the only two ways
+        // out that do not also take the shade down. The compact host passes nothing, because an
+        // Activity already has a back gesture.
+        CompactControls(
+            dimLevel = current.dimLevel,
+            warmth = current.warmth,
+            running = current.running,
+            autoOff = current.autoOff,
+            onDimLevel = onDimLevel,
+            onWarmth = onWarmth,
+            onAutoOff = onAutoOff,
+            onToggleRunning = onToggleRunning,
+            onOpenApp = onOpenApp,
+            onSectionOpen = onSectionOpen,
+            onClose = onClose,
+        )
     }
 }
