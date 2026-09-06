@@ -63,7 +63,7 @@ class MainApplication : Application() {
      * The theme mode as it was on disk at process start, so the very first composition paints in the
      * right palette rather than flashing light and repainting.
      */
-    var startupThemeMode: ThemeMode = ThemeMode.SYSTEM
+    var startupThemeMode: ThemeMode = ThemeMode.DARK
         private set
 
     /**

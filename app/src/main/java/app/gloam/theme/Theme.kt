@@ -7,7 +7,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -31,7 +33,7 @@ import app.gloam.data.ThemeMode
  */
 @Composable
 fun AppTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    themeMode: ThemeMode = ThemeMode.DARK,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
@@ -56,8 +58,30 @@ fun AppTheme(
 
     SystemBarAppearance(darkTheme)
 
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    }
 }
+
+/**
+ * Whether the *app* is in its dark scheme — which is not the same question as whether the phone is.
+ *
+ * `isSystemInDarkTheme()` reads the configuration, and this app overrides the configuration
+ * (ADR-0006): a user who chose Light on a phone in dark mode has to get the light column, and the
+ * panel's overlay window has no Activity configuration to consult in the first place. So the answer
+ * is published by [AppTheme], which is the one place that already resolved it.
+ *
+ * The default is `true`, matching the app's own default theme mode — a composable that renders
+ * outside [AppTheme] is a bug, and this makes it a *dark* bug rather than a bright flash on a
+ * screen somebody dimmed.
+ *
+ * Kotlin/Compose note: a `CompositionLocal` is React context — an implicit value passed down the
+ * tree rather than through every call. `staticCompositionLocalOf` is the variant that does not track
+ * reads individually: changing it re-composes everything under the provider instead of only the
+ * readers. That is the right trade for a value that changes when the whole palette changes anyway,
+ * and it costs nothing at every read in between.
+ */
+val LocalDarkTheme = staticCompositionLocalOf { true }
 
 /**
  * Dark icons on the status and navigation bars under a light scheme, light icons under a dark one.

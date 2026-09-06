@@ -83,18 +83,32 @@ class AppPreferences(
     }
 
     /**
-     * Light, dark or follow-the-system.
+     * Light, dark or follow-the-system — and **the default is [ThemeMode.DARK], not
+     * [ThemeMode.SYSTEM]**.
      *
-     * Unknown stored values fall back to [ThemeMode.SYSTEM] rather than throwing: a preference file
+     * That is a product decision rather than a style one. Gloam is opened by somebody whose screen
+     * is already too bright for the room they are in; a phone left on the system default hands that
+     * person a full-brightness white screen as the *first* thing the dimming app does. Following
+     * the system is the right default for an app that is used at any hour, and this one is not.
+     *
+     * The setting stays — all three values are still offered in Settings, [ThemeMode.SYSTEM]
+     * included — so this changes what an untouched install does and nothing else.
+     *
+     * Unknown stored values fall back to the same default rather than throwing: a preference file
      * survives a downgrade, and a crash loop at startup is a far worse outcome than the wrong theme.
      * This is the opposite of the rule for enums stored in the *database*, where an unknown value
      * means the schema gate missed something and should be loud.
+     *
+     * **The default lives in the read, never on disk** (the house rule): nothing writes `DARK` at
+     * first launch, so a later version can still change its mind without a migration, and a user who
+     * has actually chosen dark is indistinguishable from one who never opened Settings — which is
+     * fine, because both want the same screen.
      */
     val themeMode: Flow<ThemeMode> =
         store.data.map { prefs ->
             prefs[Keys.THEME_MODE]?.let { name ->
                 runCatching { enumValueOf<ThemeMode>(name) }.getOrNull()
-            } ?: ThemeMode.SYSTEM
+            } ?: ThemeMode.DARK
         }
 
     /**
