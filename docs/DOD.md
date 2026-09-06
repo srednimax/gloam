@@ -61,8 +61,22 @@ capped at an hour — is why §4 arms a chain of hops rather than `nextOn` itsel
 numbers are in `phase-4.md` §1. **D landed on 2026-09-05** — the schedule screen and its route, the
 dim screen's summary row, the pickers with the equal-times refusal and the short-window warning, the
 battery banner and its widened hand-off, the compact hosts' read-only section, `launcherCompact`
-defaulting `true`, the deadline on the notification's sub-text, and the copy in both locales. What is
-left is **E** (the readings, including a second night) and **F** (the documents).
+defaulting `true`, the deadline on the notification's sub-text, and the copy in both locales.
+
+**E is under way.** **R7 was taken 2026-09-06**: with a synthetic clock at 23:50 and a 23:55-to-00:05
+window, the fire resolved its deadline onto **2026-09-07 00:05** in the device's own zone and the
+shade came down 44 ms after it — the crossing, on a phone rather than in the sweep. It also found a
+defect **D had introduced**: after *any* auto-off, the deadline going away re-posted the ongoing
+notification 263 ms after the shade was already down, leaving "Screen dimmed" with a Stop action over
+a screen nothing was dimming, removable only by a force-stop. Reproduced without the schedule
+involved, fixed and re-read the same day (`ee85203`), which makes E a commit it was not expected to
+be.
+
+**What E still owes is R4, and it is one night rather than two.** Both halves run together: the
+window at 02:00-to-03:00 for the real receiver, and the bare gate alarm armed at put-down so it lands
+*after* the window has closed and the service has stopped — the only arrangement in which this ROM
+is asked whether it starts a process it has already reaped. Then **F** (the documents, and
+`PLAN.md`'s tick).
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
 which here costs a night rather than a minute.

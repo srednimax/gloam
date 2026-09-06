@@ -114,7 +114,7 @@ remembered — and is a point at which the phase could stop without stranding an
 | **B** | The window and the deadline as pure functions with their tests, and both call-site sweeps | `refactor:` + `test:` | nothing |
 | **C** | Storage, the alarm, the receiver, and every place it is re-armed | `chore:` | B, and **A's verdict** |
 | **D** | The schedule screen, the row that reaches it, the battery hand-off, and the launcher default | `feat:` | C |
-| **E** | The readings — the second overnight run, the reconcile paths, the emulator pass | no commit | D |
+| **E** | The readings — the second overnight run, the reconcile paths, the emulator pass | `fix:`, which it was not expected to carry | D |
 | **F** | The documents | `docs:` | everything above |
 
 **0 is not part of the schedule and that is why it goes first.** §5's screen-on receiver repairs a
@@ -1610,7 +1610,7 @@ that reaches a user who never opens the schedule screen.
 | **B** | `refactor: resolve the shade's deadline from every promise that is live` — `shade/Schedule.kt` with all four functions, `ShadeStart`, `ShadeEnd`, the five-argument `deadlineFor`, `autoOffDeadline`'s rename, `shade/Deadlines.kt`, and **both** four-call-site sweeps: `beginShadeAt` and `endShadeAt`. Plus `test: sweep the schedule window and the deadline that wins` — `ScheduleTest` and `DeadlineTest`. **No behaviour change**, and the regression rows are what say so — including Stop, in all four of its paths |
 | **C** | `chore: arm an alarm for the schedule that cannot be switched on yet` — the four keys, `AppPreferences.schedule` and its three setters, `work/ScheduleAlarm.kt`, `shade/ScheduleReceiver.kt`, its manifest entry, `BootReceiver`'s extra line, and `MainApplication`'s second collector with the tighten and the reconcile hanging off it. **C is dead again**, which it briefly was not: `ShadeEnd` and `endShadeAt` moved to B, so nothing C lands touches a path a user can reach with the schedule disabled |
 | **D** | `feat: dim on a nightly schedule` — the `Schedule` route and screen, the dim screen's summary row, the time pickers, the battery banner and its hand-off, the compact host's read-only schedule section, `launcherCompact`'s default, and the copy in both locales |
-| **E** | The readings. Not a commit — and if R4 moves the banner's wording, a `fix:` carrying one string |
+| **E** | The readings. Expected to be no commit — and it is one: `fix: take the notification down with the shade, not a moment after it`, which R7 found and D introduced. If R4 moves the banner's wording, a second `fix:` carrying one string |
 | **F** | `docs: ...` — §12's edits, ADR-0003's third amendment, ADR-0012, this file's readings block filled in, and the release notes the notes gate wants |
 
 **The ramp precedent holds twice, as it did in Phase 3.** B lands the arithmetic and its sweep wired to
@@ -1749,7 +1749,49 @@ written on `ShadeService`'s `combine`.
     that branch by arriving *early*. Both are `windowStart == null`, so the behaviour is right and
     only the sentence is wrong. Left as an observation rather than fixed mid-reading, so that the
     build the overnight run is taken on is the build the rest of E was taken on.
-- **R7** — the midnight crossing, on the device: -
+- **R7** — the midnight crossing, on the device: **taken 2026-09-06 on the phone**, HyperOS,
+  `…gloam.debug`, exemption on and autostart **off**, screen on and the device `ACTIVE` — the one
+  cell in this phase that needs neither grant, recorded because §13's rule is to say which state a
+  reading was taken in. The clock was made synthetic with `service call alarm 2 i64 <millis>`; the
+  documented route is refused to the shell (`cmd time_detector suggest_manual_time` answers *"uid
+  2000 does not have android.permission.SUGGEST_MANUAL_TIME_AND_ZONE"*, and so does the time-zone
+  detector), so the legacy `IAlarmManager` binder call is how a host drives this phone's clock. The
+  zone was left as the device's own `Europe/Warsaw` — the point is the zone we are handed, not one
+  chosen to be convenient — and the window set to **23:55 to 00:05**.
+  - **Armed 23:52:37.477 for 23:55:00**, a 142,528 ms hop: `hopFor`'s `FINAL_HOP_MS` branch, since
+    the gap is under five minutes, and `window=+1m46s893ms` — 75% of the futurity, as everywhere.
+  - **Fired 23:56:46.983**, **106,983 ms** after the on-instant against a 106,893 ms window. The far
+    end, 90 ms past it, and the fourth cell in a row to land there on this ROM.
+  - **`scheduled shade up until 1788732300000` — 2026-09-07 00:05:00 CEST.** That is the whole
+    question: the crossing resolves onto the *next day* in the zone the device handed us, on a phone
+    rather than in §14's sweep, and the ongoing notification's sub-text read **"Until 00:05"** at
+    the same moment.
+  - **Came down at 00:05:00.044**, 44 ms after the deadline, and re-armed in the same breath for
+    `1788814500000` — 2026-09-07 22:55, an hour-wide intermediate hop toward tomorrow's on-instant.
+    One alarm in `dumpsys alarm`, not two.
+  - **A ten-minute window raises no short-window warning, and that is the boundary rather than a
+    miss**: `SHORT_WINDOW_MINUTES` is 10 and the comparison is `<`, so 23:55 to 00:05 sits exactly on
+    it. Checked rather than assumed, because a warning that fired here would have been read as one.
+  - ⚠️ **The reading found a defect that has nothing to do with midnight, and it is the reason E
+    is a commit after all.** At the off-instant the shade came down and the **ongoing notification
+    did not**: `dumpsys notification` still listed one eighty seconds later, live in the Notification
+    List, `flags=ONGOING_EVENT|SILENT` with `FOREGROUND_SERVICE` gone, `when=` **263 ms after**
+    `auto-off fired`, against zero services and no shade window. Nothing but a force-stop takes that
+    row down. **Reproduced with the schedule not involved** — the debug section's plain two-minute
+    deadline, `auto-off fired 63ms after the deadline` at 00:10:37.969, same orphan — so it is the
+    deadline path rather than the schedule's, and the schedule only found it. The cause is §3's own
+    shape read one step further: the deadline is a *preference*, so ending the shade writes it away,
+    the write returns through `shadeIntent` as a changed deadline, `currentDeadline` goes null and
+    `syncNotificationText` re-posts — after `stopSelf`, at which point the notification is no longer
+    the service's and nothing will ever remove it. **It is new in D.** Before the deadline was on the
+    sub-text, nothing the notification said changed on the way down, which is exactly what the
+    comment at the post site claimed and why it was wrong: it had been reasoned about rather than
+    measured. Fixed in `ee85203` — a `stopping` flag consulted before every re-post, and a `cancel`
+    in `onDestroy` so the invariant is local rather than inferred from the framework's timing — and
+    re-read on the phone: auto-off fires, service gone, **zero** notifications, no window. The hand
+    Stop and the panel's Stop were read the same way, before and after; only the two paths where the
+    service stops *itself* can orphan, and an external stop cannot, because cancelling the scope
+    kills the collector before it can post.
 - **R8** — the API-33 emulator pass: **taken 2026-09-05**, `gloam-api33` headless
   (`-no-window -gpu swiftshader_indirect`), 1080x2400, and in **Polish**, so section 11's copy was
   read in `pl` rather than in the language it was written in. The phase's behaviours, on the floor
