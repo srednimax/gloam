@@ -253,6 +253,12 @@ fun DebugSettings() {
             }
         }
 
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            OutlinedButton(onClick = { context.armGateAlarm(GATE_EARLY_MILLIS) }) {
+                Text("Gate alarm 5 h")
+            }
+        }
+
         Text(
             text = "second window: " + if (secondWindowUp) "up" else "down",
             style = MaterialTheme.typography.bodySmall,
@@ -491,6 +497,15 @@ private const val SLEEP_ARM_MILLIS = 600_000L
  * entire question.
  */
 private const val GATE_OVERNIGHT_MILLIS = 10L * 60 * 60 * 1000
+
+/**
+ * The same arm, for a night whose window sits early and whose morning starts early. Five hours put
+ * down at about 23:00 fires between 04:00 and 05:00 — after a 02:00-to-03:00 window has closed and
+ * the service it started has been reaped, and before the phone is picked up. The Doze it lands in is
+ * shallower than [GATE_OVERNIGHT_MILLIS]'s, because the window itself woke the phone an hour or two
+ * earlier; that is the trade a reading makes when it has to be read before six in the morning.
+ */
+private const val GATE_EARLY_MILLIS = 5L * 60 * 60 * 1000
 
 /** Big enough to see and to land a `screencap` on, small enough to obscure nothing that matters. */
 private const val SIDE_DP = 200
