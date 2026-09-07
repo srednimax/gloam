@@ -88,28 +88,37 @@ window at 04:00-to-05:00 for the real receiver, and the bare gate alarm armed at
 is asked whether it starts a process it has already reaped. Then **F** (the documents, and
 `PLAN.md`'s tick).
 
-**The night of 2026-09-07 to 08 is armed**, at 22:50 and in this order: `installDebug` first, then
-`appops set --uid ... SYSTEM_ALERT_WINDOW allow` (the install revokes it), then autostart back on —
-it had lapsed again, reading `no` — then the window, then the gate button, then the cable out. Two
-**pending** entries, read off `dumpsys alarm` rather than off a notification: `ScheduleReceiver`
-`origWhen=2026-09-08 03:00:00 window=+1h` (section 4's hop toward the 04:00 on-instant) and
-`GateReceiver` `origWhen=2026-09-08 08:50:33 window=+1h`, `exempt=true`, which lands after the window
-has closed and the service has been reaped. **The window sits at 04:00 rather than 02:00 so that it closes an
-hour before the phone is picked up**, which is the difference between reading its `logcat`
-at one hour old and at four; the gate's own hop is fixed at ten hours by the debug button and
-could not move with it without a rebuild, and a rebuild would have cancelled both.
- **Read it before 09:50 and without the cable** — plugging
-in ends Doze instantly and the gate half is still outstanding at that hour; wireless `adb` is up on
-`192.168.0.17:5555` for exactly that. `logcat` is the only thing that holds the lateness and the
-allowed/refused verdict, and it does not last the morning, so `bash scripts/doze-capture.sh` is
-the first thing the morning does — it now ends by counting *pending* alarms and saying whether
-the run is over, which is the difference between a finished night and one still in progress.
+**The night of 2026-09-07 to 08 is armed**, and the arrangement is built around a 06:00 morning:
+the window at **02:00 to 03:00**, and the gate alarm at **04:31**, which is after the window has
+closed and the service it started has been reaped, and still ninety minutes before the phone is
+picked up. Two **pending** entries, read off `dumpsys alarm` rather than off a notification:
+`ScheduleReceiver` `origWhen=2026-09-08 01:00:00 window=+1h` (section 4's hop toward the 02:00
+on-instant) and `GateReceiver` `origWhen=2026-09-08 04:31:15 window=+1h`, `exempt=true`. **The
+five-hour arm is new** — `GATE_EARLY_MILLIS`, beside the ten-hour one rather than instead of it -
+because an inexact alarm lands at the far end of an hour-wide window on this ROM, so a gate that has
+to fall after 03:00 and before 06:00 has exactly one place to sit.
+Set-up order: `installDebug`, then `appops set --uid ... SYSTEM_ALERT_WINDOW allow` because the
+install revokes it, then autostart re-read (it had lapsed again, reading `no`), then the window, then
+the gate button, then **the shade stopped by hand** — the update had restored one, and a shade
+already up at 02:00 is adopted rather than started, which is a different reading — then the cable
+out. In the morning: `adb connect`, `bash scripts/doze-capture.sh`, and no cable until it says the
+run is over. `logcat` holds the lateness and the allowed/refused verdict and nothing else does.
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
 which here costs a night rather than a minute. **And arm after the last install, never before**:
 replacing the APK cancels every `PendingIntent` the package owns, so an alarm armed across a rebuild
 is silently gone. The night of 2026-09-06 to 07 was lost to the pair of them and produced no reading
 at all — `phase-4.md`'s R4 has what the device could still be made to say about it afterwards.
+
+⚠️ **Correction, 2026-09-07: replacing the APK does *not* cancel the package's alarms, and
+the paragraph above used to say it did.** Measured directly tonight: with a gate alarm pending for
+08:50:33, `installDebug` replaced the package at 23:28:29 and the alarm was **still pending
+afterwards** — same `origWhen`, and no new entry in the removal history. Only the gate alarm can
+answer this, because `MY_PACKAGE_REPLACED` re-arms the schedule's two seconds later. What did for
+last night was something else at 07:16:59, three minutes *before* that morning's install: a
+force-stop cancels alarms (R5's row) and this ROM force-stops apps on its own. **Arm last anyway** -
+an install revokes `SYSTEM_ALERT_WINDOW`, so a schedule armed across one comes up with no window it
+is allowed to draw.
 ⚠️ **R4 is the phase's long pole and not D's**, and its two halves are not the
 same question asked twice. The bare half is the one no cell of section 1 could ask: `am kill` refuses
 to kill a process Android thinks is unsafe to kill, so the process was alive every time, and
