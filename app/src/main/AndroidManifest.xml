@@ -110,10 +110,30 @@
             silently inert for as long as the app's task survived. It also means a second launch of
             this Activity can never stack a second copy of it on the task — which is correct anyway
             for an app whose whole UI is one Activity and a Nav3 back stack.
+
+            `windowDisablePreview` removes the **starting window** — the placeholder the platform
+            paints from this theme before a line of the app's code runs. It is here because of what
+            this Activity mostly does: with the compact preference on, which is the default, a
+            launcher tap reaches `onCreate`, forwards to the compact controls and finishes before
+            `setContent`. Nothing of the full app is ever composed — but the starting window is
+            drawn regardless, full-screen and dark, and it reads to a user as the whole app opening
+            and shutting again. Measured on the phone: the first frame after the tap is that window,
+            and the compact bar is up by the second.
+
+            It cannot be fixed in code. The platform reads this theme to paint the placeholder
+            before `onCreate`, so the manifest is the only place that can decline it — the same
+            asymmetry `ControlsActivity` is a separate Activity for.
+
+            **The cost is the other path**, and it is a real one: with the preference off, a cold
+            start of the full app now shows the launcher until Compose has a frame instead of a dark
+            rectangle that at least says something happened. That is the trade — a placeholder that
+            lies about what is opening is worse than no placeholder, for the launch this app
+            actually performs.
         -->
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
+            android:windowDisablePreview="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
