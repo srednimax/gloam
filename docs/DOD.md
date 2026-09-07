@@ -79,7 +79,10 @@ is asked whether it starts a process it has already reaped. Then **F** (the docu
 `PLAN.md`'s tick).
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
-which here costs a night rather than a minute.
+which here costs a night rather than a minute. **And arm after the last install, never before**:
+replacing the APK cancels every `PendingIntent` the package owns, so an alarm armed across a rebuild
+is silently gone. The night of 2026-09-06 to 07 was lost to the pair of them and produced no reading
+at all — `phase-4.md`'s R4 has what the device could still be made to say about it afterwards.
 ⚠️ **R4 and R5 are still owed and both cost a night**, so they are the phase's long pole
 and not D's. R4 is the bare apparatus left to reach natural Doze on its own — `am kill` refuses to
 kill a process Android thinks is unsafe to kill, so *whether this ROM starts a process for a

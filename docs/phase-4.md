@@ -1702,6 +1702,26 @@ written on `ShadeService`'s `combine`.
   dump can answer: whether this ROM starts a **dead** process for the broadcast — `am kill` refused
   to kill the app in every cell above, so the process was alive each time and question three has not
   been asked yet.
+  ⚠️ **The night of 2026-09-06 to 07 was void, and reading it back the next day is what
+  says so.** The conditions were the ones R4 wants: `dumpsys deviceidle`'s idling history has the
+  device in **uninterrupted deep idle from 01:02:45 to 03:02:46**, two hours with no maintenance
+  window in them, so a 02:00-to-03:00 window would have sat wholly inside natural Doze. Nothing of
+  Gloam was in it. `dumpsys usagestats` covers from 01:02:43 and carries **zero** `…gloam.debug`
+  events before 06:39:40 — no `FOREGROUND_SERVICE_START`, no notification; the previous evening
+  ends at an `ACTIVITY_STOPPED` at 19:44:11 with no service start after it; and the preferences hold
+  neither `schedule_enabled` nor `schedule_honoured_at`, which is the key the off-instant writes.
+  **A reinstall is what cost the morning's cell**, and it is the trap to carry forward: a gate alarm
+  armed around 06:44 for 16:44 was gone by 07:16:59 with `Reason=pi_cancelled` in `dumpsys alarm`'s
+  removal history, against an install at 07:19:44. Replacing the APK invalidates every
+  `PendingIntent` the package owns and `AlarmManager` drops the alarm — **no error, no log
+  line**. That is AOSP rather than the ROM, and it is the second grant-shaped way to lose a night
+  after autostart lapsing: **arm last, after the final install**, and confirm a *pending* entry
+  rather than a removal-history one before the phone goes down.
+  **What made that recoverable is exactly what will not be**: `logcat` reached back only a few hours,
+  so `GloamGate`'s lateness figure and its allowed/refused verdict — the substance of R4 —
+  exist only in the session that takes them. `usagestats`, `deviceidle` and `batterystats --history`
+  last for days and answer *whether* something ran; they cannot answer how late it was or why it was
+  refused.
 - **R5** — one alarm armed after each of the five loss paths: **taken 2026-09-05 on the phone**,
   HyperOS, `…gloam.debug`, exemption and autostart both granted and re-read first. Every count below
   is off `dumpsys alarm`'s *pending* entries, never off a notification.
