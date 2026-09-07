@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Capture the evidence from an overnight Doze run, read-only, in one command.
 #
-# Run it with the phone plugged in and the shade UNTOUCHED. Plugging in after the
-# fire time cannot affect what already fired; swiping the shade destroys the
-# notification record, and every hour of ordinary use pushes the fire time closer
-# to falling out of the batterystats and logcat ring buffers. So: plug in, run
-# this, then use the phone however you like.
+# Run it with the shade UNTOUCHED: swiping it destroys the notification record, and
+# every hour of ordinary use pushes the fire time closer to falling out of the
+# batterystats and logcat ring buffers.
+#
+# The cable is a question rather than a habit. Plugging in after everything has fired
+# cannot affect what already fired - but charging ends Doze instantly, so plugging in
+# while a later alarm is still pending destroys the half of the run that has not
+# happened yet. Capture over wireless adb (adb connect <phone>:5555) whenever that is
+# the case; the guard at the end of this script says which case you are in.
 #
 #   ./scripts/doze-capture.sh [output-dir]
 set -euo pipefail
@@ -32,10 +36,27 @@ adb shell dumpsys deviceidle              > "$OUT/deviceidle.txt"
 adb shell dumpsys battery                 > "$OUT/battery.txt"
 adb shell cmd appops get "$PKG" SCHEDULE_EXACT_ALARM > "$OUT/appops.txt"
 
+# usagestats outlives logcat by days and answers *whether* the app ran at all - which is
+# the only question still answerable the morning after a night nobody captured. The void
+# night of 2026-09-06 to 07 is why it is in here (docs/phase-4.md, R4).
+adb shell dumpsys usagestats              > "$OUT/usagestats.txt"
+
 # There used to be a database pull here — what the app believed, beside what the dumps
 # say Android did. Gloam has no database (ADR-0007), so the dumps are the whole record.
 
 date -Is > "$OUT/captured-at.txt"
 echo "Captured to $OUT/"
+# `grep -c` exits 1 on a zero count, and `pipefail` + `set -e` would end the script here
+# on the ordinary case of no notification - taking the guard below with it.
 grep -c "pkg=$PKG" "$OUT/notification.txt" 2>/dev/null \
-  | xargs -I{} echo "  {} live notification records for the app"
+  | xargs -I{} echo "  {} live notification records for the app" || true
+
+# Is the run actually over? Pending entries only - everything below "Removal history" is
+# the past, and reading that as an armed alarm is the mistake this whole file is against.
+PENDING=$(sed -n '1,/Removal history/p' "$OUT/alarm.txt" | grep -c "walarm\*:$PKG" || true)
+if [ "${PENDING:-0}" -gt 0 ]; then
+  echo "  $PENDING alarm(s) STILL PENDING for $PKG - the run is not over."
+  echo "  Do not plug the phone in: charging ends Doze and voids what has yet to fire."
+else
+  echo "  nothing pending for $PKG - the run is complete, the cable is safe."
+fi
