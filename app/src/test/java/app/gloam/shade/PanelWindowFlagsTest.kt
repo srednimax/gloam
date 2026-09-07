@@ -2,6 +2,7 @@ package app.gloam.shade
 
 import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 import android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+import android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,6 +36,29 @@ class PanelWindowFlagsTest {
         assertTrue(
             "PANEL_WINDOW_FLAGS has lost FLAG_NOT_FOCUSABLE: the panel would take the Back key " +
                 "and the IME away from the app the user is actually in",
+            PANEL_WINDOW_FLAGS and FLAG_NOT_FOCUSABLE != 0,
+        )
+    }
+
+    /**
+     * Dismissal, and the reason this is a *flag* test rather than a behaviour one.
+     *
+     * `TouchReportingLayout` turns `ACTION_OUTSIDE` into a dismissal, but the window manager only
+     * ever sends that event to a window that asked for it. Drop this flag and the code that handles
+     * it still compiles, still reads correctly and is simply never called — the panel would keep its
+     * close button and lose the tap-anywhere-else that a floating control is expected to have, with
+     * nothing failing anywhere. So the flag is asserted where it cannot be quietly lost.
+     */
+    @Test
+    fun `a tap outside the panel reaches the panel`() {
+        assertTrue(
+            "PANEL_WINDOW_FLAGS has lost FLAG_WATCH_OUTSIDE_TOUCH: ACTION_OUTSIDE would never be " +
+                "delivered, and tapping beside the panel would no longer put it away",
+            PANEL_WINDOW_FLAGS and FLAG_WATCH_OUTSIDE_TOUCH != 0,
+        )
+        assertTrue(
+            "FLAG_WATCH_OUTSIDE_TOUCH only reports a touch it does not take: the panel must still " +
+                "refuse focus, or the outside tap would stop here instead of reaching the app below",
             PANEL_WINDOW_FLAGS and FLAG_NOT_FOCUSABLE != 0,
         )
     }

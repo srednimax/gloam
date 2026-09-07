@@ -42,13 +42,25 @@ import kotlinx.coroutines.flow.StateFlow
  * system bars because a bright strip across the top of an otherwise dimmed screen reads as a bug.
  * The panel is sized to its own content and has no business outside the display's bounds.
  *
+ * **`FLAG_WATCH_OUTSIDE_TOUCH` is what makes a tap anywhere else put the panel away**, and it is the
+ * rare flag that costs the app underneath nothing. It does not widen the window, does not make it
+ * touch-modal and does not consume the touch: the window is told about a press outside its bounds
+ * with a single `ACTION_OUTSIDE` event, and the press goes on to the app below exactly as it would
+ * have. So the safety bound [panelWidthPx] guards is untouched, and the panel gains a third way to
+ * close — after the close button and the idle timeout — that costs no screen and no chrome.
+ *
+ * It needs `FLAG_NOT_FOCUSABLE`'s company to mean this, which it has: a *focusable* window would be
+ * touch-modal, and then the outside tap would stop at the panel instead of reaching what is under
+ * it. The two flags are read together or not at all.
+ *
  * `const` for the same reason [SHADE_WINDOW_FLAGS] is: a `const val` is inlined into its callers at
  * compile time, so `PanelWindowFlagsTest` reads a number on the JVM instead of calling into
  * `android.jar`, where an unmocked method throws.
  */
 const val PANEL_WINDOW_FLAGS =
     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
 /**
  * How long the panel survives without being touched, before the service takes it down.
@@ -71,22 +83,13 @@ const val PANEL_IDLE_TIMEOUT_MS = 30_000L
 private const val PANEL_MAX_DISPLAY_FRACTION = 0.7f
 
 /**
- * How far in from the display's edges the panel floats. The bar is anchored to a bottom corner —
- * where a thumb already is — rather than centred over what the user is reading.
+ * How far in from the trailing edge the panel floats.
+ *
+ * It is the only margin the panel has. The group is *centred* on the other axis rather than offset
+ * from an edge (see `ShadeService.addPanelWindow`), so there is no second number here to keep in
+ * step with this one.
  */
 internal const val PANEL_SIDE_MARGIN_DP = 16
-
-/**
- * How far above the navigation bar the panel floats.
- *
- * Small: the panel is bottom-anchored so the controls land under the thumb, and pushing it further
- * up only moves it over more of what the user is reading. **The navigation bar is not in this
- * number and must not be added to it** — the panel carries no `FLAG_LAYOUT_NO_LIMITS`, so the window
- * manager lays it out inside a display frame that already stops above the bar, whichever navigation
- * mode the phone is in. R6 read that off the phone after a first attempt added the inset by hand and
- * floated the panel five times too high.
- */
-internal const val PANEL_BOTTOM_MARGIN_DP = 24
 
 /**
  * How wide to add the panel's window: the bar, plus the room a disclosure needs when one is open.
@@ -161,10 +164,14 @@ fun panelWidthPx(
  * @param onTouch called for **every** touch the panel receives, including the ones a child consumes.
  *   `dispatchTouchEvent` is the only place that sees all of them — a Compose `pointerInput` would
  *   see a consumed touch only on `PointerEventPass.Initial`. It is what re-arms the idle timeout.
+ * @param onOutside called for a press that landed *outside* the window, which `FLAG_WATCH_OUTSIDE_TOUCH`
+ *   is what delivers. Deliberately not [onTouch]: a tap on the app behind is the user attending to
+ *   something else, so re-arming the idle timeout on it would be the opposite of the right answer.
  */
 internal class PanelHost(
     context: Context,
     onTouch: () -> Unit,
+    onOutside: () -> Unit,
 ) : LifecycleOwner,
     SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -184,7 +191,7 @@ internal class PanelHost(
      * touch on its way down to the children regardless of who consumes it.
      */
     val view: View =
-        TouchReportingLayout(context, onTouch).apply {
+        TouchReportingLayout(context, onTouch, onOutside).apply {
             addView(
                 composeView,
                 FrameLayout.LayoutParams(
@@ -231,8 +238,18 @@ internal class PanelHost(
 private class TouchReportingLayout(
     context: Context,
     private val onTouch: () -> Unit,
+    private val onOutside: () -> Unit,
 ) : FrameLayout(context) {
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        // `ACTION_OUTSIDE` arrives here like any other event and is the one that must not be
+        // treated like one: its coordinates are outside this view, so passing it down to Compose
+        // would have children reasoning about a press that never touched them. It is answered and
+        // consumed, and the app underneath still receives the press itself — the window manager
+        // sent this as a copy, not as a diversion.
+        if (ev.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+            onOutside()
+            return true
+        }
         onTouch()
         return super.dispatchTouchEvent(ev)
     }
