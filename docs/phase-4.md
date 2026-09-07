@@ -1722,6 +1722,17 @@ written on `ShadeService`'s `combine`.
   exist only in the session that takes them. `usagestats`, `deviceidle` and `batterystats --history`
   last for days and answer *whether* something ran; they cannot answer how late it was or why it was
   refused.
+  ⚠️ **Correction, 2026-09-07: the reinstall did not cancel that alarm, and the numbers
+  above already said so.** The removal is stamped 07:16:59.920 and the install 07:19:44 — the cancel
+  came three minutes *first*, so proximity was doing the work the causal claim took credit for.
+  Measured directly the same night: a gate alarm pending for 08:50:33, `installDebug` at 23:28:29,
+  and the alarm **still pending afterwards** with the same `origWhen` and nothing new in the removal
+  history. The schedule's alarm cannot answer this — `MY_PACKAGE_REPLACED` re-arms it two seconds
+  later — which is why the gate's, that nothing re-arms, is the one that settles it. So an app
+  *update* preserves alarms on this device; what cancels them is a force-stop (R5) and a `pm clear`
+  (`data_cleared`, above), and this ROM force-stops apps of its own accord. **Arm last regardless**:
+  the install revokes `SYSTEM_ALERT_WINDOW`, so a schedule that survives one still raises a shade it
+  has no permission to draw.
 - **R5** — one alarm armed after each of the five loss paths: **taken 2026-09-05 on the phone**,
   HyperOS, `…gloam.debug`, exemption and autostart both granted and re-read first. Every count below
   is off `dumpsys alarm`'s *pending* entries, never off a notification.
