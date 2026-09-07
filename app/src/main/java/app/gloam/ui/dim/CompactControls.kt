@@ -146,7 +146,11 @@ fun CompactControls(
     // bar that does not fit is a bar whose foot band — the control that stops the dimming — is off
     // the bottom of the screen. `BoxWithConstraints` is the one composable that can read what its
     // parent is offering, which in both hosts is the display.
-    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.BottomEnd) {
+    // `CenterEnd` rather than a corner, so the box agrees with the gravity both hosts give their
+    // window (`ShadeService.addPanelWindow` says why that is the centre). Both windows wrap this
+    // content, so the alignment only decides anything if one is ever given room to spare — and
+    // then it should put the bar where the window itself is aimed.
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.CenterEnd) {
         // `hasBoundedHeight` rather than a comparison against `Dp.Infinity`: an unbounded parent —
         // a scrolling column, or a measure pass before the window has been given a size — reports
         // no maximum at all, and the design's own height is the right answer there.

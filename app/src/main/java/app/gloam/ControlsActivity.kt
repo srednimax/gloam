@@ -5,13 +5,15 @@ import android.os.Bundle
 import android.view.Gravity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.gloam.shade.PANEL_BOTTOM_MARGIN_DP
 import app.gloam.shade.PANEL_SIDE_MARGIN_DP
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
@@ -67,16 +69,27 @@ class ControlsActivity : AppCompatActivity() {
 
         val app = application as MainApplication
 
-        // **The same corner the panel uses, for the same reason.** These two surfaces are one thing
+        // **The same edge the panel uses, for the same reason.** These two surfaces are one thing
         // to the user — the notification opens whichever the shade's state allows — so the bar has
-        // to be in the same place in both. A floating window's `x`/`y` are offsets from the edges
-        // its gravity names, not absolute coordinates.
+        // to be in the same place in both, which means centred on the trailing edge rather than in
+        // the bottom corner. A floating window's `x` is an offset from the edge its gravity names,
+        // not an absolute coordinate; there is no `y` because the other axis is centred.
+        // **Tap anywhere else to put it away.** A floating window is touch-modal unless it says
+        // otherwise, so a tap outside the bar already comes *here* rather than to the app behind —
+        // it was simply being swallowed. This turns it into `finish()`, which is what a dialog over
+        // somebody else's screen should do and the only dismissal this host had besides Back.
+        //
+        // Set in code rather than as `windowCloseOnTouchOutside` in the theme: AppCompat's dialog
+        // themes are built on `Theme.AppCompat` rather than on the platform's `Theme.Dialog`, so
+        // whether the attribute is inherited at all depends on the support library's version. One
+        // line here does not.
+        setFinishOnTouchOutside(true)
+
         val density = resources.displayMetrics.density
-        window.setGravity(Gravity.BOTTOM or Gravity.END)
+        window.setGravity(Gravity.CENTER_VERTICAL or Gravity.END)
         window.attributes =
             window.attributes.apply {
                 x = (PANEL_SIDE_MARGIN_DP * density).toInt()
-                y = (PANEL_BOTTOM_MARGIN_DP * density).toInt()
             }
 
         setContent {
@@ -87,16 +100,35 @@ class ControlsActivity : AppCompatActivity() {
             AppTheme(themeMode = themeMode, dynamicColor = materialYou) {
                 // **No `Surface` behind it.** The edge bar paints its own shape on a window
                 // `Theme.App.Controls` already made transparent; a surface here would be a
-                // rectangle of theme colour around a control designed to float. `fillMaxSize` is
-                // safe for the same reason it was not before: the window is floating and wrapped to
-                // the size the theme's minimum-width items allow, and what fills it is a
-                // transparent box that aligns the bar into its bottom corner.
-                ControlsBody(
-                    onStart = ::startShade,
-                    onStop = ::stopShade,
-                    onOpenApp = ::openFullApp,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                // rectangle of theme colour around a control designed to float.
+                //
+                // **`fillMaxSize` is load-bearing and the phone is what proved it (R8.)** A
+                // floating window is measured `AT_MOST` the display, so filling *takes* all of it
+                // and the window comes up 320x845dp with the bar aligned inside. Letting it wrap
+                // the bar instead looks tidier, positions identically, and **breaks dragging**: the
+                // press still registers and every move after it is lost, so the column can only be
+                // pointed at, never pulled. Measured both ways with the same synthetic swipe — 26%
+                // (the finger's release) filled, 39% (the finger's press) wrapped.
+                //
+                // So the window stays large and the empty part of it is made to mean something
+                // instead. `detectTapGestures` here fires only on a press the bar did not take —
+                // `levelDrag` consumes its own down, and `awaitFirstDown` under this detector wants
+                // an unconsumed one — so a tap on the control sets a level and a tap anywhere else
+                // closes the window. [setFinishOnTouchOutside] covers the strip beyond the window's
+                // own 320dp; between them there is nowhere left to tap that does nothing.
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) { detectTapGestures { finish() } },
+                ) {
+                    ControlsBody(
+                        onStart = ::startShade,
+                        onStop = ::stopShade,
+                        onOpenApp = ::openFullApp,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }

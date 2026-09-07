@@ -661,14 +661,24 @@ class ShadeService : Service() {
      * `PanelWidthTest` sweeps it. The height is `WRAP_CONTENT` on purpose: a bounded height clips a
      * control, and an unreachable close button is the trap this whole design is shaped to avoid.
      *
-     * ## Why it is bottom-anchored and offset
+     * ## Why it is centred on the trailing edge rather than anchored to a corner
      *
-     * `Gravity.BOTTOM` puts the controls under the thumb rather than over the middle of whatever the
-     * user is reading, and the offset above that edge is the flat [PANEL_BOTTOM_MARGIN_DP]. The
-     * navigation bar is deliberately *not* added to it: the panel carries no `FLAG_LAYOUT_NO_LIMITS`
-     * — which the shade does — so the window manager lays it out inside a display frame that already
-     * stops above the bar, whichever navigation mode the phone is in. R6 read that off the phone,
-     * after a first attempt added the inset by hand and floated the panel five times too high.
+     * The design anchors the group to the bottom corner, and on a real phone that reads as a ladder
+     * down the side rather than a control in a corner. The bar is 84dp wide but 330dp tall, the
+     * buttons under it are another 180, and 510dp of a 904dp screen held 24dp off the bottom starts
+     * *above* the middle and ends on the navigation bar. `CENTER_VERTICAL` spends that height either
+     * side of the middle instead of all of it downwards — the difference between a control that sits
+     * on the edge and one that runs down it. The reach argument for the corner survives it: what a
+     * thumb needs is the foot band and the buttons, and centring moves those *towards* the middle of
+     * the screen rather than away from it.
+     *
+     * **Centred means the centre of the app's area, not of the display.** That is a platform fact
+     * rather than a choice: the panel carries no `FLAG_LAYOUT_NO_LIMITS` — which the shade does — so
+     * the window manager lays it out inside a display frame that already stops short of the status
+     * and navigation bars. The group therefore centres between the bars with no inset arithmetic
+     * here at all. R6 read that frame off the phone back when this was an offset from the bottom;
+     * the attempt before it added the navigation inset by hand and floated the panel five times too
+     * high.
      *
      * ## No brightness of its own
      *
@@ -685,7 +695,15 @@ class ShadeService : Service() {
         if (!canDrawShade()) return
 
         val state = MutableStateFlow(initial)
-        val host = PanelHost(this) { panelTouches.tryEmit(Unit) }
+        val host =
+            PanelHost(
+                context = this,
+                onTouch = { panelTouches.tryEmit(Unit) },
+                // A tap on the app behind the panel is the user going back to what they were doing.
+                // The panel is a control summoned for a moment, so that is a dismissal — the same
+                // answer the close button gives, reached without aiming at anything.
+                onOutside = ::removePanelWindow,
+            )
 
         host.setContent {
             PanelContent(
@@ -710,22 +728,18 @@ class ShadeService : Service() {
                     PANEL_WINDOW_FLAGS,
                     PixelFormat.TRANSLUCENT,
                 ).apply {
-                    // **The bottom corner rather than the bottom edge**, which is where the bar the
-                    // redesign replaced the sheet with is anchored: a thumb is already there, and a
-                    // window that only reaches into one corner leaves the rest of the app touchable.
-                    // `END` rather than `RIGHT` so a right-to-left layout mirrors it with the rest
-                    // of the UI. The known limitation, carried from the design: this assumes a right
-                    // hand in a left-to-right locale, and a left-handed user has no preference to
-                    // say so yet.
-                    gravity = Gravity.BOTTOM or Gravity.END
+                    // **One edge, centred on it.** A window that reaches into a single edge leaves
+                    // the rest of the app touchable, which is the safety argument; why it is centred
+                    // rather than cornered is in this function's doc. `END` rather than `RIGHT` so a
+                    // right-to-left layout mirrors it with the rest of the UI. The known limitation,
+                    // carried from the design: this assumes a right hand in a left-to-right locale,
+                    // and a left-handed user has no preference to say so yet.
+                    gravity = Gravity.CENTER_VERTICAL or Gravity.END
                     x = (PANEL_SIDE_MARGIN_DP * density).toInt()
-                    // **Measured, not assumed** (R6). Without `FLAG_LAYOUT_NO_LIMITS` — which the
-                    // shade has and the panel deliberately does not — the window is laid out inside
-                    // the display frame the system already keeps clear of the navigation bar, so
-                    // `y` is an offset from the *top* of that bar rather than from the bottom of the
-                    // display. Adding the navigation-bar inset here counted it twice and floated the
-                    // panel 59 dp up instead of 12.
-                    y = (PANEL_BOTTOM_MARGIN_DP * density).toInt()
+                    // No `y`. Under `CENTER_VERTICAL` it would be an offset *from the centre*, which
+                    // is not a thing this layout wants — so the bottom margin that used to live here
+                    // is gone, constant and all, rather than left at zero for a later reader to
+                    // wonder about.
                 }
 
         runCatching { manager.addView(host.view, params) }
