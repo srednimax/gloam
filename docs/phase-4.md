@@ -1806,7 +1806,7 @@ written on `ShadeService`'s `combine`.
     the service's and nothing will ever remove it. **It is new in D.** Before the deadline was on the
     sub-text, nothing the notification said changed on the way down, which is exactly what the
     comment at the post site claimed and why it was wrong: it had been reasoned about rather than
-    measured. Fixed in `ee85203` — a `stopping` flag consulted before every re-post, and a `cancel`
+    measured. Fixed in `b8fba4d` — a `stopping` flag consulted before every re-post, and a `cancel`
     in `onDestroy` so the invariant is local rather than inferred from the framework's timing — and
     re-read on the phone: auto-off fires, service gone, **zero** notifications, no window. The hand
     Stop and the panel's Stop were read the same way, before and after; only the two paths where the
