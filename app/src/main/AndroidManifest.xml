@@ -103,61 +103,76 @@
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.App">
         <!--
-            `singleTop` exists for one case and it is a platform fact rather than a preference:
-            a launcher tap on a task that already exists is a `moveTaskToFront`, and `onCreate` is
-            never called. Without this, `MainActivity.onNewIntent` is never called either, and the
-            compact-controls forward (`docs/phase-3.md` §3) would work on a cold start and be
-            silently inert for as long as the app's task survived. It also means a second launch of
-            this Activity can never stack a second copy of it on the task — which is correct anyway
-            for an app whose whole UI is one Activity and a Nav3 back stack.
+            **The launcher entry is not here. It is on `ControlsActivity`** — shape iv in
+            `docs/phase-3.md` §2, and the reason is a platform fact rather than taste.
 
-            `windowDisablePreview` removes the **starting window** — the placeholder the platform
-            paints from this theme before a line of the app's code runs. It is here because of what
-            this Activity mostly does: with the compact preference on, which is the default, a
-            launcher tap reaches `onCreate`, forwards to the compact controls and finishes before
-            `setContent`. Nothing of the full app is ever composed — but the starting window is
-            drawn regardless, full-screen and dark, and it reads to a user as the whole app opening
-            and shutting again. Measured on the phone: the first frame after the tap is that window,
-            and the compact bar is up by the second.
+            While this Activity held the entry, the icon opened the compact controls by forwarding:
+            read the preference in `onCreate`, start the dialog, finish. That works from cold and
+            **cannot** work once the app's task exists in the background, because a launcher tap on
+            an existing task is a `moveTaskToFront` — the platform brings the *already composed*
+            window forward and puts it on screen before a line of our code runs, and only then
+            delivers `onNewIntent` for the forward to fire. What flashed was the full app itself,
+            not a placeholder, which is why `android:windowDisablePreview` here removed the cold
+            start's starting window and left the flash exactly where it was. Read on the phone:
+            `am start` with `CATEGORY_LAUNCHER` answers *"Activity not started, its current task has
+            been brought to the front"*.
 
-            It cannot be fixed in code. The platform reads this theme to paint the placeholder
-            before `onCreate`, so the manifest is the only place that can decline it — the same
-            asymmetry `ControlsActivity` is a separate Activity for.
+            No forward can outrun that, so the fix is that the icon's intent never resolves into
+            this task: it names `ControlsActivity`, whose empty `taskAffinity` puts it somewhere
+            else entirely. `windowDisablePreview` goes with the forward — with the launcher landing
+            elsewhere, a cold start of the *full* app is a start the user asked for, and it gets its
+            placeholder back rather than showing the launcher until Compose has a frame.
 
-            **The cost is the other path**, and it is a real one: with the preference off, a cold
-            start of the full app now shows the launcher until Compose has a frame instead of a dark
-            rectangle that at least says something happened. That is the trade — a placeholder that
-            lies about what is opening is worse than no placeholder, for the launch this app
-            actually performs.
+            `singleTop` stays. Nothing forwards into this Activity from the launcher any more, but
+            the cog in the compact controls and the one in the panel both start it with
+            `FLAG_ACTIVITY_NEW_TASK`, and this is what keeps a second tap from stacking a second
+            copy on the task — which is correct anyway for an app whose whole UI is one Activity and
+            a Nav3 back stack.
+
+            **`exported="true"` with no intent filter is deliberate.** There is no Android Studio in
+            this loop: `scripts/project.py` publishes this component as `MAIN_ACTIVITY`,
+            `scripts/edge-to-edge.py` drives the whole screenshot matrix through `am start -n`, and
+            R2 read on this phone that `am start -n` cannot reach a component that is not exported.
+            What it opens is the app's own first screen — no side effect an outside caller could
+            trigger by opening it.
         -->
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
-            android:windowDisablePreview="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="true" />
 
         <!--
             The compact controls (`docs/phase-3.md` §2). A second activity rather than a flag on
             MainActivity, because the thing that makes a window float is the **manifest** theme,
             which the platform reads before any of this app's code runs — one activity has one of
-            those, and the starting window is drawn from it either way.
+            those, and the starting window is drawn from it either way. That asymmetry is also why
+            the launcher entry moved here rather than staying on `MainActivity` with a forward.
 
-            `exported="false"`: the two doors that reach it, the shade's notification and 2b's tile,
-            are both this app's own. A PendingIntent carries the app's identity, so neither needs an
-            export, and nothing outside Gloam has business opening a dialog over the foreground app.
+            **This is where the launcher icon lands**, and the four task attributes below are what
+            make that safe rather than what make it tidy. `taskAffinity=""` is the load-bearing one
+            now: it is why a tap on the icon cannot resolve into `MainActivity`'s task and bring the
+            full app forward, which is the flash shape iii could not get rid of. `noHistory` means
+            somebody who opens the controls and leaves does not find them again on top of whatever
+            they switch to next; `excludeFromRecents` keeps a dialog out of the recents list; and
+            `singleTop` makes a second tap reuse this window rather than stack a second one behind
+            the first — and delivers `onNewIntent`, which is where the preference gets a second
+            reading (`ControlsActivity.onNewIntent`).
 
-            The four attributes below are all "this is a dialog, not a screen", and none of them is
-            load-bearing for safety — but `noHistory` is the one worth naming: without it somebody
-            who summons the controls from the notification and then leaves finds them again the next
-            time they switch to Gloam's task, on top of whatever they were doing. `taskAffinity=""`
-            keeps it out of the app's own task, `excludeFromRecents` keeps it out of the recents
-            list, and `singleTop` makes a second summon reuse the window rather than stack a second
-            one behind the first.
+            **Nothing of this window is drawn before its own content is**, which is the other half
+            of why the icon lands here: `Theme.App.Controls` is floating and translucent, so the
+            platform gives it `STARTING_WINDOW_TYPE_NONE` and paints no placeholder at all. There is
+            nothing to flash — the launcher stays on screen until the bar itself fades in.
+
+            `exported="true"` is not a choice made here; it is what a launcher entry *is*. The cost
+            is that any app can now open this dialog, and it is small: what appears is Gloam's own
+            controls, over the caller's own screen, doing nothing at all until the person holding
+            the phone taps something. The doors that mattered before — the shade's notification and
+            2b's tile — are still this app's own `PendingIntent`s and never needed the export.
+
+            **A launcher tap is told apart from every other route by its category, not by an extra.**
+            `CATEGORY_LAUNCHER` is on the icon's intent and on nothing this app sends itself, so the
+            *Open the small controls from the icon* preference is read on exactly the entry it is
+            about, and the notification keeps opening the controls whatever the preference says.
 
             Because the task affinity is empty, the way *out* of here has to say so:
             `openFullApp()` adds FLAG_ACTIVITY_NEW_TASK, or the full app would open inside this
@@ -165,12 +180,17 @@
         -->
         <activity
             android:name=".ControlsActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@style/Theme.App.Controls"
             android:taskAffinity=""
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
-            android:noHistory="true" />
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!--
             The shade. `exported="false"` because nothing outside this app has any business starting

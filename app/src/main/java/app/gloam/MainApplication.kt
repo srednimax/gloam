@@ -68,7 +68,9 @@ class MainApplication : Application() {
 
     /**
      * Whether a launcher tap opens the compact controls instead of this app's own screen
-     * (`docs/phase-3.md` §3). `MainActivity.onCreate` reads it before it composes anything.
+     * (`docs/phase-3.md` §3). `ControlsActivity.onCreate` reads it before it composes anything —
+     * the icon lands *there* now (shape iv), so what the preference decides is whether that window
+     * stays or bounces on to `MainActivity`.
      *
      * **Seeded by the blocking startup read and then kept current by a collector**, which is one
      * more moving part than [startupThemeMode] needs and the reason is that nothing corrects this
@@ -80,7 +82,7 @@ class MainApplication : Application() {
      * answer until something happens to kill it.
      *
      * Kotlin note: `@Volatile` because the collector writes from a background dispatcher and
-     * `MainActivity` reads on the main thread. It makes the write visible to other threads; it is
+     * `ControlsActivity` reads on the main thread. It makes the write visible to other threads; it is
      * not a lock, and none is wanted here — the value is a single boolean and a reader that catches
      * the previous one is a reader that ran before the user's tap.
      */

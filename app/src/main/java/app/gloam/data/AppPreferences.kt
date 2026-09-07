@@ -191,7 +191,8 @@ class AppPreferences(
 
     /**
      * Whether a tap on the launcher icon opens the **compact controls** instead of the full app
-     * (`docs/phase-3.md` §2, shape iii).
+     * (`docs/phase-3.md` §2, shape iv — the icon's `<intent-filter>` is on `ControlsActivity`, and
+     * this key decides whether it stays there or forwards to `MainActivity`).
      *
      * **It shipped `false` in Phase 3a and defaults `true` from Phase 4, and R9 is why.** The
      * argument that kept it off was that a first launcher tap landing on a dialog over another app
@@ -279,7 +280,7 @@ class AppPreferences(
      * The same shape and the same justification as [themeModeNow], and the same one caller:
      * `MainApplication` needs both before the first window, because a value that arrives after the
      * first composition arrives a frame too late — and here that frame is a whole activity launch,
-     * with `MainActivity` already on screen by the time the answer says it should not have been.
+     * with the wrong surface already on screen by the time the answer says it should not have been.
      *
      * Two one-shot reads rather than one combined one. Nothing writes the theme mode and this key
      * together, so there is no torn read to prevent — [ShadeIntent] exists for the pair that *is*

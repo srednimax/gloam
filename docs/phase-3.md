@@ -256,6 +256,7 @@ change.
 | **i** | One `MainActivity`, `setTheme()` in `onCreate` from a stored preference | The *starting window* is drawn from the **manifest** theme, before any code runs. One theme in the manifest means one of the two modes flashes the other's window frame on every launch |
 | **ii** | Two activities, and an `<activity-alias>` the app enables and disables to move the launcher entry | `PackageManager.setComponentEnabledSetting` on a `LAUNCHER` component **removes the icon from the home screen** on many launchers, and some do not put it back. A preference that can lose the app's icon is not a preference |
 | **iii** | Two activities. `MainActivity` keeps the launcher entry unconditionally and forwards to `ControlsActivity` when the preference says so | One frame of `MainActivity`'s starting window before the forward. No component surgery, no lost icon |
+| **iv** | Two activities. The launcher `<intent-filter>` sits on `ControlsActivity`, which forwards to `MainActivity` when the preference is off | The entry moves once, in an update, rather than per preference — so a pinned home-screen icon may need re-adding, and the compact host is exported. No forward on the default path at all |
 
 **Shape iii, and the reason is failure mode rather than elegance.** All three cost roughly the same
 to write. Only one of them has a failure that the user cannot undo from inside the app: shape ii
@@ -294,6 +295,35 @@ of the question is about the *second* week of use rather than the first, so it s
 `DOD.md`, with the caveat R9 added: only a tester who granted notifications is using the default at
 all.
 
+**Correction, 2026-09-07 — the shape does not stand. Shape iv ships, and F3 is why.** The table
+above prices shape iii's flash as "one frame of `MainActivity`'s starting window", and the 2026-09-05
+note above prices it at nothing at all. Both are reading the wrong window. The starting window is
+only what a *cold* tap draws, and `android:windowDisablePreview` did remove it. What the user kept
+seeing was the second case: with Gloam's task alive in the background — which is where it is after
+anybody taps the cog to change a setting and leaves — a launcher tap is a `moveTaskToFront`, so the
+platform brings the full app's **already composed** window forward and puts it on screen, and only
+*then* delivers `onNewIntent` for the forward to fire. The flash is the real app, not a placeholder,
+and no forward can outrun it: F2 established that `onCreate` is not called on that path, and
+`onNewIntent` is called after the window is up. **A forward is the wrong instrument** — the fix is
+that the icon's intent must not resolve into that task at all.
+
+So the entry moves. `ControlsActivity` carries the `<intent-filter>`, its empty `taskAffinity` puts
+the tap in a task of its own, and `MainActivity` is left with no launcher logic in it whatsoever. The
+preference survives unchanged in meaning and inverts in direction: the icon now *arrives* at the
+compact host, and `forwardIfFullAppWanted` sends it on to the full app when the preference is off.
+`CATEGORY_LAUNCHER` is still the test and still for the same reason, though the ping-pong it was
+guarding against is gone with the second forward — only one of these two activities forwards now.
+
+**What shape iv costs, since the table above prices the other three.** The launcher entry is a
+component, so it moves in an update: a pinned home-screen icon pointing at `MainActivity` may need
+re-adding, which is the same class of failure shape ii was rejected for — except that it happens
+*once, on an update we chose*, rather than every time a preference is touched, and Gloam has never
+been past internal testing. `ControlsActivity` becomes `exported="true"`, because that is what a
+launcher entry is; what an outside caller gets is Gloam's own controls doing nothing until somebody
+taps them. And a cold tap now shows the launcher for the whole launch — `Displayed …ControlsActivity
+… +1s138ms` — where shape iii's `windowDisablePreview` had already made that true for the compact
+path. The full app keeps its starting window, because nothing forwards away from it any more.
+
 ### The guard, which is not polish
 
 ```kotlin
@@ -327,6 +357,10 @@ the routes out. A launcher tap always carries the category and `ControlsActivity
 never does, so neither the *Open Gloam* button nor the guard has to remember anything — and any later
 entry into `MainActivity`, a deep link or a settings shortcut, is correct by default instead of
 correct for as long as somebody remembers to opt out.
+
+*(Shape iv keeps this test and moves it: it is `ControlsActivity.forwardIfFullAppWanted` now, with
+the condition negated — `!launcherCompact && intent.hasCategory(CATEGORY_LAUNCHER)`. See the
+correction above.)*
 
 **`escapeHatchLive()` gets its second caller here**, which `phase-2.md` §2 predicted would come from
 2b. It arrives from 3a instead and the predicate is unchanged, which is the point of having written
@@ -460,7 +494,10 @@ pending intent regardless of their extras. Both candidate targets change that id
 `FLAG_UPDATE_CURRENT` beside `FLAG_IMMUTABLE` or the old extras survive an app update, silently.
 
 **The launcher route** is shape iii from §2, with the entry test the guard above adds:
-`MainActivity.onCreate` reads the preference and forwards only on a launcher tap. It needs the value
+`MainActivity.onCreate` reads the preference and forwards only on a launcher tap. *(Shape iv, from
+2026-09-07: the route is the `<intent-filter>` itself and the read is `ControlsActivity`'s. Everything
+below about **when** the value has to be known is unchanged — it is still needed before the first
+frame, and still comes from the same `runBlocking` in `MainApplication`.)* It needs the value
 *before* the first frame, which is a `suspend` read, which the app already does once —
 `MainApplication` reads `themeModeNow()` before any Activity exists and hands it over as
 `startupThemeMode`. **`launcherCompactNow()` joins it there**, a second one-shot accessor of exactly
@@ -1256,6 +1293,7 @@ right". Derivations are in §12 and are arithmetic, not observations.
 | R8 | Rotation and locale change with the panel up | `settings put system user_rotation 1`, `cmd locale …` | **The panel survives both, and the rotation needed a fix** (2026-09-03). ~~`settings put system user_rotation` does nothing on HyperOS; `wm user-rotation lock 1` is the one that turns the display.~~ **Withdrawn by R14** (2026-09-04): `settings put` turns this phone fine when the foreground app permits it — read with the launcher in front, *neither* command rotates anything, because the launcher is the portrait lock. What R8 met was its own foreground, not a HyperOS quirk. The panel findings below are unaffected. A window laid out from explicit pixels keeps them across a rotation, so the panel wore the width of whichever orientation it was summoned in: landscape gives 1200 px (the cap biting, correctly) and rotating to portrait left 1200 px on a 1220 px display — 10 px of screen either side of a *touchable* window. `onConfigurationChanged` re-measures now, and it reads 1098 → 1200 → 1098 across both turns. **The locale is not re-read**: switched to English under an open panel, the panel stayed Polish. Left alone — it is stale for at most the 30 s idle timeout and the next summon is correct, where the rotation case was a safety property. Polish fits the panel in both orientations, nothing clipped |
 | R9 | Inactivity dismissal, and death with the shade | open the panel, leave it untouched; then stop the shade | **Both** (2026-09-03). Untouched, the panel lived **30.1 s** (poll granularity 2 s) and logged `panel idle for 30000ms, taking it down`; the shade survived it, `mWindowManagerBrightnessOverride` still `0.01`. The panel's own *Stop dimming* took both windows down and released the override to `NaN` (§8, third route). So does a process kill: `am force-stop` with both up went 2 overlay windows → 0 with nothing orphaned — the Xiaomi case. HyperOS never renders the notification's *Stop* action into the shade, so that route is unread |
 | F2 | **A launcher tap on an existing task never calls `onCreate`** | `am start` with `CATEGORY_LAUNCHER`, preference on, task alive; `logcat -s ActivityTaskManager` | **Bug, found and fixed** (2026-09-03). `moveTaskToFront … result code=2` (`START_TASK_TO_FRONT`) — the instance is resumed, so §3's forward in `onCreate` could not run and the icon preference honoured a cold start and was silently inert for as long as the task survived, which is days. `launchMode="singleTop"` plus `onNewIntent` is the fix: re-read, `result code=2` now ends at `topResumedActivity=…/app.gloam.ControlsActivity`, and the cold path (`result code=0`) does too. **The same trace caught the guard working**: with the overlay op reset by `adb install -r`, one tap went `MainActivity` → `ControlsActivity` → `MainActivity` and **stopped there** — §2's ping-pong argument confirmed on the phone rather than argued, and the category test is what stopped it |
+| F3 | **A launcher tap on an existing task cannot be forwarded out of** | `am start` with `CATEGORY_LAUNCHER` and an explicit component, the app's task alive; `dumpsys activity activities`, six back-to-back `screencap`s across a cold tap | **Bug, found and fixed** (2026-09-07). Shape iii's flash outlived `windowDisablePreview` because the two launches draw different windows. Cold: the starting window, which that attribute did remove. **Warm: the full app itself** — with the task alive, `am start` answers *"Activity not started, its current task has been brought to the front"*, so the platform composites `MainActivity`'s already-drawn window and only then delivers `onNewIntent`, which is F2's finding read from the other side. Nothing in `onCreate` or `onNewIntent` runs early enough to prevent it. **Shape iv** moves the launcher `<intent-filter>` onto `ControlsActivity`: re-read on the same phone, the same tap now starts task `t12114` with `topResumedActivity=…/app.gloam.ControlsActivity` and **no** `brought to the front` line, the `MainActivity` task left in the background untouched. Cold, `Displayed …ControlsActivity … +1s138ms` with the launcher in every captured frame and no dark rectangle in any of them. Both preference branches re-read: off plus the category → `MainActivity`; a start *without* the category, which is the notification's shape → the compact host, whatever the preference says |
 | R10 | `SCREEN_BRIGHTNESS` under adaptive, and the control-centre slider | poll `settings get system screen_brightness` at 10 Hz through a control-centre drag; `dumpsys display`'s *Automatic Brightness Controller State* with the override live and released | **The slider writes it, and while our override is live nothing else can** (2026-09-03). The control-centre slider is not a decoration: one drag took the setting 255 → 13 and a second 13 → 30, with Gloam's override unmoved at `0.01` throughout — the drag that does nothing, measured. **It writes once per gesture, not per pixel**: across a 2.1 s drag sampled every 101 ms the value changed exactly once, to its final figure. And the noise objection turns out not to apply: with the override up the controller reads `mState=AUTO_BRIGHTNESS_DISABLED`, `mLightSensorEnabled=false`, `mCurrentLightSensorRate=-1`, `mAmbientLuxValid=false` — the sensor is not sampled at all — against `AUTO_BRIGHTNESS_ENABLED`, `true`, `250` and `mAmbientLux=12.02` the moment the shade stops. 600 samples over 61.7 s under adaptive with the shade up: **zero writes**. Releasing the override produced one immediately (30 → 21), which is R4's phenomenon, and then 311 samples over 49.7 s at a steady 12.02 lux with none. §4 |
 | R12 | **The notification line, and what it costs to post** | `dumpsys notification --noredact`; `logcat -b events` for `notification_enqueue`; `screencap` with the row open | **Both directions, one post each, and legible** (2026-09-03). Shade at dim 100 with the backlight toggle on: `android.title=(Screen dimmed)`, `android.text=(Your brightness slider is paused while Gloam is dimming)`. Toggling the backlight off gave **one** `notification_enqueue` and `android.text=null`, and back on one more and the line again; the whole 40% → 100% slider drag gave **none**. Starting the shade is two posts — `startForeground` without the line, then the transition with it. `NotificationShade` is `Window #4` above Gloam's `#7`, printed top-first, and the override stays `0.01` tagged ours with the row open: the text renders at **175/255**, which is HyperOS's own notification-body grey untouched, against **59/255** for `dim_backlight_hint`'s screen behind it (cream background at R6's 0.24 transmission) and 22/255 for that screen's own text. Wraps to two lines in English and in Polish, clipped in neither |
 | R11 | API-33 AVD end-of-phase pass | `emulator -avd gloam-api33 -no-window` | **The whole phase on the floor, and it holds** (2026-09-03). Panel above shade, `panelWidthPx` at 972 of 1080, touches caught and passed, both dismissals, the notification line. See below |

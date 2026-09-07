@@ -32,6 +32,14 @@ import app.gloam.ui.dim.DimViewModel
  * app's first-run framing. `docs/phase-3.md` §2 is the argument for it; what follows is only the
  * part that is not obvious from reading the code.
  *
+ * **And it is the launcher's door too** — shape iv, which is the manifest's `<intent-filter>` rather
+ * than anything in this file. The icon used to land on [MainActivity], which read the preference and
+ * forwarded here; that could not stop the full app flashing, because a launcher tap on a task that
+ * already exists is a `moveTaskToFront` and the platform draws that task's window before any code of
+ * ours runs. An intent that names this Activity resolves into a different task entirely — the empty
+ * `taskAffinity` — so there is nothing of the full app to draw. What is left in code is the other
+ * direction: [forwardIfFullAppWanted], for the user who has turned the preference off.
+ *
  * ## It is a dialog because a theme said so, before any of this ran
  *
  * `Theme.App.Controls` is what makes this window float, and the platform reads it out of the
@@ -64,8 +72,12 @@ class ControlsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Before anything is composed: a dialog with a broken start button on it is worse than no
-        // dialog. `finish()` from `onCreate` skips straight to `onDestroy` without composing.
-        if (forwardIfUnusable()) return
+        // dialog, and so is a dialog the user asked the icon not to open. `finish()` from `onCreate`
+        // skips straight to `onDestroy` without composing.
+        //
+        // Kotlin note: `||` short-circuits exactly as it does in JS, so the guard's two live reads
+        // are never taken on a tap that is leaving for the full app anyway.
+        if (forwardIfFullAppWanted(intent) || forwardIfUnusable()) return
 
         val app = application as MainApplication
 
@@ -134,6 +146,53 @@ class ControlsActivity : AppCompatActivity() {
     }
 
     /**
+     * **A launcher tap on a task that already exists never calls `onCreate`** — the platform fact
+     * F2 read off the phone when this Activity was the forward's *destination* rather than the
+     * icon's target. It applies here now for the same reason: this window is `singleTop` and lives
+     * in its own task, so a second tap on the icon while it is up is delivered here instead.
+     *
+     * Without this override the preference would be honoured on the tap that created the window and
+     * ignored on every tap after it, for as long as the window survived — which is exactly the bug
+     * F2 found, moved one component along.
+     *
+     * `setIntent` first, so a later reader — a resume, a configuration change — is not still being
+     * told this Activity was entered from the launcher.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // `isFinishing` for [forwardIfUnusable]'s reason: this window may already be on its way out,
+        // and starting the full app twice is two task animations for one tap.
+        if (!isFinishing) forwardIfFullAppWanted(intent)
+    }
+
+    /**
+     * **The launcher preference, read on the one entry it is about.**
+     *
+     * *Open the small controls from the icon* is on by default, so this is the minority path: the
+     * user who wants the icon to open Gloam itself. The forward costs them one hop through a window
+     * that never draws — `Theme.App.Controls` is floating and translucent, so the platform paints no
+     * placeholder for it — and then [MainActivity] opens with its own starting window, which is the
+     * placeholder that is finally telling the truth about what is opening.
+     *
+     * **The category test is not a detail.** `CATEGORY_LAUNCHER` rides on the icon's intent and on
+     * nothing this app sends itself, so the notification and the tile keep opening these controls
+     * whatever the preference says — which is what the shipped copy promises. Testing the category
+     * rather than passing a "do not bounce me" extra also makes every later route in — a shortcut, a
+     * deep link — correct by default rather than correct for as long as its author remembers.
+     *
+     * Deliberately **not** re-checked in [onResume], unlike the guard below: the preference can move
+     * while this window sits in the background, and throwing somebody into the full app because they
+     * changed a setting on a screen they have already left is not what the setting says it does.
+     */
+    private fun forwardIfFullAppWanted(intent: Intent): Boolean {
+        val app = application as MainApplication
+        if (app.launcherCompact || !intent.hasCategory(Intent.CATEGORY_LAUNCHER)) return false
+        openFullApp()
+        return true
+    }
+
+    /**
      * The second half of the guard, on the rule `DimScreen` already follows: both preconditions are
      * switches on settings screens, so both can move while this window is in the background.
      *
@@ -171,12 +230,11 @@ class ControlsActivity : AppCompatActivity() {
      * The flag sends it to the task its own affinity names, which is the app's, where it belongs and
      * where it can be come back to.
      *
-     * **And the intent deliberately carries no categories.** A launcher tap carries
-     * `CATEGORY_LAUNCHER` and a `startActivity` from inside the app carries none, which is how
-     * checkpoint D's launcher forward will tell the two apart. Testing for the category rather than
-     * passing a "do not bounce me" extra is what stops these two activities forwarding into each
-     * other, and it is correct by default for every later caller instead of correct for as long as
-     * each of them remembers to opt out.
+     * **And the intent deliberately carries no categories**, which is what keeps
+     * [forwardIfFullAppWanted] from reading this as a launcher tap if [MainActivity] ever grows a
+     * route back. The ping-pong §2 argued about is gone with shape iv — only one of these two
+     * activities forwards now, so there is no loop left to break — but the category is still what
+     * says *how this Activity was entered*, and a start from inside the app is not the icon.
      */
     private fun openFullApp() {
         startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
