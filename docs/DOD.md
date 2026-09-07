@@ -69,7 +69,7 @@ shade came down 44 ms after it — the crossing, on a phone rather than in the s
 defect **D had introduced**: after *any* auto-off, the deadline going away re-posted the ongoing
 notification 263 ms after the shade was already down, leaving "Screen dimmed" with a Stop action over
 a screen nothing was dimming, removable only by a force-stop. Reproduced without the schedule
-involved, fixed and re-read the same day (`ee85203`), which makes E a commit it was not expected to
+involved, fixed and re-read the same day (`b8fba4d`), which makes E a commit it was not expected to
 be.
 
 **And a second defect D had introduced, found the same way on 2026-09-07: the icon flashed the full
@@ -83,21 +83,39 @@ all. **One consequence to watch on update**: the launcher entry is a component, 
 home-screen icon may need re-adding once.
 
 **What E still owes is R4, and it is one night rather than two.** Both halves run together: the
-window at 02:00-to-03:00 for the real receiver, and the bare gate alarm armed at put-down so it lands
+window at 04:00-to-05:00 for the real receiver, and the bare gate alarm armed at put-down so it lands
 *after* the window has closed and the service has stopped — the only arrangement in which this ROM
 is asked whether it starts a process it has already reaped. Then **F** (the documents, and
 `PLAN.md`'s tick).
+
+**The night of 2026-09-07 to 08 is armed**, at 22:50 and in this order: `installDebug` first, then
+`appops set --uid ... SYSTEM_ALERT_WINDOW allow` (the install revokes it), then autostart back on —
+it had lapsed again, reading `no` — then the window, then the gate button, then the cable out. Two
+**pending** entries, read off `dumpsys alarm` rather than off a notification: `ScheduleReceiver`
+`origWhen=2026-09-08 03:00:00 window=+1h` (section 4's hop toward the 04:00 on-instant) and
+`GateReceiver` `origWhen=2026-09-08 08:50:33 window=+1h`, `exempt=true`, which lands after the window
+has closed and the service has been reaped. **The window sits at 04:00 rather than 02:00 so that it closes an
+hour before the phone is picked up**, which is the difference between reading its `logcat`
+at one hour old and at four; the gate's own hop is fixed at ten hours by the debug button and
+could not move with it without a rebuild, and a rebuild would have cancelled both.
+ **Read it before 09:50 and without the cable** — plugging
+in ends Doze instantly and the gate half is still outstanding at that hour; wireless `adb` is up on
+`192.168.0.17:5555` for exactly that. `logcat` is the only thing that holds the lateness and the
+allowed/refused verdict, and it does not last the morning, so `bash scripts/doze-capture.sh` is
+the first thing the morning does — it now ends by counting *pending* alarms and saying whether
+the run is over, which is the difference between a finished night and one still in progress.
 ⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
 grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
 which here costs a night rather than a minute. **And arm after the last install, never before**:
 replacing the APK cancels every `PendingIntent` the package owns, so an alarm armed across a rebuild
 is silently gone. The night of 2026-09-06 to 07 was lost to the pair of them and produced no reading
 at all — `phase-4.md`'s R4 has what the device could still be made to say about it afterwards.
-⚠️ **R4 and R5 are still owed and both cost a night**, so they are the phase's long pole
-and not D's. R4 is the bare apparatus left to reach natural Doze on its own — `am kill` refuses to
-kill a process Android thinks is unsafe to kill, so *whether this ROM starts a process for a
-broadcast* has not been asked yet — and R5 is the same question against the real receiver, which
-reads preferences, writes two keys and starts a foreground service.
+⚠️ **R4 is the phase's long pole and not D's**, and its two halves are not the
+same question asked twice. The bare half is the one no cell of section 1 could ask: `am kill` refuses
+to kill a process Android thinks is unsafe to kill, so the process was alive every time, and
+*whether this ROM starts a dead process for a broadcast* is still unanswered. The real half puts it
+to a receiver that reads preferences, writes two keys and starts a foreground service — a different
+load on a ROM deciding whether to run either.
 
 ## The standing schema gate — parked, because there is no database
 
@@ -434,6 +452,11 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
       rather than the system dialog, which is what `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` would have
       been for. **"No new permissions" is a claim to read off the artifact, not off the diff** — the
       diff cannot see what a dependency merged in.
+      **And again on the 2026-09-07 bundle, after the manifest was rewritten**: still six, still
+      all accounted for. The launcher `<intent-filter>` moving to `ControlsActivity` changed 112
+      lines of `AndroidManifest.xml` and not one permission — the five the source declares are
+      the same five `v0.5.0` declared, and the sixth on the artifact is AndroidX's as before. A
+      rewrite of that file is exactly the moment this check earns its standing place.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
       **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
       2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the
