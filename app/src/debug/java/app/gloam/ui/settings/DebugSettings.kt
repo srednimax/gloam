@@ -90,14 +90,15 @@ import kotlinx.coroutines.launch
  *
  * ## Opening the compact controls — Phase 3, checkpoint C
  *
- * `ControlsActivity` is `exported="false"`, because the only things that legitimately open it are
- * this app's own notification and 2b's tile, and a dialog any installed app could raise over the
- * foreground app is a different thing entirely. That is also why `adb shell am start -n` cannot
- * reach it — it runs as uid 2000 and the activity manager refuses with `not exported from uid …`,
- * which `docs/phase-3.md` §12 did not allow for when it wrote that command down.
+ * `ControlsActivity` was `exported="false"` when this button was written, so `adb shell am start -n`
+ * could not reach it at all — the shell runs as uid 2000 and the activity manager refuses with
+ * `not exported from uid …`, which `docs/phase-3.md` §12 did not allow for when it wrote that
+ * command down. **Shape iv exports it**, because it now carries the launcher's `<intent-filter>` and
+ * that is what a launcher entry is; the button stays anyway. It reproduces the route with the flags
+ * the real callers use, and a reading taken through a hand-built `am start` is a reading of the
+ * command rather than of the app.
  *
- * So the same justification the two above carry applies a third time: **only the app can do this to
- * itself**. R2, R3 and R5 are all taken through this button until checkpoint D builds the routes a
+ * R2, R3 and R5 are all taken through this button until checkpoint D builds the routes a
  * user will actually use.
  *
  * ## Summoning the panel — Phase 3, checkpoint F

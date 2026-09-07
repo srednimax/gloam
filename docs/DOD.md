@@ -72,6 +72,16 @@ a screen nothing was dimming, removable only by a force-stop. Reproduced without
 involved, fixed and re-read the same day (`ee85203`), which makes E a commit it was not expected to
 be.
 
+**And a second defect D had introduced, found the same way on 2026-09-07: the icon flashed the full
+app.** Not the starting window `ba855ac` had already taken away — that fix was correct and
+insufficient — but `MainActivity`'s own window, brought forward by the platform whenever Gloam's task
+was alive, which is the ordinary state after anybody opens Settings and leaves. A forward cannot
+outrun `moveTaskToFront`, so the launcher `<intent-filter>` moved to `ControlsActivity` instead:
+shape **iv** in `phase-3.md` §2, with the reading in F3. The preference means what it always meant
+and now reads from the other side of the forward; `MainActivity` is left with no launcher logic at
+all. **One consequence to watch on update**: the launcher entry is a component, so a pinned
+home-screen icon may need re-adding once.
+
 **What E still owes is R4, and it is one night rather than two.** Both halves run together: the
 window at 02:00-to-03:00 for the real receiver, and the bare gate alarm armed at put-down so it lands
 *after* the window has closed and the service has stopped — the only arrangement in which this ROM

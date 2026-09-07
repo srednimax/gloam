@@ -1262,11 +1262,14 @@ SCENES = [
     # clip it**. The window is bottom-weighted and sized to its content, which is exactly the shape
     # that gets clipped, and R5 already caught the Polish leg overflowing its height on the phone.
     #
-    # **Reached through the debug section rather than through the launcher icon**, and both halves of
-    # that are forced. `ControlsActivity` is `exported="false"`, so `am start -n` cannot reach it at
-    # all (`phase-3.md` R2); and the icon route needs `CATEGORY_LAUNCHER` on the intent, which
-    # [relaunch]'s explicit-component start deliberately does not carry — which is also what keeps
-    # the launcher preference from leaking into every scene after this one.
+    # **Reached through the debug section rather than through the launcher icon**, which was forced
+    # when this was written and is now a choice worth keeping. `ControlsActivity` was
+    # `exported="false"`, so `am start -n` could not reach it at all (`phase-3.md` R2); shape iv
+    # exports it, because it carries the launcher `<intent-filter>` now, and the command would work.
+    # The button stays: [relaunch] drives `MainActivity`, which is still the exported component this
+    # whole matrix walks, and its explicit-component start deliberately carries no
+    # `CATEGORY_LAUNCHER` — which is what keeps the launcher preference from deciding where any
+    # scene in this table lands.
     #
     # The button's label is a Kotlin literal in `DebugSettings.kt` rather than a string resource, so
     # [resolve_needles] finds no match and passes it through unchanged. That is the licence name's
