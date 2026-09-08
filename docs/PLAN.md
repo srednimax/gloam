@@ -21,13 +21,13 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 - [ ] **Phase 2b** — As dark as it goes
 - [x] **Phase 3a** — The controls, from the launcher
 - [x] **Phase 3b** — The panel *(the go/no-go went: `phase-3.md` R1)*
-- [ ] **Phase 4** — It turns itself on and off
+- [x] **Phase 4** — It turns itself on and off *(the gate went: `phase-4.md` R2)*
 - [ ] **Phase 5** — Ship shape
 
-**Two boxes below an unticked one are ticked, and that is the real state rather than a slip.** Phase
+**Three boxes below an unticked one are ticked, and that is the real state rather than a slip.** Phase
 2's code has been done since 2026-09-02; what its box waits on is twelve testers opted in for
-fourteen days, which is calendar time and other people's replies (`DOD.md`). Phase 3 needed none of
-that, so it ran while the door waits. 2b is the one genuine dependency and it is unstarted.
+fourteen days, which is calendar time and other people's replies (`DOD.md`). Phases 3 and 4 needed none
+of that, so they ran while the door waits. 2b is the one genuine dependency and it is unstarted.
 
 **Every phase in this list is split along cost or along kind.** That is not a stylistic tic: each of
 Phases 2, 3, 4 and 5 originally bundled a cheap item with an expensive one, or a feature with the
