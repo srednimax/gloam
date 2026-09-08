@@ -130,3 +130,23 @@ reboot row of `phase-4.md` section 6 does not fire. Force-stop and reboot compos
 direction: what recovers the alarm after both is the next launch, which is the third recovery site
 and costs no code. Measured 2026-09-05: `stopped=true` and zero alarms after the reboot, one alarm
 and `stopped=false` a second after the launcher tap.
+
+Amendment, 2026-09-08 (fourth). **The far end is `force-idle`'s habit, not this ROM's**, and R4 is
+what separates them. The finding above is measured and stands — the *width* an inexact alarm is given
+is 75% of its futurity, capped at an hour — but "delivered every cell within 50 ms of the far end"
+describes three cells taken under `dumpsys deviceidle force-idle`. Under **natural** overnight Doze on
+the same phone (`phase-4.md` R4, the night of 2026-09-07 to 08), a gate alarm armed five hours out
+with `window=+1h0m0s0ms` arrived **2 m 50 s** in, 57 minutes short of the far end, and the schedule's
+final hop — armed for the on-instant itself — was **4 m 4 s** late. So `force-idle` is **pessimistic**
+about delivery rather than optimistic, which is the opposite of the direction a simulation is usually
+wrong in. The hop chain stays: it is cheap, and the vendor habit it was built against is real under
+the conditions it was measured in. It is now insurance rather than the only thing between the user and
+an hour of lateness.
+
+**And one thing the natural night could measure that no forced cell could.** A foreground service does
+not hold Doze off — `deviceidle` sat at `IDLE` for the whole hour the shade was up, and the phone was
+awake **5.7%** of it. So anything of ours that waits by counting *uptime* waits in wall-clock terms it
+did not choose: `ShadeService`'s sixty-second deadline re-check took the shade down **14 m 5 s** after
+the off-instant. That is a consequence of this ADR's "inexact, and no wakelock" position rather than a
+defect in it, and it is recorded here because the next person to add a timer will reach for `delay`
+first and this is the number that says what that costs.

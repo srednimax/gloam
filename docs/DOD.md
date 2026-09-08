@@ -51,19 +51,20 @@ control surface in Gloam that is legible at maximum dim (1.59 nits under it agai
 measured both ways). The notification now says when the user's own brightness slider is paused.
 **What is left of the phase is not code**: the two rule-5 questions below, which outlive it.
 
-**Phase 4 is open, and its detail is [`phase-4.md`](phase-4.md)** — seven checkpoints, 0 and A–F.
-**0, A, B, C and D are done; E is next.** The gate answered on 2026-09-05 and its verdict is **(ii)**,
+**Phase 4 is done, and its detail is [`phase-4.md`](phase-4.md)** — seven checkpoints, 0 and A–F.
+**Every checkpoint is closed.** The gate answered on 2026-09-05 and its verdict is **(ii)**,
 build as planned: the alarm fires in forced Doze with the battery exemption and autostart both
 granted, the exemption licenses the *service start* rather than the alarm, and autostart is absolute.
 So §7's Xiaomi half is load-bearing rather than a footnote, and the one finding no verdict
 anticipated — an inexact alarm is delivered at the far end of a window 75% as wide as its futurity,
-capped at an hour — is why §4 arms a chain of hops rather than `nextOn` itself. The verdict and its
-numbers are in `phase-4.md` §1. **D landed on 2026-09-05** — the schedule screen and its route, the
+capped at an hour — is why §4 arms a chain of hops rather than `nextOn` itself. (**R4 narrows that**:
+the far end is `force-idle`'s habit rather than the ROM's, and the chain is what makes it not matter.
+Below.) The verdict and its numbers are in `phase-4.md` §1. **D landed on 2026-09-05** — the schedule screen and its route, the
 dim screen's summary row, the pickers with the equal-times refusal and the short-window warning, the
 battery banner and its widened hand-off, the compact hosts' read-only section, `launcherCompact`
 defaulting `true`, the deadline on the notification's sub-text, and the copy in both locales.
 
-**E is under way.** **R7 was taken 2026-09-06**: with a synthetic clock at 23:50 and a 23:55-to-00:05
+**E is closed.** **R7 was taken 2026-09-06**: with a synthetic clock at 23:50 and a 23:55-to-00:05
 window, the fire resolved its deadline onto **2026-09-07 00:05** in the device's own zone and the
 shade came down 44 ms after it — the crossing, on a phone rather than in the sweep. It also found a
 defect **D had introduced**: after *any* auto-off, the deadline going away re-posted the ongoing
@@ -82,49 +83,51 @@ and now reads from the other side of the forward; `MainActivity` is left with no
 all. **One consequence to watch on update**: the launcher entry is a component, so a pinned
 home-screen icon may need re-adding once.
 
-**What E still owes is R4, and it is one night rather than two.** Both halves run together: the
-window at 04:00-to-05:00 for the real receiver, and the bare gate alarm armed at put-down so it lands
-*after* the window has closed and the service has stopped — the only arrangement in which this ROM
-is asked whether it starts a process it has already reaped. Then **F** (the documents, and
-`PLAN.md`'s tick).
+**R4 was taken on the night of 2026-09-07 to 08, both halves in one night**, and it closes E. The
+window ran 02:00 to 03:00 against the real receiver; the bare gate alarm was armed for 04:31, after
+the window had closed. `deviceidle` has the device in deep `IDLE` from 01:01, with both fires landing
+inside it rather than in a maintenance window — the natural Doze `force-idle` was standing in for.
 
-**The night of 2026-09-07 to 08 is armed**, and the arrangement is built around a 06:00 morning:
-the window at **02:00 to 03:00**, and the gate alarm at **04:31**, which is after the window has
-closed and the service it started has been reaped, and still ninety minutes before the phone is
-picked up. Two **pending** entries, read off `dumpsys alarm` rather than off a notification:
-`ScheduleReceiver` `origWhen=2026-09-08 01:00:00 window=+1h` (section 4's hop toward the 02:00
-on-instant) and `GateReceiver` `origWhen=2026-09-08 04:31:15 window=+1h`, `exempt=true`. **The
-five-hour arm is new** — `GATE_EARLY_MILLIS`, beside the ten-hour one rather than instead of it -
-because an inexact alarm lands at the far end of an hour-wide window on this ROM, so a gate that has
-to fall after 03:00 and before 06:00 has exactly one place to sit.
-Set-up order: `installDebug`, then `appops set --uid ... SYSTEM_ALERT_WINDOW allow` because the
-install revokes it, then autostart re-read (it had lapsed again, reading `no`), then the window, then
-the gate button, then **the shade stopped by hand** — the update had restored one, and a shade
-already up at 02:00 is adopted rather than started, which is a different reading — then the cable
-out. In the morning: `adb connect`, `bash scripts/doze-capture.sh`, and no cable until it says the
-run is over. `logcat` holds the lateness and the allowed/refused verdict and nothing else does.
-⚠️ **Run `python3 scripts/device-gate.py` before every reading in that phase.** The autostart
-grant lapses on its own, and a Doze run against an unknown one proves nothing in either direction —
-which here costs a night rather than a minute. **And arm after the last install, never before**:
-replacing the APK cancels every `PendingIntent` the package owns, so an alarm armed across a rebuild
-is silently gone. The night of 2026-09-06 to 07 was lost to the pair of them and produced no reading
-at all — `phase-4.md`'s R4 has what the device could still be made to say about it afterwards.
+- **The schedule works, and the hop chain is why.** Four hops, each re-armed at `gap / 1.75`, the
+  last of them armed for the on-instant itself; the shade came up **4 m 4 s** into the hour. The hour
+  a single long arm would have cost is a price the chain never pays.
+- **The gate fired 2 m 50 s late and its service start was allowed** — not at the far end of its
+  hour-wide window but 57 minutes short of it. **`force-idle` is pessimistic about delivery**, which
+  is the opposite of the direction a simulation usually errs in, and is what the night bought.
+- **The auto-off is the finding with a cost attached.** The shade came down **14 m 5 s** after the
+  off-instant, because `DEADLINE_RECHECK_MS` is sixty seconds of *uptime* and this phone is awake
+  5.7% of a screen-off night. The loop's own comment predicted the shape; fourteen minutes is the
+  size, and it is what section 10's short-window warning is now written from.
+- **The one question the night could not answer is still the bare half's.** The process was alive
+  through both fires — this ROM's cleaners had killed the app repeatedly through the evening and then
+  left it alone the moment the phone settled — so *whether it starts a **dead** process for a
+  broadcast* needs a night where nothing launches the app after the last clean, and `am kill` still
+  refuses to make one. Not a Phase 4 blocker: the schedule is proven on a ROM that keeps the process,
+  and section 6's reconcile is what covers the case where it does not.
 
-⚠️ **Correction, 2026-09-07: replacing the APK does *not* cancel the package's alarms, and
-the paragraph above used to say it did.** Measured directly tonight: with a gate alarm pending for
-08:50:33, `installDebug` replaced the package at 23:28:29 and the alarm was **still pending
-afterwards** — same `origWhen`, and no new entry in the removal history. Only the gate alarm can
-answer this, because `MY_PACKAGE_REPLACED` re-arms the schedule's two seconds later. What did for
-last night was something else at 07:16:59, three minutes *before* that morning's install: a
-force-stop cancels alarms (R5's row) and this ROM force-stops apps on its own. **Arm last anyway** -
-an install revokes `SYSTEM_ALERT_WINDOW`, so a schedule armed across one comes up with no window it
-is allowed to draw.
-⚠️ **R4 is the phase's long pole and not D's**, and its two halves are not the
-same question asked twice. The bare half is the one no cell of section 1 could ask: `am kill` refuses
-to kill a process Android thinks is unsafe to kill, so the process was alive every time, and
-*whether this ROM starts a dead process for a broadcast* is still unanswered. The real half puts it
-to a receiver that reads preferences, writes two keys and starts a foreground service — a different
-load on a ROM deciding whether to run either.
+The numbers, and the two methodology findings that came with them, are in `phase-4.md`'s R4.
+
+⚠️ **Run `python3 scripts/device-gate.py` before every device reading.** The autostart grant
+lapses on its own, and a Doze run against an unknown one proves nothing in either direction — which
+for an overnight reading costs a night rather than a minute.
+
+⚠️ **Arm last, after the final install — but for the overlay permission, not the alarm.**
+`adb install -r` revokes `SYSTEM_ALERT_WINDOW` on this ROM, so a schedule armed across an install
+comes up with no window it is allowed to draw. It does **not** cancel the package's alarms, and this
+file used to say it did: measured 2026-09-07, a gate alarm pending for 08:50:33 survived
+`installDebug` at 23:28:29 with the same `origWhen` and nothing new in the removal history. Only the
+gate alarm can settle it, because `MY_PACKAGE_REPLACED` re-arms the schedule's two seconds later.
+What cancels an alarm is a force-stop (R5's row) and a `pm clear` — and this ROM force-stops apps of
+its own accord. Also stop a shade the install restored: one already up at the on-instant is *adopted*
+rather than started, which is R6 and not the reading a scheduled night is for.
+
+⚠️ **An overnight capture cannot depend on the app's own log lines.** The main ring is 2 MiB, and
+`GloamSchedule`'s and `ShadeService`'s lines from 02:04 and 03:14 were gone by 06:25 while framework
+records from the same process, 44 ms apart, survived. `scripts/doze-capture.sh` pulls the events
+buffer, `dumpsys alarm` and the preferences file for that reason, and R4's lateness figures were
+rebuilt from those rather than read off the log. **And its closing guard counts *pending* alarms for
+the package**, so the schedule re-arming itself for the next night reads as *"the run is not over"*
+the morning after a run that finished perfectly — read *which* alarm is pending before believing it.
 
 ## The standing schema gate — parked, because there is no database
 

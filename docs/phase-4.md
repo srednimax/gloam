@@ -1692,8 +1692,12 @@ written on `ShadeService`'s `combine`.
   for 08:57:27, device stepped to deep `IDLE`, watched for **fifteen minutes** — nothing in
   `GloamGate` at all, and the alarm still listed in `dumpsys alarm` at the end. Armed and run are
   two different things, measured. This is the cell that makes section 7's Xiaomi half load-bearing.
-- **R4** — the overnight run, natural Doze. In **A** against the bare apparatus: - . In **E** against
-  the real receiver: -
+- **R4** — the overnight run, natural Doze. **Both halves in one night, 2026-09-07 to 08.** In **A**
+  against the bare apparatus: **it fired 2 m 50 s late and the start was allowed** — but into a
+  process that was still alive, so the third question is still open. In **E** against the real
+  receiver: **the shade went up 4 m 4 s into the hour and came down 14 m 5 s after the off-instant**,
+  the second number being the deadline loop's sixty-second re-check measured against a phone that is
+  awake 5.7% of the night. Both halves in full at the end of this entry.
   **Half of what R4 was going to cost has already been paid without waiting**: the window an alarm
   is given is visible in `dumpsys alarm` the instant it is armed, and a ten-hour arm reads
   `window=+1h0m0s0ms` against a two-minute arm's `+1m29s997ms`. So the batching window is 75% of the
@@ -1733,6 +1737,66 @@ written on `ShadeService`'s `combine`.
   (`data_cleared`, above), and this ROM force-stops apps of its own accord. **Arm last regardless**:
   the install revokes `SYSTEM_ALERT_WINDOW`, so a schedule that survives one still raises a shade it
   has no permission to draw.
+  **Taken 2026-09-07 to 08**, HyperOS, `…gloam.debug`, exemption and autostart both re-read before
+  the phone went down, cable out and the capture taken over wireless `adb`, battery 80% to 73%.
+  `dumpsys deviceidle` has the device in deep `IDLE` from **01:01:22**, with maintenance only at
+  02:01:23-02:02:32 and 04:02:32-04:03:34 and nothing else until 05:47:44 — so **both fires landed
+  inside `IDLE` rather than in a maintenance window**, which is the thing `force-idle` was standing
+  in for.
+  **E, the real receiver — the hop chain is what the night measured, and it works.** Four
+  `ScheduleReceiver` fires, each re-arming `gap / 1.75`: armed 01:33:37.093, fired 01:34:06.071
+  (**29 s** late); armed 01:48:54.058, fired 01:54:05.022 (**5 m 11 s**); armed 01:57:27.896, fired
+  01:59:04.126 (**1 m 36 s**); and there the gap to the on-instant was 55.9 s, under `FINAL_HOP_MS`,
+  so the fourth was armed for **the on-instant itself** and fired at 02:04:04.095 — **4 m 4.1 s
+  late**. No `am_foreground_service_start` at any of the first three, so each took the
+  `windowStart == null` branch and refused, exactly as R6 read it awake. **The chain was re-seeded by
+  a launch**, not by the 01:00 arm that was pending at 23:45: the user opened the compact controls at
+  00:58:26, and `gap / 1.75` from there is 01:33:37 to the millisecond — R5's arm-on-launch row,
+  happening by itself.
+  **So the hour a long arm would cost is a price the chain never pays.** The paragraph above reasons
+  from every forced-Doze cell landing at `maxWhenElapsed` that an hour is what a single arm costs;
+  the chain narrows the last arm to a 55-second gap and the delivered lateness is four minutes.
+  **The shade went up 4 m 4 s into the hour** — `Background started FGS: Allowed …
+  code:SYSTEM_ALLOW_LISTED`, `uidState: RCVR`, the overlay window added at 02:04:04.385 — and
+  `schedule_honoured_at` holds **1788825600000, which is 02:00:00.000**, the window's opening
+  instant and the marker only the success branch writes.
+  **The auto-off came down at 03:14:05.180, 14 m 5 s after the off-instant, and that number is the
+  loop's own bound read in the wild.** `DEADLINE_RECHECK_MS` is sixty seconds of *uptime* and this
+  phone is not awake: `am_foreground_service_stop` records the service's life as **240,245 ms**
+  against **70 m 1 s** of wall clock, so the CPU ran **5.7%** of the window and four sixty-second
+  re-checks spanned seventy minutes. `dumpsys batterystats` puts the whole screen-off period at
+  **10.0% uptime against realtime**, so the duty cycle is the phone's and not this window's. Section
+  5's comment predicted the shape — a deadline that passes on a sleeping phone is not evaluated late,
+  it is not evaluated at all — and **fourteen minutes is what the shape costs here**, which is the
+  figure section 10's short-window warning is written from. What proves it is the write rather than
+  the log: the preferences file is stamped **03:14** with `shade_running=false` and `off_at_millis=0`,
+  which is `endShadeAt(ByDeadline)`. **And a foreground service does not hold Doze off** —
+  `deviceidle` sat at `IDLE` from 02:02:32 to 04:02:32 with the shade up for all of it.
+  **A, the bare gate.** Armed **04:31:15.801** with `window=+1h0m0s0ms`, delivered **04:34:06.056**:
+  `GloamGate: fired at 1788834846056, 170255ms late, exempt=true`, then `startForegroundService:
+  allowed`. **2 m 50 s, and 57 minutes short of the far end of its own window.**
+  ⚠️ **This is the cell that contradicts the paragraph above it.** Every forced-Doze cell in
+  section 1 was delivered at `maxWhenElapsed` exactly, and the reasoning built on that says an hour
+  is what a long arm costs. Under *natural* Doze it is not: the alarm woke the device early in its
+  window rather than at the end of it. **`force-idle` is pessimistic about delivery**, which is the
+  opposite of the direction a simulation is usually wrong in, and is the reason R4 was worth a night
+  rather than an argument.
+  ⚠️ **Question three is still not answered, and this night could not answer it.** The process was
+  **alive**: `am_proc_start` at 00:58:26 for pid 6352 — the compact controls — and **no `am_kill` and
+  no `am_proc_died` after it**, through both fires and up to the capture. HyperOS's own cleaners had
+  killed the app repeatedly through the evening (`OneKeyClean`, `SwipeUpClean`, `installPackageLI`)
+  and then left it alone the moment the phone settled. So *whether this ROM starts a **dead** process
+  for the broadcast* needs a night where nothing launches the app after the last clean, and `am kill`
+  still refuses to make one.
+  ⚠️ **And an overnight capture cannot depend on the app's own log lines.** Both of E's —
+  `GloamSchedule`'s *scheduled shade up until …* at 02:04 and `ShadeService`'s *auto-off fired …ms
+  after the deadline* at 03:14 — were **gone from the buffer by 06:25**, while a `W`-level framework
+  line from the same process 44 ms later at 02:04:04.354 survived, and `GloamGate`'s two `I` lines at
+  04:34 survived. `logcat -g` puts the main ring at **2 MiB**. Every number above is off the events
+  buffer, `dumpsys alarm`'s per-package stats and the preferences file, all of which held; the
+  lateness figures the log would have handed over were rebuilt from `sending alarm` and the
+  foreground-service records instead. **Take an overnight reading as though the app logged nothing**,
+  or raise the ring with `logcat -G` before the phone goes down.
 - **R5** — one alarm armed after each of the five loss paths: **taken 2026-09-05 on the phone**,
   HyperOS, `…gloam.debug`, exemption and autostart both granted and re-read first. Every count below
   is off `dumpsys alarm`'s *pending* entries, never off a notification.
@@ -1937,8 +2001,11 @@ written on `ShadeService`'s `combine`.
   say which state each was taken in.
 - `aab-permissions.py` reports the **same six permissions** on the artifact as the release before it.
 - The readings block above has no dashes left in it.
-- **And either:** the schedule ships whole, `PLAN.md`'s Phase 4 is ticked, and ADR-0003's third
-  amendment says which of its own rejected fallbacks turned out to be the mechanism -
-- **or:** §1's R2 vetoed scheduled-on before anything was built on the bet, the off-half shipped
-  alone with the reason in its own copy, `PLAN.md`'s Phase 4 carries the reading that narrowed it, and
-  this file says so here rather than leaving it to be argued about later.
+- **The first of the two branches is the one taken.** R2 fired, so the schedule ships whole,
+  `PLAN.md`'s Phase 4 is ticked, and ADR-0003's third amendment says which of its own rejected
+  fallbacks turned out to be the mechanism — with **a fourth amendment added by R4**, because the
+  natural-Doze night contradicts the far-end habit the third one reasoned from.
+- *(The branch not taken, kept rather than deleted: §1's R2 vetoing scheduled-on before anything was
+  built on the bet, the off-half shipping alone with the reason in its own copy, and `PLAN.md`'s
+  Phase 4 carrying the reading that narrowed it. A checklist that erases the road not taken stops
+  being a record of the decision.)*
