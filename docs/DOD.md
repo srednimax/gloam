@@ -420,6 +420,42 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 The listing, the feature graphic and the screenshots **used to be here** and moved to *Before the
 door* on 2026-08-30: a closed test will not open without them, so they are schedule, not polish.
 
+**Phase 5 is planned and its detail is [`phase-5.md`](phase-5.md)** — six checkpoints, A-F, none
+built. Read that file for the sequence; what follows is only what this file is for, the boxes.
+**Its gate is A and it is cheap**: a validate-only promotion with `update_listing=true`, which makes
+Play read the whole metadata edit and discard it. Take it before writing copy — none of the four
+documents this phase is about (the policy, the site, the listing, the declaration) has a gate in this
+repo standing in front of it, so that dry run is the phase's only substitute for a compiler.
+
+- [ ] **The privacy policy is factually wrong today, and it is served without a release.** It says
+      *five settings*, lists *four*, and one of the four is `onboardingDone`, which Phase 2 deleted.
+      The app stores **thirteen** keys and declares **five** permissions, of which the policy names
+      two — `RECEIVE_BOOT_COMPLETED` is the one a reader finds on the Play listing and cannot map
+      onto anything the document says, and the support mail is a third thing happening outside the
+      app in a section that names two. **The same false sentence is in three files**, not two:
+      `docs/index.md` and the *listing's own English full description*, both of which are three
+      phases behind besides. `phase-5.md` §§2 and 3, all of it in checkpoint B.
+- [ ] **`scripts/play-metadata.py` renders an untranslated locale as blank files.** One byte each,
+      not absent: inert while a human pastes into the Console, a value Play is asked to store the
+      first time a promotion carries a listing. **The fix lands before the Polish copy is written**,
+      because afterwards there is no blank field left to see it with - and it makes blank and missing
+      the same thing, so the tidier document stops being the one that breaks a release. §4.
+- [ ] **The tip's exposure moved but did not shrink.** ADR-0009's amendment put the tip on the
+      repository and the Pages site; the listing's Website field and the last line of its full
+      description point at exactly those two pages. **No tip ships in Phase 5 on any surface it
+      controls**, and ADR-0009 gets a third amendment saying why the second did not reach far
+      enough. §6.
+- [ ] **`docs/play-app-content.md`** — owed since Phase P, still not written. §7.
+- [ ] **A restore is a claim nobody has read off a device.** ADR-0005's amendment says platform Auto
+      Backup covers the preferences file; `shade_running` and `off_at_millis` are live state rather
+      than settings and travel with it. §9. **A `data_extraction_rules.xml` cannot fix that** -
+      backup exclusions are file-granular and all thirteen keys share one DataStore blob, so the only
+      exclusion Android can express is *every setting*. The rule is enforced at the read instead.
+- [ ] **The shade-down screenshot closes as a refusal**, not as an open box: a capture cannot show
+      the backlight half at all, so the one image whose job is to show the product understates it.
+      §8 carries the argument, which needs no device; R5 is a capture taken for 2b's benefit while
+      the phone is already attached, not the thing the refusal rests on.
+
 - [x] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Done 2026-08-30:
       `docs/privacy-policy.md` is written, and since PR #6 merged
       <https://srednimax.github.io/gloam/privacy-policy.html> answers 200 — the URL the Console's
