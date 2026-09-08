@@ -73,13 +73,12 @@ costs the 14-day window rather than a day, because the window is other people's 
 
 ## What is in, and what is deliberately not
 
-**In:** a validate-only promotion taken as a gate; the privacy policy rewritten against the thirteen
-keys the app actually stores and the five permissions it actually declares; `docs/index.md` caught up
-with three shipped phases; the Polish listing written and the script bug that would publish it as two
-zero-byte strings fixed in front of it; the Support screen's rate-on-Play row; `docs/play-app-content.md`,
-which `DOD.md` says this phase owes; the four answers the twelve testers owe, landed or struck; a
-restore read off a device rather than off an ADR; the release-shaped build walked on the phone; and the
-promotion itself.
+**In:** a validate-only promotion taken as a gate; the privacy policy, `docs/index.md` **and the
+listing's own English full description** rewritten against the thirteen keys the app actually stores and
+the five permissions it actually declares; the Polish listing written and the script bug that would
+publish it as two one-byte strings fixed in front of it; the Support screen's rate-on-Play row;
+`docs/play-app-content.md`, which `DOD.md` says this phase owes; a restore read off a device rather than
+off an ADR; the release-shaped build walked on the phone; and the promotion itself.
 
 **Not in, and each with a reason rather than a phase:**
 
@@ -87,8 +86,11 @@ promotion itself.
   the listing links to the repository, which is the page the tip was going to live on.
 - **A version row and a source-code row in the app.** §5. The mail hand-off already carries the
   version, and the source row is the same link as §6's.
-- **A screenshot of the shade down.** §8, which closes it as a refusal with a reading behind it rather
-  than leaving it open.
+- **A screenshot of the shade down.** §8, which closes it as a refusal — on the backlight argument
+  rather than on a reading, R5 being a note taken while the cable is already in.
+- **A round of questions to the twelve.** §10. The four rule-5 questions close here as **unanswered**,
+  with the shipped values kept and the reason written down. `PLAN.md` rule 5's prompted-answer channel
+  retires without ever being used, and that is a thing to record rather than to drop quietly.
 - **Ultra dark and the Quick Settings tile** — Phase 2b, which is unstarted and which §11 prices
   against this phase rather than ignoring.
 - **1.0.** `PLAN.md` rule 2: the app ships 0.x and nothing in this plan produces a 1.0. This phase cuts
@@ -110,50 +112,55 @@ intent costs one function and no dependency.
 
 ## Checkpoints
 
-**Seven checkpoints. One of them waits on other people and the rest do not, which is what decides their
-order** — everything that can be taken before the closed test ends is in front of F. Each leaves the app
-working and ships its copy complete in both locales, which `scripts/translation-gate.py` enforces rather
-than asks for.
+**Six checkpoints, and not one of them waits on another person.** That is a property the phase ended
+up with rather than one it was planned with: the checkpoint that waited on the twelve is struck, and
+§10 is where it is struck and why. Each leaves the app working and ships its copy complete in both
+locales, which `scripts/translation-gate.py` enforces rather than asks for.
 
 | | Checkpoint | Merges | Depends on |
 | --- | --- | --- | --- |
 | **A** | **The gate** — a validate-only promotion carrying the listing, to find out what the pipeline actually sends | no commit at all: the verdict is a reading | a build on the internal track |
-| **B** | The truth pass — the privacy policy, `docs/index.md`, `README.md`, and `docs/play-app-content.md` | `docs:` | A |
-| **C** | The blank-locale refusal in `play-metadata.py`, then the Polish listing | `fix:` then `docs:` | A |
+| **B** | The truth pass — the privacy policy, `docs/index.md`, **the listing's English full description**, `README.md`, and `docs/play-app-content.md` | `docs:` | A |
+| **C** | The blank-locale refusal in `play-metadata.py`, then the Polish listing | `fix:` then `docs:` | A, **B** |
 | **D** | The Support screen's last row | `feat:` | nothing |
-| **E** | The readings — the release-shaped build, the restore, the update in place, the shade-down capture, the API-33 pass | `fix:` if any of them finds something | B, C, D |
-| **F** | The four answers from the twelve — landed, or struck with the reason | `feat:` / `fix:`, or nothing | the 14 days |
-| **G** | The documents, and the promotion | `docs:` | everything above |
+| **E** | The readings — the release-shaped build, the restore, the shade-down capture, the API-33 pass | `fix:` if any of them finds something | B, C, D |
+| **F** | The documents, and the promotion | `docs:` | everything above |
 
 **A is a gate, not a rehearsal, and it is the fourth one in this plan.** Phase 1's could veto the
 backlight half, Phase 3's could veto the panel, Phase 4's could veto scheduled-on. This one cannot veto
 a feature, because there is no feature — what it vetoes is **the assumption that the metadata path
 works**, which every other checkpoint here is written on top of. It costs one workflow dispatch and one
 approval click, it publishes nothing, and it is taken against the listing that exists today rather than
-against the one C writes. Taking it after C would answer the same question a week later and would have
-let a week of copy be written on a bet.
+against the one B and C write. Taking it after them would answer the same question a week later and
+would have let a week of copy be written on a bet.
 
 **B and C are separate because one of them has a script bug in front of it.** B is prose about the app
 and can be written and merged the moment A reports. C's Polish copy is worth nothing until
 `play-metadata.py` stops emitting empty descriptions as *values* — so C is a `fix:` and then a `docs:`,
 in that order, and the order is the point rather than tidiness.
 
+⚠ **C also waits on B, and that is the correction this plan needed most.** The Polish is translated from
+the English full description, and that description is one of B's three files rather than a finished
+document — §3. Writing the Polish first would translate the door build **once**, which is the exact waste
+the translate-once rule exists to prevent, inverted: not translated twice against a draft, but translated
+faithfully against something no longer true.
+
 **D depends on nothing and could land first.** It is deliberately not first: it is the only checkpoint
 in this phase that changes the app, and putting it after A means the one thing that needs a release to
 reach anybody is not sitting in `main` while a gate is still open. It is also the phase's only `feat:`,
 so it is what makes this release 0.7.0 rather than a `docs:`-only version release-please would not cut.
 
-**E is where a phase that looks like documentation gets its device time back.** Four of its readings are
-things no document can answer: whether R8 broke a feature nobody would notice breaking
-(`-PreleaseShapedDebug`), what a restore onto a new phone actually does with `shade_running`, whether the
-launcher entry moving in Phase 4 costs a pinned icon on the first real update, and whether a screenshot
-can photograph the shade at all.
+**E is where a phase that looks like documentation gets its device time back.** Three of its readings
+are things no document can answer: whether R8 broke a feature nobody would notice breaking
+(`-PreleaseShapedDebug`), what a restore onto a new phone actually does with `shade_running`, and whether
+a screenshot can photograph the shade at all. **A fourth was struck rather than taken** — the pinned-icon
+question, whose one transition happened before this plan was read back. R3, and §15 says how.
 
-**F is the only checkpoint that can be closed by silence**, and §10 says what silence is allowed to mean
-for each of its four questions — decided now rather than argued about in the week the answers do or do
-not arrive.
+**There is no checkpoint for the twelve, and there was one.** It waited on the 14-day window, which is
+calendar rather than work and belongs in nobody's sequence table. What it was going to land is decided in
+§10 instead, now, on the evidence there is.
 
-**G is the promotion, and it is a checkpoint rather than an afterthought** because it is the only moment
+**F is the promotion, and it is a checkpoint rather than an afterthought** because it is the only moment
 in this plan where the thing being shipped is read by somebody who did not build it.
 
 ---
@@ -165,9 +172,10 @@ in this plan where the thing being shipped is read by somebody who did not build
 Everything about the listing that has reached Play so far was typed into the Console. The first time
 `fastlane supply` sends a *listing* rather than a binary is the first time all of these matter at once:
 
-- **The Polish descriptions are two zero-byte files**, not absent ones. `play-metadata.py` renders them
-  because `store-listing.md` has the headings with empty fences under them, and `store-listing.md`
-  already warns that *"an empty short description is not a no-op to Play, it is a value"*. **That
+- **The Polish descriptions are two one-byte files**, not absent ones — `play-metadata.py` writes each
+  body with a trailing newline, so a blank fence renders as a newline rather than as nothing, which is
+  the same landmine one byte heavier. It renders them at all because `store-listing.md` has the headings
+  with empty fences under them, and `store-listing.md` already warns that *"an empty short description is not a no-op to Play, it is a value"*. **That
   warning is a prediction nobody has tested.** Play may reject the edit, may accept it and blank the
   locale, or may ignore an empty string.
 - **The screenshots** are 1452×2582 and there are three of them. Play's minimum count and aspect bounds
@@ -198,6 +206,18 @@ gh workflow run publish-play-production.yml \
 Then approve it — the `production` environment gates the job whichever track the dialog names, which is
 the protection rule `DOD.md` read back from the API rather than from the settings page.
 
+⚠ **The credential needs *Manage store presence*, and it has it.** `RELEASING.md` describes the service
+account as carrying exactly two boxes — *View app information* and *Release apps to testing tracks* — and
+says that `update_listing: true` is the one run wanting a third, "because that is the run that pushes
+descriptions, images and screenshots". That third box is granted. Without it this gate **403s on
+authorisation before Play validates a single field**, and a run that never reaches validation answers none
+of the five questions above — a green-looking failure belonging in §15's list rather than in the readings
+block. **`RELEASING.md` and `DOD.md` both still read as though it were ungranted**, which is B's business
+rather than A's and is exactly the class of stale sentence this phase exists to delete. The *fourth* box —
+*Release to production, exclude devices, and use Play App Signing* — is a separate grant and belongs to F:
+promoting `internal → alpha` is a testing-track release the existing rights already cover, which is why
+this gate can be taken without spending the brake.
+
 ⚠ **`update_listing=true` is the whole point of the run.** With it false the workflow adds
 `--skip_upload_metadata --skip_upload_images --skip_upload_screenshots` and validates a promotion
 carrying release notes and nothing else — a green run answering none of the questions above. A gate
@@ -206,7 +226,7 @@ the easiest mistake in this phase to make.
 
 ### The three verdicts, decided now rather than argued about later
 
-1. **It validates.** The metadata path is proven, the zero-byte Polish is something Play tolerates, and
+1. **It validates.** The metadata path is proven, the one-byte Polish is something Play tolerates, and
    C's script fix drops from *blocker* to *hygiene* — still done, because tolerating an empty string
    today is not a promise about tomorrow, but done in C's own time rather than in front of it.
 2. **It rejects on the Polish blanks.** The prediction in `store-listing.md` was right, C's `fix:` lands
@@ -214,7 +234,7 @@ the easiest mistake in this phase to make.
    found by a dry run rather than by a live listing going half-blank.
 3. **It rejects on something this section did not predict** — an image dimension, a notes locale, a field
    Play wants that the renderer does not write, or the promotion itself. This is the reason the gate is
-   first. Whatever it is, it is cheaper here than in G, where the same rejection arrives with a real
+   first. Whatever it is, it is cheaper here than in F, where the same rejection arrives with a real
    release attached to it.
 
 **No verdict cuts anything.** Unlike Phases 1, 3 and 4, this gate cannot veto a feature — it can only
@@ -293,6 +313,25 @@ is reading a document that does not match their experience. One short paragraph,
 honest place to repeat what `PLAN.md` rule 4 says three of the four asks do when denied: nothing
 visible, until the feature quietly does not work.
 
+### *The two things that happen outside the app* has three things in it
+
+The policy's section of that name lists Auto Backup and Play. **There is a third, and §15 already says
+the policy has to name it rather than omit it**: the Support screen's mail hand-off composes
+`Gloam 0.6.0 (84)`, the Android version and `Build.MANUFACTURER Build.MODEL` into the body before the
+user types a word (`ui/support/SupportHandoff.kt`). Nothing about that contradicts the `INTERNET`
+sentence — it is the **user's own** mail, in their client, visible and deletable line by line, sent by an
+app that is not this one — and that is exactly how it has to be said. A policy naming two routes off the
+phone when the app offers three is wrong in the direction that costs the reader their trust in the other
+two, which is the only currency this document has.
+
+**D makes it a fourth**, and a much smaller one: the rate row hands off to Play. It carries nothing about
+the user at all, and saying so is the whole of what it needs.
+
+⚠ **It is also the one place the *developer* receives something.** A user who sends that mail sends their
+own address with it. Play exempts data a user initiates in a support flow, which is why *"no data
+collected"* survives — but that is a **reason** rather than an assertion, and §7 is the file whose job is
+to hold reasons. The heading changes with the count; the section's argument does not.
+
 ### Two sentences that are still exactly right, and must survive the rewrite
 
 - *"The app does not hold Android's `INTERNET` permission, so it is not capable of sending anything
@@ -330,24 +369,44 @@ What is missing, in the order the *What it does* list would carry it:
   only thing that sets a deadline. There is one deadline and the schedule sets it too.
 
 And one line in *Your data stays on your device* is the same error as §2's: *"it stores a dim level and
-whether the shade should be on, and nothing else"*. **Fix both files in the same checkpoint from the same
-list**, which is why B is one checkpoint rather than two.
+whether the shade should be on, and nothing else"*. **That sentence is in three files, not two** — the
+third is below, and it is the one that goes to Play. **Fix all three in the same checkpoint from the same
+list**, which is why B is one checkpoint rather than three.
 
 **What stays off it, unchanged:** health claims of any kind — App content was answered health-No and
 Play's enforcement has treated a linked page as part of the listing — and, from §6, any mention of a tip.
 
-**`README.md` is the third file in the same pass** and needs less: it is current on features through
+### The listing's English full description is the door build too, and it is the copy Play shows
+
+`docs/store-listing.md`'s full description — 2571/4000, the copy this phase was calling *reviewed and
+shipped* — describes Phase 2. Its **WHAT YOU GET** lists four things: dim past the floor, warmth,
+auto-off, works over everything. **No panel, no compact controls, no schedule.** Its **PERMISSIONS**
+block names two, which is §2's short-by-three in the one document a curious reader compares the
+permission list *against*. And it carries the same false sentence as the other two files, in the section
+whose whole job is to be believed:
+
+> It remembers a dim level and whether the shade should be on. That is the whole of it.
+
+So it is B's third file rather than C's first, and the ordering that follows from it is C's constraint in
+§4: **the Polish is translated from copy that is true, or it is a faithful translation of the door
+build.** The headroom is there — 2571 of 4000 characters — and the short description at 74/80 is still
+exactly right and does not move. Two smaller things go with it: *Auto-off* is written as though it were
+the only thing setting a deadline, and the **ongoing notification with a Stop button** sentence should not
+promise a gesture Phase 1's 2b reading found HyperOS hiding.
+
+**`README.md` is the fourth file in the same pass** and needs least: it is current on features through
 Phase 4, and what it carries that is about to become false is *"Nothing is on Play yet"*. §6 decides
 whether its tip paragraph changes.
 
 ---
 
-## 4. The Polish listing, and the zero-byte landmine in front of it
+## 4. The Polish listing, and the blank-locale landmine in front of it
 
 `store-listing.md`'s Polish section is deliberately empty and the reason is the same one behind the
 translation gate: **copy is translated once, after review, rather than against a draft and again
-afterwards.** The English is reviewed and shipped, so the deferral has done its job and the Polish gets
-written here.
+afterwards.** The deferral has done its job and the Polish gets written here — **but not until B has
+rewritten the English**, because the English on disk today is the door build (§3) and translating it once
+would satisfy the letter of the rule while breaking the whole of its point.
 
 **Written from the English only**, per [`translator-brief.md`](translator-brief.md), with two things that
 are not translation:
@@ -360,13 +419,21 @@ are not translation:
   of headroom in English and will have none in Polish, so the Polish short description is a *rewrite to
   fit* rather than a translation. That is a note for the translator rather than a surprise for the
   reviewer.
+- **The screenshots stay English, and that is a decision rather than an omission.**
+  `art/play-screenshots/` holds three files and all three are tagged `-en`, so `play-metadata.py` fans
+  them into `en-US` alone and Play falls back to the default language when it renders `pl-PL`. A Polish
+  reader therefore sees three captures of an English app. `screenshots.py --locale pl` exists and the
+  filename convention (`1_dim-pl.png`) was built for precisely this, so the work is one command with the
+  phone attached — **and it is deferred to the day a third language lands**, when the cost is spread over
+  more than one locale and the convention gets exercised where it actually matters. Written down here so
+  the next reader does not spend an afternoon rediscovering it as a bug.
 
 ### The landmine, and what the fix actually is
 
-`play-metadata.py` writes `pl-PL/short_description.txt` and `pl-PL/full_description.txt` as zero-byte
+`play-metadata.py` writes `pl-PL/short_description.txt` and `pl-PL/full_description.txt` as one-byte
 files rather than skipping the locale, and reports `listings: 2` either way. Harmless while a human
 pastes into the Console; not harmless the first time `update_listing=true` runs — which is §1's gate, and
-after it, G.
+after it, F.
 
 **The fix is to write nothing rather than to write nothing-as-a-value.** `fastlane supply` sends the
 fields it finds files for and leaves the rest of Play's listing untouched, so an *absent* file is the
@@ -379,6 +446,17 @@ Play's Polish short description empty. So:
   `publish-play-production.yml` only on the path where `update_listing` is true. The release-notes-only
   promotion runs on every release and must not start failing because a locale's *descriptions* are
   incomplete; the listing-carrying promotion is exactly where an incomplete locale should stop the run.
+- **And blank means missing**, which is the half of this that the script gets backwards today. The
+  existing completeness check — `"{locale} is shipped in the app but has no listing"` — is a **hard
+  non-zero on every path**, the release-notes-only promotion included, and it fires on the *tidier*
+  document: delete the empty Polish headings and the next release stops, blank them and nothing does. So
+  that check moves behind `--strict` with the new one. One rule, however the absence is spelled: an
+  incomplete locale **warns** where the run is about release notes and **stops** where the run is about
+  the listing.
+
+⚠ **Release-note completeness is untouched by that and must stay untouched.** Notes belong to the
+release rather than to the listing, `play-whatsnew.py` already enforces them per shipped language on
+every path, and nothing here should be read as relaxing it.
 
 That split is the whole design, and it is the same shape as every other gate here: loud where it is about
 to matter, quiet where it is not.
@@ -521,6 +599,14 @@ to get wrong: Gloam uses platform Auto Backup, so a dim level can reach the user
 never sees it. `DOD.md` records that reasoning today, and `DOD.md` is a file whose whole premise is that
 closed items get deleted from it.
 
+**The second nuance, and it arrives with D.** The Support screen's mail hand-off means a user can send
+the developer their own email address, along with the six facts `SupportHandoff.kt` composes into the
+body. **That is still "no data collected"** — Play exempts data a user initiates in a support flow, the
+mail is composed in their client and editable before it is sent, and the app has no route to send
+anything itself. Write the exemption down rather than the conclusion: a year from now the answer is easy
+to re-give and the *reason* is the part nobody can reconstruct, which is the whole premise of this file.
+§2 says the same fact to the other audience.
+
 **And it is where §2's rewrite is cross-checked.** The privacy policy and this declaration are two
 descriptions of the same facts, given to two different audiences, and the only thing keeping them
 consistent is that one file names the other.
@@ -548,10 +634,13 @@ The other three obstacles are real and each is smaller than that one:
 - **A composed before/after is not a screenshot**, and Play's listing rules are specifically about images
   presenting something other than the actual in-app experience.
 
-**The reading that closes it** is one command rather than a session: start the shade at a high dim level,
-`adb shell screencap`, and look at the file. It settles empirically whether an app overlay is even in a
-SurfaceFlinger capture, which is worth knowing regardless — and either way the item closes, because a
-capture that *does* show the shade still cannot show the backlight.
+**What closes it is the argument above, not a reading.** The backlight half is not in the framebuffer on
+any device, so no capture can carry it, and that is settled without plugging anything in. **R5 is a note
+taken while the cable is already in for R2 and R4**, not the thing the refusal rests on: start the shade
+at a high dim level, `adb shell screencap`, look at the file. What it answers is whether an app overlay
+is in a SurfaceFlinger capture at all — which this phase does not need and **2b will**, when it argues
+about the 0.8 obscuring ceiling with something other than an inference. A reading kept for the phase
+after this one is worth one command; it is not worth being called the reason.
 
 **What replaces it is copy, and it already exists.** The full description's job has always been to
 describe in words the thing no picture holds; `README.md` makes the same argument and is where this
@@ -576,17 +665,23 @@ The questions, and the reason each is worth an actual reading rather than an arg
 | --- | --- |
 | `shade_running = true` | Does anything raise the shade on a phone where `SYSTEM_ALERT_WINDOW` has never been granted? `BootReceiver` refuses without the overlay permission, so the expected answer is *no, twice over* — but this is the one path reaching that refusal without the user having ever met the app |
 | `off_at_millis` | It is an absolute instant from **another phone's clock**, almost certainly in the past. A passed deadline is `BootReceiver`'s first refusal, so it should be inert. If the old phone's clock ran ahead, it is a deadline in the future that the user never set |
-| `schedule_enabled = true` and its times | The alarm is armed by `MainApplication`'s collector at first launch, on a phone where neither the battery exemption nor autostart was ever granted. The exemption is a **live read**, so §7's banner should be honest immediately — that is the claim to check |
+| `schedule_enabled = true` and its times | The alarm is armed by `MainApplication`'s collector at first launch, on a phone where neither the battery exemption nor autostart was ever granted. The exemption is a **live read**, so the battery banner should be honest immediately — that is the claim to check |
 | `schedule_honoured_at` | A marker naming a night on a different device. Harmless if it is in the past, which it always will be |
 
 ### How it is read
 
 ```bash
 adb shell bmgr enabled
-adb shell bmgr backupnow app.gloam.debug      # or the release id, if the Play copy is installed
-adb shell pm clear app.gloam.debug            # the closest thing to a new device that costs a minute
-adb shell bmgr restore <token> app.gloam.debug
+adb shell bmgr backupnow io.github.srednimax.gloam.debug   # drop the suffix for the Play copy
+adb shell pm clear io.github.srednimax.gloam.debug         # the nearest thing to a new device
+adb shell bmgr restore <token> io.github.srednimax.gloam.debug
 ```
+
+⚠ **`app.gloam` is the namespace and never the package.** The `applicationId` is
+`io.github.srednimax.gloam`, with `.debug` appended by `applicationIdSuffix` — ADR-0002, and
+`app/build.gradle.kts` keeps the two apart on purpose. Every `adb` line above wants the applicationId; the
+namespace names no package on any device and `pm clear` on it fails with nothing to clear, which reads
+like a restore that worked.
 
 ⚠ **`bmgr` may have no usable transport on this ROM**, in which case the honest loop is slower and is the
 only one: uninstall, reinstall from the closed track with backup enabled, and read the preferences file.
@@ -599,51 +694,81 @@ silently did nothing produce the same screen.
 currently a sentence nobody has read off a device. It gets a **second amendment** either way, saying what
 a restore actually does.
 
-**If the shade comes up, or a deadline arrives from another phone's clock**, the fix is a
-`data_extraction_rules.xml` excluding `shade_running` and `off_at_millis` from both `cloud-backup` and
-`device-transfer`, and a line in the privacy policy saying which settings travel. Those two keys are
-*live state* rather than settings — everything else in the file is a preference a user would want back on
-a new phone, which is the feature. **That distinction is the thing to write down whatever the reading
-says**, because it is the rule the next stored key gets judged against.
+**And if the shade does come up, or a deadline arrives from another phone's clock, the obvious fix does
+not exist.** This plan said it was a `data_extraction_rules.xml` excluding `shade_running` and
+`off_at_millis` from `cloud-backup` and `device-transfer`. **No such file can be written.** Android's
+backup exclusions are **file-granular** — `domain="file"`, `sharedpref`, `database` — and have no notion
+of a key inside a file; and `AppContainer.kt` is `preferencesDataStore(name = "app_preferences")`, so all
+thirteen keys are one blob at `files/datastore/app_preferences.preferences_pb`. Excluding that path
+excludes **every setting**, which is the feature rather than the bug: the dim level, the warmth, the
+theme and the schedule are exactly what a user wants back on a new phone.
+
+So the rule survives and the enforcement moves:
+
+- **The rule.** `shade_running` and `off_at_millis` are **live state**; the other eleven keys are
+  settings. Write it down whatever the reading says — it is what the next stored key gets judged against,
+  and it is the reason this section exists.
+- **Where it is enforced: at the read, not at the storage.** Which is where it already is.
+  `BootReceiver` refuses without the overlay grant, and a deadline from another phone's clock is in the
+  past and therefore inert by construction. If R4 finds otherwise, the fix is a guard in our own code —
+  one more refusal in the same place as the two that are already there — rather than a manifest
+  attribute.
+- **The only structural alternative, priced rather than taken.** A second DataStore file holding the two
+  live keys, excluded by path. It would enforce the rule where the values live, and it would cost
+  `beginShade()`'s single transactional write — which `AppPreferences`' own doc comment calls the one
+  thing keeping running and the deadline from disagreeing. Breaking that invariant to serve a backup edge
+  case is the wrong trade, and it is recorded here so it is not re-derived as a fresh idea.
 
 ---
 
-## 10. The four answers the twelve owe, and what silence means
+## 10. The four questions the twelve were for, and why all four close unanswered
 
 `DOD.md` carries four questions deliberately not answered in a room with one person in it. All four are
 one-line changes or nothing, all four outlive the phases that raised them, and **this is the last phase,
-so it is where they land or where they are struck.**
+so it is where they land or where they are struck. All four are struck.**
 
-| Question | Lands as | Raised by |
+**The checkpoint that was going to land them is gone, and the reason is not the calendar.** It waited on
+the 14-day window, which is weather rather than work and belongs in nobody's sequence table — but that
+alone would have argued for moving it, not for deleting it. What argued for deleting it is that **this
+plan decided at length what silence was allowed to mean and never once said the questions get asked.**
+No message, no date, no owner. Silence only carries information if a question preceded it; unasked, all
+four were always going to close as *unanswered*, and the paragraph distinguishing *answered by silence*
+from *unanswered* was distinguishing between one outcome and itself.
+
+So the honest version is the short one: **the shipped values stand, each box closes with the reason it
+could not be answered, and nothing waits.**
+
+| Question | Closes as | Raised by |
 | --- | --- | --- |
-| Auto-off's default — `Hours2` ships provisional | `AutoOff.Default` | Phase 2 |
-| The two edges of an episode — a shade started inside a window, and a night spent | `nightSpentBy` | Phase 4 §3, ADR-0012 |
-| What the launcher icon opens — `launcherCompact` defaults `true` | `AppPreferences.launcherCompact`'s default | Phase 4 D, R9 |
-| Should the phone's own brightness slider mean *"more light"* | a `ContentObserver`, already measured as buildable | Phase 3, R10 |
+| Auto-off's default — `Hours2` ships provisional | `AutoOff.Default` unchanged; provisional becomes shipped | Phase 2 |
+| The two edges of an episode — a shade started inside a window, and a night spent | `nightSpentBy` unchanged; ADR-0012's rule stands as written | Phase 4 §3, ADR-0012 |
+| What the launcher icon opens — `launcherCompact` defaults `true` | default unchanged, and **unanswerable as posed** | Phase 4 D, R9 |
+| Should the phone's own brightness slider mean *"more light"* | **not built**, with R10's measurement kept | Phase 3, R10 |
 
-**Silence is an answer for three of them and not for the fourth, and that is decided here rather than in
-the week the replies do or do not arrive.**
+**The first two close on a shipped value and nothing else.** Both are taste, both are defensible either
+way, and both have been lived with — by one person rather than twelve, which is the whole complaint and
+is not a complaint an unsent message fixes. The box closes with *"shipped, unasked"* rather than with a
+tick, so the provenance is legible: a value that stood, not a value that was tested.
 
-- **Auto-off's default, the episode edges and the launcher default** all ship a value today. A tester who
-  lives with a default for fourteen days and does not mention it has told you something — not loudly, but
-  the alternative is holding a shipped default hostage to a reply that may never come. So: **no reply, no
-  change**, and `DOD.md`'s box closes with the count of testers who did not raise it rather than with a
-  tick and no evidence.
-- **The launcher default is the exception, and `DOD.md` already says why in a warning.**
-  `ControlsActivity.forwardIfUnusable()` sends the user to the full app whenever `canDrawShade()` or
-  `escapeHatchLive()` is false — so **a tester who declined notifications never sees the default at
-  all**, and their silence is about a build they are not running. The question can only be closed on
-  testers who granted notifications, and if there are not enough of those it closes as *unanswered* with
-  the reason, which is a different outcome from *answered by silence*.
-- **The brightness-slider question is not a default and cannot be answered by silence.** Nobody
-  spontaneously reports the absence of a feature they were never told about. It is asked directly or not
-  at all, and if it is not asked it closes as **not built**, with R10's measurement kept — the
-  engineering objection is gone, so the next person to pick it up starts from *"this works, is it
-  wanted"* rather than from scratch.
+**The launcher default was never answerable in the shape it was written**, and `DOD.md` says so in a
+warning that outlived the question. `ControlsActivity.forwardIfUnusable()` sends the user to the full app
+whenever `canDrawShade()` or `escapeHatchLive()` is false, so a tester who declined notifications never
+meets the default at all — and there was never a way to know which testers those were except by asking,
+which is the thing that was not going to happen. R9 already removed the engineering objection; what is
+left is second-week taste, and it closes untested.
 
-**A change here is a `feat:` or a `fix:` in F**, and each one carries the tester's own words in the commit
-body rather than a summary of them, because the whole point of asking was to get a sentence from outside
-the room.
+**The brightness-slider question closes as *not built*, and it is the one that loses least.** Nobody
+spontaneously reports the absence of a feature they were never told about, so silence was never going to
+mean anything here. R10's measurement is the thing worth keeping: the backlight override switches the
+framework's auto-brightness controller off entirely, so an observer cannot mistake an adaptive write for
+a user's drag. The next person starts from *"this works, is it wanted"* rather than from scratch.
+
+⚠ **`PLAN.md` rule 5 retires without ever being used, and that is the sentence to write down.** It named
+the twelve as the channel for preference questions and it was right to; the channel was simply never
+opened. **The in-app route is untouched** — the Support screen's `#bug` and `#feature` hand-offs have
+shipped since Phase 2, and rule 5's own second bullet is what put them there. So an answer can still
+arrive; it arrives as ordinary mail from somebody who cared enough to write, changes a default in an
+ordinary release, and is no longer anything a phase is waiting on.
 
 ---
 
@@ -661,7 +786,8 @@ costs a listing update and a policy edit nobody remembered to make.
 | Either | the screenshots, if the Dim screen grows a control — `scripts/screenshots.py` re-runs the walk rather than re-shooting by hand, so this is a command rather than a session |
 
 **B and C are the checkpoints that re-run**, which is one reason they are separate from D, E and F.
-Nothing in D (the app's last row), E (the readings) or F (the testers' answers) is touched by 2b.
+Nothing in D (the app's last row), E (the readings) or F (the documents and the promotion) is touched by
+2b.
 
 ⚠ **And 2b has a ceiling in front of it that `DOD.md` already priced**: an overlay that passes touches may
 not obscure more than `maximum_obscuring_opacity_for_touch`, which is 0.8 by framework default on both
@@ -676,15 +802,16 @@ writing them, and it is not this phase's decision to take.
 
 **Owed nothing, and this is the first phase where that is the whole section.**
 
-No new preference key. The rate-on-Play row holds no state; §§2 and 3 are prose about keys that already
-exist; §10's four answers are *defaults* changing rather than keys appearing. `AppPreferences` is
-untouched by every checkpoint except possibly F, and F changes a default's value rather than adding a key
-— which is free, because `CLAUDE.md`'s rule keeps the default *in the read* and there is nothing stored
-to migrate.
+No new preference key, and no changed default either — §10 closes all four rule-5 questions on the values
+that ship today. The rate-on-Play row holds no state, and §§2, 3 and 4 are prose *about* keys that already
+exist. **`AppPreferences` is untouched by every checkpoint in this phase**, which is a stronger claim than
+this section was originally able to make.
 
-**The one file that might appear is `res/xml/data_extraction_rules.xml`** (§9), and it is a manifest
-attribute pointing at two exclusions rather than a schema. If §9's reading calls for it, it lands in E as
-a `fix:`.
+**And no new file, which is the correction §9 carries.** This plan expected
+`res/xml/data_extraction_rules.xml` to appear if the restore misbehaved. It cannot: backup exclusions are
+file-granular and all thirteen keys share `files/datastore/app_preferences.preferences_pb`, so the only
+exclusion Android can express here is *all of them*. The settings-versus-live-state rule is enforced at
+the read instead, where `BootReceiver` already enforces it.
 
 **Thirteen keys, no database, nothing to migrate, ever** — which is ADR-0007 still holding at the end of
 the plan it was written for.
@@ -722,8 +849,10 @@ to hold in mind for the whole of C.
   second amendment already said and could not act on.
 - **`ADR-0005`** — a **second amendment**, from §9. Its first says the platform's default Auto Backup
   covers the preferences file; this one says what a restore actually *does*, read off a device, and
-  records the settings-versus-live-state rule deciding what a `data_extraction_rules.xml` would exclude if
-  one is ever needed.
+  records the settings-versus-live-state rule **together with the reason it cannot be enforced in a
+  manifest**: exclusions are file-granular, the thirteen keys are one file, and the rule therefore lives
+  at the read. That second half is the part worth an amendment — the rule without it invites a
+  `data_extraction_rules.xml` that would silently exclude every setting the user wanted back.
 - **`ADR-0010`, `ADR-0012`, `ADR-0003`** — **nothing**, checked rather than assumed. This phase adds no
   mechanism, changes no invariant and schedules nothing. If §10's answers move `AutoOff.Default` or
   `nightSpentBy`, ADR-0012 gains a line naming the value that changed and the testers who changed it — the
@@ -732,13 +861,16 @@ to hold in mind for the whole of C.
   done at the door; §4's landmine, §6's link and §7's declaration file are what replace it; and the status
   list gets its last box. Rule 3's test count is reconciled and reads **four, all shipped**: the ramp, the
   panel's width, the schedule window and the deadline. This phase adds none, and §16 says why that is a
-  claim rather than an omission.
+  claim rather than an omission. **Rule 5 is reconciled too, and less comfortably**: the twelve were named
+  as the channel for preference questions and the channel was never opened, so the rule retires unused.
+  Its second bullet — the in-app mail route, shipped since Phase 2 — is the half that held.
 - **`DOD.md`** — the biggest edit in this list, and mostly deletions. *Before the polish half* becomes the
-  record of what closed; the four rule-5 boxes close with their answers or with the reason they could not
-  (§10); the shade-down screenshot box closes as a refusal with R5 behind it (§8); the Polish descriptions
-  box closes with C. The **standing checks stay open forever** by construction, and the artifact check
+  record of what closed; the four rule-5 boxes close as **unanswered, on the shipped values, with the
+  reason each could not be answered** (§10); the shade-down screenshot box closes as a refusal on the
+  backlight argument (§8); the Polish descriptions box closes with C. Its *"seven checkpoints, A-G"* line
+  becomes six, A-F. The **standing checks stay open forever** by construction, and the artifact check
   gets this release's line: 0.7.0 adds a row to a screen and must still report the same six permissions.
-- **`README.md`** — *"Nothing is on Play yet"* becomes false in G; the tip paragraph stays exactly as it
+- **`README.md`** — *"Nothing is on Play yet"* becomes false in F; the tip paragraph stays exactly as it
   is, per §6.
 - **`docs/index.md`, `docs/privacy-policy.md`, `docs/store-listing.md`** — §§2, 3 and 4, and they are the
   phase rather than a tidy-up.
@@ -746,8 +878,15 @@ to hold in mind for the whole of C.
 - **`CONTEXT.md`** — owed nothing, checked rather than assumed. Every word this phase uses that is not
   already in it — *listing*, *tip*, *declaration*, *promotion* — is a word about publishing the app rather
   than about what the app does, and none of them is at risk of being confused with a mechanism.
-- **`CLAUDE.md`** — one line if §9's reading calls for a `data_extraction_rules.xml`, because "what
-  travels in a backup" would then be a rule someone could break by adding a key. None otherwise.
+- **`RELEASING.md`** — one correction, and it is the phase's own subject applied to itself. Its
+  *Creating the service account* section describes the credential as holding two boxes and *Manage store
+  presence* as a thing the production workflow "wants"; it has been granted, which is what makes §1's gate
+  takeable at all. A setup document that describes a state two grants old is the same failure as a privacy
+  policy naming a deleted key.
+- **`CLAUDE.md`** — one line, and §9 is why: **what travels in a backup is now a rule someone can break by
+  adding a key**, because the thirteen keys share one file and the platform cannot exclude one of them. A
+  new preference is backed up whether or not anybody meant it to be, and the place that says so is the
+  house rule about DataStore.
 
 ---
 
@@ -759,9 +898,9 @@ Play, which is a third party answering questions no local check can.
 
 | | Reading | Answers | How |
 | --- | --- | --- | --- |
-| **R1** | **The gate.** A validate-only promotion with `update_listing=true` | What does the pipeline actually send, and does Play accept a zero-byte description? | §1; `gh workflow run`, then the run log |
+| **R1** | **The gate.** A validate-only promotion with `update_listing=true` | What does the pipeline actually send, and does Play accept a blank description? | §1; `gh workflow run`, then the run log |
 | **R2** | The release-shaped build on the phone — `assembleDebug -PreleaseShapedDebug`, then walk every feature | Did R8 break something that does not crash? The shade, the panel, the compact host, the schedule's alarm, the receivers named in the manifest, DataStore | The phone, by hand, feature by feature |
-| **R3** | An update **in place** over the previous version, on the closed track | Phase 4's F3 consequence: the launcher entry moved to `ControlsActivity`, so does a pinned home-screen icon survive? | `publish-play-closed.yml`, then the home screen |
+| **R3** | ~~An update **in place** over the previous version~~ — **struck**, and the number is kept rather than reused | It would have asked whether Phase 4's launcher move costs a pinned icon. **Its one transition has already happened**: the closed track took 0.5.0 on 2026-09-05 and 0.6.0 at 05:22 on 2026-09-08, and 0.6.0 *is* the release that moved the `<intent-filter>`. 0.7.0 moves no component, so the same command against the next update would report a green meaning nothing | — |
 | **R4** | A restore onto a cleared install | §9's four rows — and whether ADR-0005's claim is true | `bmgr`, then read the preferences file |
 | **R5** | `screencap` with the shade down at a high dim level | Is an app overlay even in the capture — and can any image carry the backlight half? | `adb shell screencap`, then look at the file |
 | **R6** | The API-33 emulator pass (ADR-0008) | The phase, on the API level it is allowed to be worst on | `gloam-api33`, headless |
@@ -787,8 +926,12 @@ Play, which is a third party answering questions no local check can.
   omitting it.
 - **"`bmgr restore` returned success."** §9's warning: a restore that silently did nothing and a restore
   that worked leave the same screen. Read the preferences file.
+- **"The next update will answer it."** R3's lesson, and the only one in this list found by reading a
+  workflow's run history rather than by thinking about it. A reading that asks about a *transition* is
+  spent when the transition happens, and a release pipeline takes transitions on its own schedule. Check
+  what has already shipped before writing a reading in the future tense.
 
-⚠ **Before R2, R3 and R4: `python3 scripts/device-gate.py`.** The autostart grant lapses on its own, and
+⚠ **Before R2 and R4: `python3 scripts/device-gate.py`.** The autostart grant lapses on its own, and
 R2's walk includes the schedule — a feature that does nothing on a lapsed grant, for a reason having
 nothing to do with R8.
 
@@ -838,21 +981,27 @@ volume of work, because everything else here is prose.
 | Checkpoint | Commits |
 | --- | --- |
 | **A** | No commit. The verdict is a reading, taken against the listing that already exists |
-| **B** | `docs: say what the app stores, what it asks for, and what it does` — the privacy policy rewritten against the thirteen keys and the five permissions, `docs/index.md` caught up with the panel and the schedule, `README.md`'s Play line, and `docs/play-app-content.md` as a new file |
+| **B** | `docs: say what the app stores, what it asks for, and what it does` — the privacy policy rewritten against the thirteen keys and the five permissions and the support mail, `docs/index.md` **and the listing's English full description** caught up with the panel and the schedule, `README.md`'s Play line, `RELEASING.md`'s service-account line, and `docs/play-app-content.md` as a new file |
 | **C** | `fix: skip a locale with no description instead of publishing an empty one` — `play-metadata.py`'s omission, its warning, `--strict`, and the workflow passing it on the listing path only. Then `docs: write the Polish listing` — the short and full descriptions, and their character counts in the headings |
 | **D** | `feat: add a rate-on-Play row to Help and feedback` — the row, `rateOnPlay()` beside `sendSupportMail()`, the Play package constant, and the three strings in both locales |
-| **E** | The readings. Expected to be no commit, and the two that would produce one are named: a `fix:` carrying `data_extraction_rules.xml` if R4 finds a restore that raises the shade, and a `fix:` for whatever R2 finds that R8 broke |
-| **F** | Whatever the twelve say — up to three one-line changes, each a `feat:` or a `fix:` carrying the tester's own words in the body, or no commit and a `docs:` line in `DOD.md` saying so |
-| **G** | `docs: ...` — §14's edits, ADR-0009's third amendment, ADR-0005's second, this file's readings block filled in, `PLAN.md`'s last box, and the 0.7.0 release notes the notes gate wants. Then the release, and then the promotion |
+| **E** | The readings. Expected to be no commit, and the two that would produce one are named: a `fix:` adding a **guard at the read** if R4 finds a restore that raises the shade — never a `data_extraction_rules.xml`, §9 — and a `fix:` for whatever R2 finds that R8 broke |
+| **F** | `docs: ...` — §14's edits, ADR-0009's third amendment, ADR-0005's second, this file's readings block filled in, `PLAN.md`'s last two boxes and its rule-5 reconciliation, and the 0.7.0 release notes the notes gate wants. Then the release, and then the promotion |
 
 **The order that matters is the one inside C**, and it is the ramp precedent in a different medium: the
 script deciding how a blank field reaches Play lands *before* there is copy to hide the blank field, which
 is the cheapest possible moment to get it wrong.
 
-**And G's last step is not a merge.** The promotion is a workflow dispatch with an approval click,
+**And F's last step is not a merge.** The promotion is a workflow dispatch with an approval click,
 `update_listing=true` this time and `dry_run=false`, at a rollout fraction rather than at 1.0 — which is
-what `publish-play-production.yml` defaults to, and what turns a bad listing into a small number of people
-rather than all of them.
+what `publish-play-production.yml` defaults to.
+
+⚠ **What the fraction protects is the build, not the listing, and this plan had that backwards.** A
+staged rollout stages the *release*: descriptions, screenshots and graphics are properties of the app,
+committed by the same edit and visible in full to anybody who opens the store page the moment it lands.
+So the fraction is worth having for exactly one reason — R2 and R6 reduce the chance that R8 broke
+something silently, and they do not eliminate it, and a bad build is the failure a halt can still contain.
+**A bad listing has no staging at all**, and its only protection is A, B and C. That is the real argument
+for taking the gate first, and it is stronger than the one this file opened with.
 
 ---
 
@@ -868,6 +1017,13 @@ with no callback and no hook unless you write a `BackupAgent` (ADR-0005 removed 
 not `localStorage`; it is closer to another process writing your config file between deploys. **Which is
 why §9 is a reading and not a paragraph.**
 
+**And what you can exclude from it is a *file*, never a value.** `data_extraction_rules.xml` speaks in
+domains — `file`, `sharedpref`, `database` — and a DataStore Preferences store is one protobuf holding
+every key you ever added. There is no JS analogue for the trap in that, because there is no JS runtime
+that backs your config up behind your back: the closest thing is a deploy tool that syncs a directory and
+offers you `.gitignore` granularity when what you wanted was per-line. It is the platform's shape rather
+than ours, and it is why the settings-versus-live-state rule has to live at the read.
+
 **`<queries>` is about *asking*, not about *doing*.** Since Android 11 an app can only see the packages it
 declares an interest in — but package visibility has never blocked `startActivity`. It blocks
 `resolveActivity`, `queryIntentActivities` and friends, which are the pre-checks. So the rate row needs no
@@ -879,7 +1035,7 @@ already is.
 **A Play edit is a transaction, not a PUT.** `fastlane supply` opens an edit, stages every change into it
 — the promotion, the release notes, the descriptions, the images — and commits it once. That is why
 `--validate_only` is a real gate rather than a linter: Play validates the whole staged edit and then
-discards it, so §1 exercises the same code path G will, minus the commit. It is also why `RELEASING.md`
+discards it, so §1 exercises the same code path F will, minus the commit. It is also why `RELEASING.md`
 insists on *one edit, one review*: splitting a listing change from the release it belongs to turns one
 review wait into two.
 
@@ -892,7 +1048,8 @@ close — see* **Done when** *.)*
 
 - **R1** — the gate. —
 - **R2** — the release-shaped build. —
-- **R3** — the update in place, and the pinned icon. —
+- **R3** — the update in place, and the pinned icon. **Struck**: the transition it asks about happened on
+  2026-09-08 at 05:22, before this plan was read back. §15.
 - **R4** — the restore. —
 - **R5** — the shade-down capture. —
 - **R6** — the API-33 pass. —
@@ -905,30 +1062,36 @@ close — see* **Done when** *.)*
 
 - **Every sentence in `docs/privacy-policy.md` is true of the shipped app**, checked against
   `AppPreferences`' thirteen keys and the manifest's five permissions rather than against memory —
-  including the two the policy has never named, and the two settings hand-offs that are not permissions at
-  all.
-- **`docs/index.md` describes the app that exists**, with the panel, the compact controls and the schedule
-  in it, and its own comment's instruction followed for the first time.
-- The Polish listing is written, and **`play-metadata.py` refuses to publish a locale whose descriptions
-  are blank** rather than sending two empty strings — proven by running it, on the path where it matters
-  and not on the path where it would break every release.
+  including the two the policy has never named, the two settings hand-offs that are not permissions at
+  all, and the **third** thing that happens outside the app, which is the support mail and the six facts
+  it composes.
+- **`docs/index.md` and the listing's English full description describe the app that exists**, with the
+  panel, the compact controls and the schedule in them — one list, three files, and `index.md`'s own
+  comment's instruction followed for the first time.
+- The Polish listing is written **from an English description that B made true**, and
+  **`play-metadata.py` treats a blank locale exactly as a missing one** — omitted rather than sent as a
+  value, warned about on the release path, refused on the listing path. Proven by running it, on the path
+  where it matters and not on the path where it would break every release.
 - Help and feedback has its last row, it opens the right listing from a build whose own `applicationId` is
   not the one Play knows, and it says which app is missing when nothing opens.
 - **`docs/play-app-content.md` exists**, carries every Console answer with the fact that would change it,
   and names the Auto Backup nuance verbatim.
 - **No tip link exists on any surface this phase controls**, ADR-0009's third amendment says why the second
   one did not reach far enough, and the promise in `CLAUDE.md` and `README.md` is unchanged.
-- The shade-down screenshot is **closed as a refusal with R5 behind it**, not left open for a later session
-  to rediscover.
-- A restore is a reading rather than a claim, ADR-0005 says what it does, and either nothing travels that
-  should not or `data_extraction_rules.xml` says which two keys do not.
-- The four rule-5 questions are each **answered, or closed with the reason they could not be** — and the
-  launcher one is not closed by silence, because the guard means some testers were never running the
-  default.
+- The shade-down screenshot is **closed as a refusal on the backlight argument**, not left open for a later
+  session to rediscover — and R5 is banked for 2b rather than credited with the decision.
+- A restore is a reading rather than a claim, ADR-0005 says what it does, and it says the part that is
+  easy to get wrong: **the settings-versus-live-state rule cannot be enforced in a manifest**, because
+  exclusions are file-granular and the thirteen keys are one file. If R4 finds something, the fix is a
+  guard where the value is read.
+- The four rule-5 questions are each closed as **unanswered, on the shipped value, with the reason** — and
+  `PLAN.md` says plainly that rule 5's prompted-answer channel retired without being opened, rather than
+  leaving a reader to infer that twelve people were asked and said nothing.
 - `aab-permissions.py` reports the **same six permissions** on the 0.7.0 artifact as on 0.6.0, on the
   release that adds a row which opens another app.
-- The release-shaped build was walked feature by feature on the phone, and the first update **in place**
-  was taken on the closed track rather than assumed from an internal install.
+- The release-shaped build was walked feature by feature on the phone, on a grant re-read rather than
+  assumed — and R3 is struck in writing, with the date its transition passed, rather than left as a dash
+  somebody re-plans next year.
 - The readings block above has no dashes left in it.
 - **And the app is on Play under its own listing, in a staged rollout**, described by four documents that
   agree with each other and with the build — which is the whole of what "ship shape" was ever going to
