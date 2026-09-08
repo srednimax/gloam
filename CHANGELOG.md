@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.6.0](https://github.com/srednimax/gloam/compare/v0.5.0...v0.6.0) (2026-09-08)
+
+
+### Features
+
+* dark is the default theme, not the system's ([d01ffb6](https://github.com/srednimax/gloam/commit/d01ffb6612eb969725bcecf2bd983ce21cd71938))
+* dim on a nightly schedule ([b961b9a](https://github.com/srednimax/gloam/commit/b961b9ad7b1c8419cf101b0c95349080ecc3e95f))
+* palette A, from the ember seeds ([180d3b5](https://github.com/srednimax/gloam/commit/180d3b5dc91808c8e491bc47f9f5b9bedb50f272))
+* put the icon's ground on the night instead of the mud ([159113b](https://github.com/srednimax/gloam/commit/159113b9dd5ffd296825c9d444d92f53167cee02))
+* replace the placeholder mark with the moon ([2feadf0](https://github.com/srednimax/gloam/commit/2feadf0fe6eedc216cfac26dc2b9f4028f2544f5))
+* the dim level is a column, and the compact controls an edge bar ([eedfcac](https://github.com/srednimax/gloam/commit/eedfcace8bc3bef3e36c1a0372d0127d1ab72b7e))
+* the launcher icon's ground goes flat ([9ddc9ce](https://github.com/srednimax/gloam/commit/9ddc9ce3ec8e8b1c758cecec82b7e5bd28b3ff30))
+
+
+### Bug Fixes
+
+* doze-capture says whether the night is over, instead of ending at a zero count ([e482204](https://github.com/srednimax/gloam/commit/e482204332127100626c0fc2ba8257833becb956))
+* keep the feature graphic inside Play's 16:9 crop ([f976de4](https://github.com/srednimax/gloam/commit/f976de4202d1af51e0cd5f1abda38b6d64a283bf))
+* sweep the two call sites the refactor's sweep missed ([0332a88](https://github.com/srednimax/gloam/commit/0332a88cff0a5a9d9ce415b005904b637c324e6b))
+* take the notification down with the shade, not a moment after it ([b8fba4d](https://github.com/srednimax/gloam/commit/b8fba4dee7404b85cc7f372b2bef207f595c3e9c))
+* take the shade down when the screen comes on, not a minute later ([e779c38](https://github.com/srednimax/gloam/commit/e779c38faf5c518f18c1672e3e5e5e248e52e124))
+* the compact controls centre on the edge, and a tap outside puts them away ([cf8bc27](https://github.com/srednimax/gloam/commit/cf8bc2762fd9d5fea44c63eab893eede5856d31d))
+* the icon lands on the compact controls, so the full app cannot flash behind them ([61b07d6](https://github.com/srednimax/gloam/commit/61b07d63724ecf7051f1c14cdbd4b5439c6b3f64))
+* the launcher icon opens the compact controls without flashing the app ([ba855ac](https://github.com/srednimax/gloam/commit/ba855acba760260f8dae7abf7afe5ef18c442d4a))
+
 ## [0.5.0](https://github.com/srednimax/gloam/compare/v0.4.0...v0.5.0) (2026-09-04)
 
 
