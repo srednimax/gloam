@@ -20,6 +20,10 @@ local.properties
 # Context handoff note (written by /handoff, resumed after /clear)
 /HANDOFF.md
 
+# Overnight device captures (scripts/doze-capture.sh). Tens of megabytes of logcat per run, and
+# every number worth keeping is copied into docs/phase-4.md by hand.
+/doze-*/
+
 # Signing keys. The upload keystore lives outside the repo entirely (docs/RELEASING.md,
 # *The upload key*); this is a second line of defence in case one is created in the tree.
 *.jks
