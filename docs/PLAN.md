@@ -431,10 +431,13 @@ test that decides when that stops being true.
 
 ## Phase 5 — Ship shape
 
+**Detail: [`phase-5.md`](phase-5.md).**
+
 The pipeline half is Phase P, and the listing, feature graphic and screenshots moved *before the
 door* on 2026-08-30 (rule 1) because a closed test cannot open without them. What is left here is
-genuinely last: the mark's refinement, the privacy prose's final pass, and the rest of the Support
-screen — the rate-on-Play link, and:
+genuinely last: ~~the mark's refinement~~ — **shipped at the door on 2026-09-05**, along with the
+icon, the feature graphic and three real screenshots — the privacy prose's final pass, and the rest
+of the Support screen — the rate-on-Play link, and:
 
 - **The tip, which ships — but not inside the app.** See ADR-0009 **and its 2026-08-30 amendment**,
   which is the part that decides what Phase 5 builds. Play's §3.2 treats a tip where 100% reaches the
@@ -446,6 +449,18 @@ screen — the rate-on-Play link, and:
   the Pages site, and nothing the app links to carries it either. No billing dependency, no Console
   product, and the promise in `CLAUDE.md` and `README.md` stands — it just is not collected from
   inside the app until the app is live and there is something to appeal from.
+
+**Detailing it, on 2026-09-08, found three things this paragraph did not know about, and one of them
+reopens the bullet above.** The listing's Website field and the last line of its full description
+point at the Pages site and the repository — **the two pages ADR-0009's amendment named as the tip's
+home** — so moving the link out of the app never moved it out of the listing's reach;
+[`phase-5.md`](phase-5.md) §6, and ADR-0009's third amendment. `scripts/play-metadata.py` renders an
+untranslated locale as *zero-byte* description files rather than skipping it, which is inert until
+the first promotion that carries a listing and is then a value Play is asked to store; §4. And
+`docs/play-app-content.md`, which `DOD.md` has said this phase owes since Phase P, is still not
+written; §7. The phase's own gate is a **validate-only promotion** taken before a word of new copy,
+because none of the four documents this phase is mostly about has a gate in this repo standing in
+front of it.
 
 Languages are not a phase of their own. `scripts/translation-gate.py` makes completeness a merge
 gate, so English and Polish stay in step branch by branch. Adding a third is an opt-in, and the day
