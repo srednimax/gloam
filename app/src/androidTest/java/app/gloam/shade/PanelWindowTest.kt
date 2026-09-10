@@ -111,12 +111,21 @@ class PanelWindowTest {
         )
 
         context.showShadePanel()
+        // The predicate asks for the width as well as the shape, because *adding* a window and
+        // *laying it out* are two steps in the window manager and this test needs the second one.
+        // `mAttrs` — and so `isPanel` — is printed the moment the window is added; `Requested w=`
+        // is `mRequestedWidth`, which the platform leaves at -1 until the first relayout. The gap
+        // is imperceptible on the phone and wide enough to poll into on a cold ATD emulator: CI's
+        // API 33 leg read a panel with `mHaveFrame=false` and `Requested w=-1`, and failed on the
+        // regex rather than on anything the panel had done wrong. Waiting is the whole fix; the
+        // assertions below are unchanged.
         val panel =
-            awaitWindow { it.isPanel }
+            awaitWindow { it.isPanel && it.requestedWidth != null }
                 ?: throw AssertionError(
-                    "No wrap-height APPLICATION_OVERLAY window for $packageName appeared within " +
-                        "${TIMEOUT_MS}ms of showShadePanel(). The service never added the panel, " +
-                        "or dumpsys no longer prints windows the way this test reads them.",
+                    "No laid-out wrap-height APPLICATION_OVERLAY window for $packageName appeared " +
+                        "within ${TIMEOUT_MS}ms of showShadePanel(). The service never added the " +
+                        "panel, it was added but never relayed out, or dumpsys no longer prints " +
+                        "windows the way this test reads them.",
                 )
 
         val windows = ourOverlayWindows()
@@ -135,16 +144,11 @@ class PanelWindowTest {
                 .getSystemService(WindowManager::class.java)
                 .currentWindowMetrics.bounds
                 .width()
-        val requested =
-            REQUESTED_WIDTH
-                .find(panel.text)
-                ?.groupValues
-                ?.get(1)
-                ?.toInt()
-                ?: throw AssertionError(
-                    "dumpsys did not print a requested width for the panel; this test reads " +
-                        "'Requested w=…'. Window was:\n${panel.text}",
-                )
+        // Non-null by the predicate that found this window: one without a requested width never
+        // satisfied `awaitWindow`, so reaching here with null is impossible rather than merely
+        // unlikely. `checkNotNull` states that, where the previous `?: throw` described a failure
+        // this can no longer have.
+        val requested = checkNotNull(panel.requestedWidth)
         assertTrue(
             "The panel was added $requested px wide over a $displayWidth px display — a touchable " +
                 "window that spans the display blocks every touch under it",
@@ -222,7 +226,7 @@ class PanelWindowTest {
         return ourOverlayWindows().isEmpty()
     }
 
-    /** One `Window #N` block of `dumpsys window windows`, with the two questions it can answer. */
+    /** One `Window #N` block of `dumpsys window windows`, with the questions it can answer. */
     private class OverlayWindow(
         val text: String,
     ) {
@@ -231,6 +235,22 @@ class PanelWindowTest {
 
         /** `WRAP_CONTENT` height over an explicit pixel width, which only the panel asks for. */
         val isPanel: Boolean get() = "xwrap)" in text
+
+        /**
+         * The width the window manager was asked for, or `null` before the window was laid out.
+         *
+         * `mRequestedWidth` rather than the `mAttrs` width that [isPanel] reads: the two agree once
+         * the window is up, but this one is the number the platform has actually taken, and it
+         * prints as `-1` beforehand — which makes reading it a readiness check as well as a
+         * measurement. The regex takes digits only, so `-1` is a miss, and a miss is `null`.
+         */
+        val requestedWidth: Int?
+            get() =
+                REQUESTED_WIDTH
+                    .find(text)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toInt()
     }
 
     /**
