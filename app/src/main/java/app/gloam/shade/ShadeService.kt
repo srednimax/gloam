@@ -171,6 +171,9 @@ const val SHADE_WINDOW_FLAGS =
  *
  * ## Kotlin/Android notes
  *
+ * **The shade's window is the one exception to the next sentence.** Its views live on
+ * [ShadeThread], and every touch of them goes through `shadeThread.run`.
+ *
  * A `Service` is not a thread — every callback here runs on the main thread, which is why the
  * preference `Flow` is collected on a scope this class owns and cancels rather than blocking in
  * `onStartCommand`. `START_STICKY` asks Android to recreate the service if it is killed for memory;
@@ -189,6 +192,14 @@ class ShadeService : Service() {
         get() = (application as MainApplication).preferences
 
     private var windowManager: WindowManager? = null
+
+    /**
+     * Where every touch of the shade's views and window happens. [ShadeThread] explains why: a
+     * rotation drops the backlight override until the shade redraws, and on the main thread that
+     * redraw waited behind our own screens for ~400 ms. The panel stays on the main thread, because
+     * its Compose host is there.
+     */
+    private val shadeThread = ShadeThread()
 
     /**
      * The last values the preference collector produced, kept so a window added *after* it started
@@ -542,6 +553,8 @@ class ShadeService : Service() {
         // of the panel's three ways out, and the only one the user does not ask for.
         removePanelWindow()
         removeShadeWindow()
+        // After the removal, never before: the removal finishes on this thread. See [ShadeThread.quit].
+        shadeThread.quit()
         // Beside [stopping] rather than instead of it: the flag stops a re-post being made, and
         // this removes one that was already made. Android removes the notification with the service
         // by itself in the ordinary case, so this costs one binder call to make the invariant
@@ -613,7 +626,11 @@ class ShadeService : Service() {
                     fitInsetsTypes = 0
                 }
 
-        runCatching { windowManager?.addView(view, params) }
+        // On [shadeThread], and that is what binds the window to it. The views were built on main and
+        // that is safe: a view belongs to no thread until its window is added. From here on this
+        // service touches them, and the params' brightness, only inside `shadeThread.run`.
+        shadeThread
+            .run { runCatching { windowManager?.addView(view, params) } }
             .onSuccess {
                 shadeView = view
                 dimLayer = dim
@@ -642,7 +659,7 @@ class ShadeService : Service() {
 
     private fun removeShadeWindow() {
         val view = shadeView ?: return
-        runCatching { windowManager?.removeView(view) }
+        shadeThread.run { runCatching { windowManager?.removeView(view) } }
         shadeView = null
         dimLayer = null
         warmthLayer = null
@@ -1034,9 +1051,16 @@ class ShadeService : Service() {
 
         val values = shadeValuesFor(settings, backlightTop, appliedMinBacklight)
         // A view property, unlike the backlight below: `alpha` takes effect on its own, where
-        // `params.screenBrightness` does nothing until the window layout is handed back.
-        dimLayer?.alpha = values.shadeAlpha
-        warmthLayer?.alpha = values.warmthAlpha
+        // `params.screenBrightness` does nothing until the window layout is handed back. Set on the
+        // shade's thread, which owns the views, and skipped outright when there is no window.
+        val dim = dimLayer
+        val warmth = warmthLayer
+        if (dim != null && warmth != null) {
+            shadeThread.run {
+                dim.alpha = values.shadeAlpha
+                warmth.alpha = values.warmthAlpha
+            }
+        }
         applyBacklight(values.backlight)
         // After the backlight, never before: [backlightOverrideLive] reads what was just written.
         syncNotificationText()
@@ -1108,9 +1132,15 @@ class ShadeService : Service() {
         val params = shadeParams ?: return
         val requested = value ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         if (params.screenBrightness == requested) return
-        params.screenBrightness = requested
-        // Guarded for the same reason `addView` is: the window can be gone underneath us.
-        runCatching { windowManager?.updateViewLayout(view, params) }
+        // The write happens on the shade's thread too, not only the hand-back. The window's root
+        // view keeps a reference to these very params, so a write from main could land while that
+        // thread reads them. Reading on main, as the line above and [backlightOverrideLive] do, is
+        // safe: the shade thread never writes.
+        shadeThread.run {
+            params.screenBrightness = requested
+            // Guarded for the same reason `addView` is: the window can be gone underneath us.
+            runCatching { windowManager?.updateViewLayout(view, params) }
+        }
     }
 
     /**
