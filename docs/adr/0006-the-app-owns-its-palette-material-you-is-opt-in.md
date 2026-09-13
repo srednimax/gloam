@@ -55,3 +55,17 @@ the palette file.
   `vN` in Android's qualifier precedence, so `values-night/` would beat `values-v29/` on an API 29+
   phone in dark mode; `values-night-v29/` is what settles it, and a `<style>` cannot merge across
   qualified files the way one `<color>` reference can.
+
+## Amendment, 2026-09-13: the toggle is removed
+
+**Material You is no longer opt-in; it is gone.** Closed-test feedback was that wallpaper palettes
+looked worse than the app's own and could not be made to work for everyone — which is this ADR's own
+*Alternatives* argument arriving from users rather than from reasoning: a palette the app does not
+control is a contrast guarantee nobody can check, and an opt-in does not change that, it only makes it
+the user's problem. The toggle also carried cost with no one to pay it back: `ColumnColors` had to be
+written to survive wallpaper roles, and every screenshot run had to pin the toggle to be reproducible.
+
+What stays: the scheme is generated from four seeds, and light/dark is still the user's choice —
+System, Light or Dark, **Dark by default**. Only the wallpaper branch is gone. The stored
+`material_you` key is left on existing installs rather than migrated away; nothing reads it, and
+`AppPreferences.Keys` marks the name as retired.

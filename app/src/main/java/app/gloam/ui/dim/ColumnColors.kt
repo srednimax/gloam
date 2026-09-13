@@ -20,12 +20,11 @@ import app.gloam.theme.LocalDarkTheme
  *   because that is what it depicts; there is no `MaterialTheme` role that means "the light being
  *   covered", and the nearest ones (`primaryContainer`, `inversePrimary`) mean something else and
  *   move when the palette does.
- * - **It must survive dynamic colour.** With Material You on (ADR-0006 makes it opt-in, so this is
- *   the user's choice rather than the default) every role in the scheme is replaced by wallpaper
- *   colours. A plate painted from a role would then be blue or green — a picture of light that is
- *   not the colour of light — while the shade this app actually draws stays amber. `shade/` already
- *   holds its amber as a constant for a related reason (ADR-0010, the second luminance bound); this
- *   is the same argument one layer up.
+ * - **It must not move with the palette.** A plate painted from a role would change whenever the
+ *   seeds do — and when Material You was still a toggle (removed, ADR-0006's amendment) it would have
+ *   turned blue or green: a picture of light that is not the colour of light, while the shade this
+ *   app actually draws stays amber. `shade/` already holds its amber as a constant for a related
+ *   reason (ADR-0010, the second luminance bound); this is the same argument one layer up.
  *
  * **What is *not* here is as deliberate.** Everything *around* the column — buttons, chips, the
  * switch, every piece of text, the warmth ramp's warm end — takes `MaterialTheme` roles as usual, so

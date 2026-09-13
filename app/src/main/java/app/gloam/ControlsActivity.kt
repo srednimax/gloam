@@ -105,11 +105,10 @@ class ControlsActivity : AppCompatActivity() {
             }
 
         setContent {
-            val materialYou by app.preferences.materialYou.collectAsStateWithLifecycle(initialValue = false)
             val themeMode by
                 app.preferences.themeMode.collectAsStateWithLifecycle(initialValue = app.startupThemeMode)
 
-            AppTheme(themeMode = themeMode, dynamicColor = materialYou) {
+            AppTheme(themeMode = themeMode) {
                 // **No `Surface` behind it.** The edge bar paints its own shape on a window
                 // `Theme.App.Controls` already made transparent; a surface here would be a
                 // rectangle of theme colour around a control designed to float.

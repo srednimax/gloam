@@ -66,9 +66,8 @@ class MainActivity : AppCompatActivity() {
             // readable that early.
             //
             // Kotlin note: a plain `Flow` has no current value the way a `StateFlow` does, so
-            // collecting one as state needs an initial. `false` is also the stored default, which is
-            // what keeps the first frame from being the wrong palette and then repainting.
-            val materialYou by app.preferences.materialYou.collectAsStateWithLifecycle(initialValue = false)
+            // collecting one as state needs an initial.
+            //
             // The initial value is the one `onCreate` already read off disk, not `SYSTEM`: this
             // flow's first emission arrives after the first composition, so a stored `DARK` would
             // otherwise light-flash on every cold start. `MainApplication` paid for that read before
@@ -76,7 +75,7 @@ class MainActivity : AppCompatActivity() {
             val themeMode by
                 app.preferences.themeMode.collectAsStateWithLifecycle(initialValue = app.startupThemeMode)
 
-            AppTheme(themeMode = themeMode, dynamicColor = materialYou) {
+            AppTheme(themeMode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
