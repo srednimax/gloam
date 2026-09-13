@@ -1,7 +1,9 @@
 package app.gloam.shade
 
+import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
@@ -131,6 +133,34 @@ class ShadeWindowTest {
     }
 
     /**
+     * **The whole display, navigation bar included.** `fillxfill` says what the shade *asked* for,
+     * and the window manager is free to answer with less: until `fitInsetsTypes = 0` it laid the
+     * shade out clear of the navigation bar, and the frame ended 48 px short of the display's bottom
+     * edge on the phone — a bright strip under every app that shows the bar. The requested size never
+     * changed, so only the frame it was given can catch that.
+     *
+     * Compared against `maximumWindowMetrics`, which is the display in its current rotation with no
+     * inset taken off — the frame the shade should have.
+     */
+    @Test
+    fun theShadeCoversTheWholeDisplay() {
+        context.startShade()
+        val window = awaitShadeWindow() ?: throw AssertionError("No shade window appeared.")
+
+        val display = context.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
+        val frame =
+            FRAME.find(window)?.destructured?.let { (left, top, right, bottom) ->
+                Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+            } ?: throw AssertionError("No frame= line in the shade's window block:\n$window")
+
+        assertTrue(
+            "The shade's frame $frame does not cover the display $display — a strip of the screen " +
+                "is left undimmed. Window was:\n$window",
+            frame.contains(display),
+        )
+    }
+
+    /**
      * Poll `dumpsys` until the shade's window shows up, and hand back the block describing it.
      *
      * Polling rather than one sleep: adding the window is asynchronous — `startForegroundService`
@@ -193,5 +223,11 @@ class ShadeWindowTest {
 
         /** `MATCH_PARENT` x `MATCH_PARENT` as `dumpsys` prints it. Only the shade asks for it. */
         const val SHADE_LAYOUT = "fillxfill"
+
+        /**
+         * The `frame=[l,t][r,b]` on the window's `Frames:` line. The leading space keeps it off
+         * `parent=` and `display=`, which sit on the same line and end in the same shape.
+         */
+        val FRAME = Regex(""" frame=\[(-?\d+),(-?\d+)]\[(-?\d+),(-?\d+)]""")
     }
 }
