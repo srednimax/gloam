@@ -161,6 +161,7 @@ class ControlsActivity : AppCompatActivity() {
                         onStart = ::startShade,
                         onStop = ::stopShade,
                         onOpenApp = ::openFullApp,
+                        onClose = ::finish,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -275,9 +276,12 @@ class ControlsActivity : AppCompatActivity() {
  * can never fire from here. What is left is the pair that must stay together — the stored intent and
  * the service — written the same way round as on the full screen.
  *
- * `onClose` is left at its default `null`: an Activity is closed by the back gesture, so a button
- * that did the same thing would be a fourth icon buying nothing. The panel, which the Back key never
- * reaches, is the host that passes one.
+ * **`onClose` is passed, though the back gesture already closes an Activity.** This used to be the
+ * one host without the close button, on the grounds that a button doing what Back does buys nothing.
+ * It bought a visible seam instead: the panel has the button, the two hosts replace each other (one
+ * edge bar at a time), and a group one button shorter centres its bar somewhere else — so the bar
+ * jumped when one took over. Which host is showing is an implementation detail the user should not
+ * be able to see, so both draw the same controls in the same place.
  *
  * No `extras` on the `viewModel()` call, unlike every screen inside `NavDisplay`: those resolve to a
  * bare per-entry `ViewModelStoreOwner` with no default extras, and this one resolves to the Activity,
@@ -290,6 +294,7 @@ private fun ControlsBody(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onOpenApp: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DimViewModel = viewModel(factory = DimViewModel.Factory),
 ) {
@@ -314,6 +319,7 @@ private fun ControlsBody(
             }
         },
         onOpenApp = onOpenApp,
+        onClose = onClose,
         modifier = modifier,
     )
 }

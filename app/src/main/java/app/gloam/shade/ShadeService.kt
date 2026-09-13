@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
@@ -735,13 +736,18 @@ class ShadeService : Service() {
      * thumb needs is the foot band and the buttons, and centring moves those *towards* the middle of
      * the screen rather than away from it.
      *
-     * **Centred means the centre of the app's area, not of the display.** That is a platform fact
-     * rather than a choice: the panel carries no `FLAG_LAYOUT_NO_LIMITS` — which the shade does — so
-     * the window manager lays it out inside a display frame that already stops short of the status
-     * and navigation bars. The group therefore centres between the bars with no inset arithmetic
-     * here at all. R6 read that frame off the phone back when this was an offset from the bottom;
-     * the attempt before it added the navigation inset by hand and floated the panel five times too
-     * high.
+     * **Centred means the centre of the app's area, not of the display — and of exactly the area the
+     * compact controls' dialog is centred in.** The two hosts draw the same bar and replace each other
+     * (one edge bar at a time, [panelOnScreen]), so a bar that moves when one takes over from the other
+     * shows the user a seam they have no reason to know about. The group centres between the bars
+     * with no inset arithmetic here, because `fitInsetsTypes` does it: see the params below.
+     *
+     * **This paragraph used to say the frame already stopped short of both bars, and it did not.**
+     * `FLAG_LAYOUT_IN_SCREEN` takes the status bar out of the default fit types, so the panel was
+     * centred in `[0, 2664]` while the dialog, which fits every system bar, was centred in
+     * `[130, 2664]`: 65 px apart on the phone, half the status bar's height. R6 read the bottom edge
+     * back when this was an offset from the bottom, and the top was never looked at. The attempt
+     * before R6 added the navigation inset by hand and floated the panel five times too high.
      *
      * ## No brightness of its own
      *
@@ -799,6 +805,12 @@ class ShadeService : Service() {
                     // and a left-handed user has no preference to say so yet.
                     gravity = Gravity.CENTER_VERTICAL or Gravity.END
                     x = (PANEL_SIDE_MARGIN_DP * density).toInt()
+                    // **Every system bar, stated rather than defaulted**, so the panel is centred in
+                    // the area a floating dialog is — the compact controls' — and the two bars land on
+                    // the same pixels. Setting this also marks the fit types as the app's own choice,
+                    // which is what stops the platform's compatibility pass from dropping the status
+                    // bar out of them for `FLAG_LAYOUT_IN_SCREEN`.
+                    fitInsetsTypes = WindowInsets.Type.systemBars()
                     // No `y`. Under `CENTER_VERTICAL` it would be an offset *from the centre*, which
                     // is not a thing this layout wants — so the bottom margin that used to live here
                     // is gone, constant and all, rather than left at zero for a later reader to
