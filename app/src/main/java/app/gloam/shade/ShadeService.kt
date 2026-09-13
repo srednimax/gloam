@@ -122,7 +122,7 @@ const val SHADE_WINDOW_FLAGS =
  *
  * ## What the window actually is
  *
- * A `FrameLayout` with two children — black at the dim level, amber at the warmth — in a window of
+ * A `FrameLayout` with two children — black at the dim level, a tint at the warmth — in a window of
  * type `TYPE_APPLICATION_OVERLAY`, with the flags that make it **incapable of being interacted
  * with**: `FLAG_NOT_TOUCHABLE` means every touch passes through to whatever is underneath, and
  * `FLAG_NOT_FOCUSABLE` means it never takes keyboard focus. Without both, the shade would swallow
@@ -132,8 +132,8 @@ const val SHADE_WINDOW_FLAGS =
  * **Two children, still one window.** Every safety flag above, the window type, the cutout mode and
  * the foreground notification are attributes of the *window*, so a second layer costs nothing and
  * changes none of them — which is why the warmth layer lands here rather than in a second window
- * later. What it does change is where the safety cap lives: black at `MAX_SHADE_ALPHA` under amber
- * at `MAX_WARMTH_ALPHA` leaves half of what the black child alone was ever allowed to leave, with
+ * later. What it does change is where the safety cap lives: black at `MAX_SHADE_ALPHA` under the
+ * tint at `MAX_WARMTH_ALPHA` leaves half of what the black child alone was ever allowed to leave, with
  * neither child past its own limit, so the bound belongs to the composite. [shadeValuesFor] is
  * where that is enforced, and it is proven on the JVM rather than by looking at a screen.
  *
@@ -219,7 +219,7 @@ class ShadeService : Service() {
     /** The black child, carrying the **dim level**. */
     private var dimLayer: View? = null
 
-    /** The amber child, drawn above the black one, carrying the **warmth**. */
+    /** The tint child, drawn above the black one, carrying the **warmth** in the warmth colour. */
     private var warmthLayer: View? = null
 
     /**
@@ -590,8 +590,8 @@ class ShadeService : Service() {
         // over it is a worse one.
         if (!canDrawShade()) return
 
-        // **Amber above black**, and the order is not arbitrary. It makes no difference to how much
-        // of the content survives — `(1 - a) x (1 - w)` either way — but it decides the amber's own
+        // **The tint above black**, and the order is not arbitrary. It makes no difference to how much
+        // of the content survives — `(1 - a) x (1 - w)` either way — but it decides the tint's own
         // strength: underneath, the tint would be attenuated by exactly the black layer that makes
         // it worth having, so warmth would fade out where a dark-adapted eye most notices it.
         //
