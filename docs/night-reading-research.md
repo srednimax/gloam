@@ -25,6 +25,12 @@ Do this first, before changing the ramp.
 - **If confirmed:** derive the shade alpha from the target light through the sRGB encode, not
   `1 - light`. Then re-check both invariants in `ShadeRampTest`, and update the dim-100 figure in
   ADR-0010 and `docs/DOD.md`.
+- **Done, 2026-09-13, without a light meter.** There was no second phone, so the question was
+  settled from the phone's own readings: the screencap values, mostly `CLIENT` composition in
+  SurfaceFlinger (so screencap shows what the panel receives), and the display's sRGB colour mode.
+  The model includes the platform's 0.8 window-alpha clamp. The ramp now derives the alpha from
+  light, dim 100 is unchanged at ≈0.09 nits, and the levels in between are evenly spaced. See
+  ADR-0010's seventh amendment.
 
 ## 2. Flicker: find where this panel switches to PWM
 
@@ -51,6 +57,8 @@ Optional, and only after a test.
   the brightest moment in a night session, and it is platform behaviour Gloam can't change.
 - Add one tip, in onboarding or settings: keep the system brightness low at night, because Gloam dims
   on top of it. This is strings only, and needs Polish too.
+- **Done, 2026-09-13.** There is no onboarding, so it is a *Lock screen* section in Settings
+  (`settings_lock_screen`, `settings_lock_screen_body`), in English and Polish.
 
 ## 5. Small cleanups left over from PR #58
 
@@ -58,6 +66,9 @@ Some comments still say "amber" where the tint is now a range from amber to deep
 
 - the KDoc on `DimSettings` and `ShadeValues` in `shade/ShadeRamp.kt`
 - the "Amber above black" comment in `shade/ShadeService.kt`
+
+**Done, 2026-09-13**, along with the same wording in `ShadeRampTest`, `ColumnColors.kt` and
+`CLAUDE.md`. ADR-0010 keeps its wording, because an ADR records what was decided at the time.
 
 ## Keep as is
 

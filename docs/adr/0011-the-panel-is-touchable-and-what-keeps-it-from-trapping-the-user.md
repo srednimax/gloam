@@ -19,7 +19,8 @@ moves it. So the app's own controls are under the shade while the panel, being a
 above the shade, is at the full backlight the override left (R6: its palette comes back
 byte-identical to `Color.kt`, where a shaded copy would read ≈`#3D2D1D`). That was **≈1.59 against
 6.64 nits** when measured; since [ADR-0010](0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
-fifth amendment moved `MIN_BACKLIGHT` to the floor it is **≈0.48 against 2.0**. One of those two
+fifth amendment moved `MIN_BACKLIGHT` to the floor it is **≈0.48 against 2.0** — and ≈0.09 against
+2.0 counted in light rather than in stored values, by ADR-0010's seventh amendment. One of those two
 surfaces can be read at maximum dim and the other cannot.
 
 `PLAN.md` gives the panel one reason to exist beyond that: the **live preview**, a slider that moves
