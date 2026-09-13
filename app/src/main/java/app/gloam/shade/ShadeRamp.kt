@@ -225,10 +225,14 @@ private fun linearise(channel: Float): Float =
  *   maximum — captured at the moment the override is applied and held until it is released, never
  *   re-read while it is live. **Null means the backlight half does nothing this session**, which is
  *   also what a failed or untrustworthy read decays to; see [readBacklight].
+ * @param minBacklight the lowest override the ramp may ask for. Always [MIN_BACKLIGHT] in a release
+ *   build; a parameter only so the debug build can compare it against the floor on a real page
+ *   (`src/debug/.../shade/MinBacklight.kt`). The tests hold the default.
  */
 fun shadeValuesFor(
     settings: DimSettings,
     backlightTop: Float?,
+    minBacklight: Float = MIN_BACKLIGHT,
 ): ShadeValues {
     val t = settings.dimLevel.coerceIn(0, 100) / 100f
 
@@ -237,9 +241,9 @@ fun shadeValuesFor(
     // answer as well as the safe one.
     val top =
         backlightTop
-            ?.takeIf { settings.lowerBacklight && it >= MIN_BACKLIGHT && it <= 1f }
+            ?.takeIf { settings.lowerBacklight && it >= minBacklight && it <= 1f }
 
-    val ratio = if (top == null) 1f else top / MIN_BACKLIGHT
+    val ratio = if (top == null) 1f else top / minBacklight
     val span = 1f / (1f - MAX_SHADE_ALPHA)
     val light = (ratio * span).pow(-t)
 
@@ -247,7 +251,7 @@ fun shadeValuesFor(
     // than set to the top. CONTEXT.md already says a dim level of zero is still running; this is
     // what that means physically — the shade is transparent, the backlight is the user's own, and
     // their brightness slider works again. Everything else falls out of the expression above.
-    val backlight = if (top == null || settings.dimLevel <= 0) null else maxOf(top * light, MIN_BACKLIGHT)
+    val backlight = if (top == null || settings.dimLevel <= 0) null else maxOf(top * light, minBacklight)
     val shadeAlpha = (1f - minOf(1f, light * ratio)).coerceIn(0f, MAX_SHADE_ALPHA)
 
     // Something has to give at the very top, and it cannot be the dim level — that is the one value
