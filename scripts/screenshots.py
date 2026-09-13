@@ -66,6 +66,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -115,6 +116,40 @@ def set_theme(theme: str) -> None:
     # has landed" signal that arrives before the recomposition does, so this is a wait; every scene
     # force-stops and relaunches anyway, which is the real guarantee.
     e2e.settle(2.5)
+
+
+def read_theme() -> tuple[str, bool]:
+    """The phone's own dark-theme mode before the run moves it, and whether a one-off toggle rode on it.
+
+    **Read, never assumed.** `--restore` used to write back `auto`, which is not "whatever the phone
+    had" but Android's sunset-to-sunrise schedule: a phone set to dark was still dark at bedtime and
+    light again by morning, so it looked like something ran overnight (2026-09-13). `cmd uimode
+    night` prints its mode as the same word it accepts — `yes`, `no`, `auto`, `custom`, and
+    `custom_schedule` / `custom_bedtime` from API 34 — so the reading is also the command that puts
+    it back.
+
+    **The override is the half that cannot go back, and it is a platform limit.** Toggling dark from
+    Quick Settings (Control Center on HyperOS) while the mode is `auto` or `custom` does not change
+    the mode; it sets an override that lasts until the schedule's next transition. The run's first
+    `yes`/`no` clears it and no shell verb sets one, so the most this script can do is say so.
+    """
+    mode = e2e.shell("cmd uimode night").split(":", 1)[-1].strip()
+    flags = re.search(r"mOverrideOn/Off=(\w+)/(\w+)", e2e.shell("dumpsys uimode"))
+    overridden = mode not in ("yes", "no") and flags is not None and "true" in flags.groups()
+    return mode, overridden
+
+
+def restore_theme(mode: str, overridden: bool) -> None:
+    """Put back what [read_theme] saw. Leaves the phone alone rather than guess at an unreadable mode."""
+    if mode in ("", "unknown"):
+        print("  -- note: the phone's dark theme read as unknown before the run; left as the run left it")
+        return
+    e2e.shell(f"cmd uimode night {mode}")
+    if overridden:
+        print(
+            f"  -- note: dark theme is back on `{mode}`, but the one-off Quick Settings toggle on top of"
+            " it is gone — the phone follows its schedule until that toggle is tapped again"
+        )
 
 
 # The locale lever moved to `edge-to-edge.py`, beside the needle table it has to agree with — the
@@ -280,8 +315,10 @@ def main() -> int:
     if args.restore:
         e2e.restore_device()
         set_locale(None)
-        e2e.shell("cmd uimode night auto")
-        print("rotation, navigation mode, locale, theme and Do Not Disturb handed back to the phone")
+        # No theme here: a separate invocation has no record of what the phone had, and writing a
+        # guess is how this line used to leave a dark phone on a sunrise schedule. The run puts the
+        # theme back itself — see [read_theme].
+        print("rotation, navigation mode, locale and Do Not Disturb handed back to the phone")
         return 0
 
     if not args.out:
@@ -336,6 +373,9 @@ def main() -> int:
     # Do Not Disturb for the length of the run, off again whatever happens — the seed's 20:00 dose
     # posts a heads-up banner over Home a minute after every reseed, and this script reseeds once
     # per cell. See [e2e.set_dnd]; the `finally` is because it is a phone-wide setting.
+    # The theme is phone-wide too, so it is read before the first cell writes it and put back in the
+    # same `finally`.
+    phone_theme = read_theme()
     e2e.set_dnd(True)
     try:
         for theme in themes:
@@ -349,6 +389,7 @@ def main() -> int:
             e2e.reset_to_seeded()
     finally:
         e2e.set_dnd(False)
+        restore_theme(*phone_theme)
 
     manifest["seconds"] = round(time.time() - started)
     manifest_path = args.out / "manifest.json"
