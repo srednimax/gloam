@@ -23,7 +23,11 @@ import app.gloam.ui.dim.BAR_GROUP_GAP_DP
 import app.gloam.ui.dim.BAR_SECTION_WIDTH_DP
 import app.gloam.ui.dim.BAR_WIDTH_DP
 import app.gloam.ui.dim.CompactControls
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The flags the **panel**'s window is added with — and the one that is missing is the point.
@@ -342,3 +346,46 @@ internal fun PanelContent(
         )
     }
 }
+
+/**
+ * Whether the panel's window is up in this process — which is what keeps **one edge bar on screen at
+ * a time, the one opened last** (the user's call, 2026-09-13).
+ *
+ * The compact controls and the panel draw the same bar on the same edge, one in an Activity *under*
+ * the shade and one in a window *above* it, and nothing tied their lifetimes together: the icon
+ * reaches the Activity and the notification reaches this service. Opened one after the other, both
+ * stayed up — offset rather than stacked, because each centres in a different area: the Activity's
+ * window starts below the status bar and runs to the navigation bar, and the panel's frame stops
+ * short of both.
+ *
+ * So the service reports the panel here and `ControlsActivity` finishes when one *appears*; the
+ * Activity, on being opened, takes the panel down through [dismissPanel]. One process holds both,
+ * so a value in memory is exact, for [shadeOnScreen]'s reason.
+ */
+val panelOnScreen: StateFlow<Boolean>
+    get() = panelUp.asStateFlow()
+
+private val panelUp = MutableStateFlow(false)
+
+/** The service's half: set where the panel's window is added and removed, and nowhere else. */
+internal fun reportPanelOnScreen(up: Boolean) {
+    panelUp.value = up
+}
+
+/**
+ * Take the panel down if there is one; do nothing if there is not.
+ *
+ * **A signal in memory rather than an `Intent` to the service, and not for brevity.** A start command
+ * to a service that is not running *creates* it, and `onStartCommand`'s default branch raises the
+ * shade — so a "close the panel" command reaching a dead service would dim the screen. An emission
+ * with no collector is simply dropped, which is the right answer: no service, no panel.
+ *
+ * `DROP_OLDEST` over a buffer of one, for `panelTouches`' reason: this is a signal rather than a
+ * queue, and it is sent from the main thread, where `tryEmit` must never suspend.
+ */
+fun dismissPanel() {
+    panelDismissals.tryEmit(Unit)
+}
+
+internal val panelDismissals =
+    MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
