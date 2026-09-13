@@ -273,7 +273,7 @@ private class TouchReportingLayout(
  * battery-exemption warning and the deadline read-out are gone from this surface: what is left is
  * the level, the warmth, run/stop and the auto-off chips. Everything dropped is a *read* rather than
  * a control, and the pips at the top of the bar are one tap from the screen that has all of them.
- * A window that must stay legible at 6.64 nits, block as little of the app underneath as it can and
+ * A window that must stay legible at the backlight floor, block as little of the app underneath as it can and
  * be dismissible by somebody who cannot see the rest of the screen cannot also be a dashboard.
  */
 data class PanelState(

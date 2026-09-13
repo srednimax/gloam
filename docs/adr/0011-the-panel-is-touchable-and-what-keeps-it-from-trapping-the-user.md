@@ -15,10 +15,12 @@ At dim level 100 the shade transmits 0.24 of what is under it (`phase-3.md` R3, 
 bright-pixel samples; R6 read 0.2411 independently and agreed). Everything Gloam hosts in an Activity
 — the full app, and the compact controls 3a shipped — is *below* that window by construction: every
 Activity in Android sits under `TYPE_APPLICATION_OVERLAY`, and no flag, theme or `LayoutParams` field
-moves it. So the app's own controls are at **≈1.59 nits** while the panel, being a sibling overlay
-above the shade, is at the **6.64 nits** the backlight override left (R6: its palette comes back
-byte-identical to `Color.kt`, where a shaded copy would read ≈`#3D2D1D`). One of those two surfaces
-can be read at maximum dim and the other cannot.
+moves it. So the app's own controls are under the shade while the panel, being a sibling overlay
+above the shade, is at the full backlight the override left (R6: its palette comes back
+byte-identical to `Color.kt`, where a shaded copy would read ≈`#3D2D1D`). That was **≈1.59 against
+6.64 nits** when measured; since [ADR-0010](0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
+fifth amendment moved `MIN_BACKLIGHT` to the floor it is **≈0.48 against 2.0**. One of those two
+surfaces can be read at maximum dim and the other cannot.
 
 `PLAN.md` gives the panel one reason to exist beyond that: the **live preview**, a slider that moves
 the dim over the content the user is actually reading rather than over Gloam's own screen. That, too,

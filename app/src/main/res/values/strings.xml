@@ -212,7 +212,7 @@
          %1$s is a time of day, formatted by the platform. -->
     <string name="shade_notification_until">Until %1$s</string>
     <!-- Carried only while the backlight override is actually live. It is the one line of copy in
-         this app that gets read on a screen at 6.64 nits, because the notification is drawn above
+         this app that gets read on a screen at the backlight floor, because the notification is drawn above
          the shade and dim_backlight_hint is in the app underneath it - so it is short, and it names
          the symptom before the cause. -->
     <string name="shade_notification_text_backlight">Your brightness slider is paused while Gloam is dimming</string>

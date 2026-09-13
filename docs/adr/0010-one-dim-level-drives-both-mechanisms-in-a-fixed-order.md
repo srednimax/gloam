@@ -147,9 +147,10 @@ nothing*.
 **Nothing downstream of that withdrawal moves.** The ramp still derives the split between its two
 stretches from `backlightTop` rather than from a constant, because that argument was never about the
 integer being unreadable — it was about the *range* being user state, running from 1 to 1000 on one
-panel, which the withdrawal does not touch. `MIN_BACKLIGHT` is `0.01f`, set by measurement rather
+panel, which the withdrawal does not touch. `MIN_BACKLIGHT` was `0.01f`, set by measurement rather
 than by argument: **6.64 nits** on the development panel, read against the criterion that the
-notification shade can be pulled down and *Stop* tapped in a dark room and a lit one.
+notification shade can be pulled down and *Stop* tapped in a dark room and a lit one. *(Since the
+fifth amendment it is the panel's floor, `6.83661E-4f`, **2.0 nits**.)*
 
 **The open question in *Consequences* — "when a second window appears above the shade, whose override
 applies?" — is measured.** From both sides, and it is the same rule: **the topmost window that asks
@@ -186,7 +187,8 @@ live at dim 100 and a bare 200 dp square added above it as a second `TYPE_APPLIC
 So **the topmost window that *asks* owns the override, and one that declines is not consulted** —
 between two windows of ours exactly as it held against everyone else's. The panel therefore keeps
 `BRIGHTNESS_OVERRIDE_NONE` and the shade keeps the override, which is what makes the panel legible at
-the 6.64 nits the shade left rather than at the 1.59 nits every Activity of ours sits at (R3, R6).
+the backlight the shade left rather than under the shade, where every Activity of ours sits (R3, R6).
+That was 6.64 against 1.59 nits when measured; since the fifth amendment it is **2.0 against ≈0.48**.
 The field-copy fallback the phase had written down — the panel carrying the shade's own
 `screenBrightness` on every update — is **not built**, and stays in `phase-3.md` §6 as the thing to
 reach for if a ROM ever disagrees.
@@ -213,3 +215,36 @@ binds tighter than ours cannot break a bound stated as a floor on transmitted li
 changes is Phase 2b's ceiling** — ultra dark is defined as going past `MAX_SHADE_ALPHA`, and past a
 point more alpha buys nothing at all while the platform pins the window at 0.8. That is in `DOD.md`
 against 2b, priced before the phase opens rather than discovered inside it.
+
+Amendment, 2026-09-13 (fifth). **`MIN_BACKLIGHT` moves from `0.01f` to the panel's floor,
+`6.83661E-4f`**: from 6.64 nits to **2.0** on the development panel, the dimmest backlight Android
+gives an app. The decision stands. The one number the third amendment set by measurement is re-set
+by choice, and this amendment says what the choice costs.
+
+**Why.** The Phase 2b ceiling was priced in `DOD.md`. At dim 100 the old ramp let **1.59 nits**
+reach the eye, and every lever past it except one was ruled out: raising the shade cap buys about
+17% and breaks this ADR's invariants, `FLAG_DIM_BEHIND` blocks every touch, and a second shade window
+blocks touches because one uid's opacities add up. The backlight was the lever left, and at the floor
+dim 100 is **≈0.48 nits**, about 3.3× darker. The goal is **headroom**: a level someone actually reads
+at that sits well below 100, rather than a darker number at the top.
+
+**What it costs is R2's criterion, knowingly.** `0.01f` was the value at which the notification
+shade could be pulled down and *Stop* tapped in a dark room and a lit one, with margin. R5 is why that
+one number carries the whole argument: the system's own surfaces read our override back unchanged. At
+the floor they sit at 2.0 nits rather than 6.64, and so does the panel. Three things do not move. The
+keyguard still releases the override outright, so the power button still brings back the user's own
+brightness. A ROM kill still releases it. And the shade's cap and the two invariants are unchanged.
+**R2 is owed again, by eye, at the new value**, and the debug build keeps a switch back up to `0.01f`
+until it is taken.
+
+**Other panels.** The floor is not readable through a public API, so the constant is this panel's.
+An override below a panel's floor is clamped up to it (R1, on this device). So a panel with a higher
+floor reaches its own floor after a short flat stretch at the bottom of the backlight half, and a
+panel with a lower floor stops above it. Neither is a safety question. **Never `0f`** still holds,
+and `ShadeRampTest` still holds it.
+
+**The affine distortion now bites.** `ShadeRamp.kt` declined to correct for the panel's affine
+response because `0.01f` kept the ramp out of the float's bottom decade. The floor is inside that
+decade: between the two values the float falls 14.6× and the light only 3.3×, so the bottom of the
+backlight half darkens the screen more slowly per point. Recorded there, and left alone until someone
+notices.

@@ -52,24 +52,23 @@ const val MAX_SHADE_ALPHA = 0.95f
  * The lowest window brightness override Gloam will ask for. **Never `0f`**, which is
  * `BRIGHTNESS_OVERRIDE_OFF` — the backlight *off*, over a live touchscreen.
  *
- * **This is a floor on the escape hatch, not on the display driver.** The driver's own floor is a
- * hard lower bound on the search, not the answer to it: what this number has to buy is that the
- * notification shade can be pulled down and **Stop** tapped, in a dark room *and* under normal room
- * light, while the override is live. That matters here and did not matter before the backlight half
- * existed — [MAX_SHADE_ALPHA] never dimmed the escape hatches, because all three sit above
- * `TYPE_APPLICATION_OVERLAY`, whereas the backlight override dims everything including them, on a
- * value the user can no longer change while it is applied.
+ * **The panel's floor, since 2026-09-13: the dimmest backlight Android will give an app.** This is
+ * `mScreenBrightnessRangeMinimum` on the development panel, **2.0 nits** by R1's fit (`nits = 498.3 ×
+ * override + 1.66`). ADR-0010's fifth amendment moved it here from `0.01f` (6.64 nits), which buys
+ * about 3.3× less light at dim 100. The floor is not readable through a public API, so this is
+ * this panel's number rather than each device's. An override below a panel's floor is clamped up to
+ * it (R1), so on a panel whose floor sits higher the backlight half ends in a short flat stretch, and
+ * on one whose floor sits lower Gloam stops above it. Neither is a safety question.
  *
- * **`0.01f`, and the phone is what set it (R2, R5).** On the development panel that is **6.64 nits**
- * — `nits = 498.3 × override + 1.66`, R1's fit, which reproduced to three decimal places at every
- * level checked. For scale, the *system's own* slider bottoms out at 19 nits on this device, so the
- * floor Gloam stops at is already 2.9× below anything Android will hand the user.
- *
- * **R5 is why it cannot go much lower, and it went the unhelpful way.** The question was whether the
- * system's own surfaces carry their own brightness above ours. They do not: the notification shade,
- * quick settings and the volume dialog all read back our override unchanged, so this one number
- * carries the whole escape-hatch argument rather than sharing it. Verified by eye at maximum dim in
- * a lit room *and* a dark one — the criterion is *with margin*, not *I managed it*.
+ * **What it costs is the escape hatch, and the cost is taken knowingly.** [MAX_SHADE_ALPHA] never
+ * dims the escape hatches, because all three sit above `TYPE_APPLICATION_OVERLAY`. The backlight
+ * override dims everything including them, on a value the user can no longer change while it is
+ * applied. R5 measured that the system's own surfaces do not carry a brightness of their own: the
+ * notification shade, quick settings and the volume dialog all read back our override unchanged, so
+ * this one number carries the whole escape-hatch argument. `0.01f` was R2's answer to the criterion
+ * that the notification shade can be pulled down and **Stop** tapped in a dark room *and* a lit one,
+ * with margin. At the floor those surfaces sit at 2.0 nits, and **R2 is owed again by eye**
+ * (`DOD.md`). The debug build keeps a switch back up to `0.01f` until it is taken.
  *
  * The one surface that does lift it is the **keyguard**, which releases the override outright and
  * comes up at the user's own brightness. That is a free escape hatch this constant does not pay for,
@@ -77,7 +76,7 @@ const val MAX_SHADE_ALPHA = 0.95f
  * window is hidden behind the lock screen, so it is not there to own the brightness. It returns on
  * its own after unlocking.
  */
-const val MIN_BACKLIGHT = 0.01f
+const val MIN_BACKLIGHT = 6.83661E-4f
 
 /**
  * The most amber the warmth child may ever carry.
@@ -186,15 +185,19 @@ private fun linearise(channel: Float): Float =
  * halve the light. A ramp that is geometric in the float is therefore slightly *flatter* than
  * geometric in what the eye receives, and it flattens where this product lives.
  *
- * **Measured, it is small enough to leave alone.** Over the whole slider the shortfall in perceptual
- * travel is under 4% at either end of the user's own brightness range — the backlight stretch
- * delivers 94% of the ratio it promises at maximum, 80% for a user already at their system minimum,
- * and the shade half is exactly geometric because alpha genuinely multiplies. The correction would
- * cost a fifth constant whose value (`498.3` and `1.66`) is **this panel's and is not readable from
- * an app** — a device-specific number carried for every device, to fix a distortion smaller than the
- * ramp's own first step. That trade is not worth taking, and the reason it is cheap to decline is
- * [MIN_BACKLIGHT]: the divergence only bites in the float's bottom decade, and the escape-hatch floor
- * stops the ramp well above it.
+ * **Measured with the old `0.01f` floor, it was small enough to leave alone.** Over the whole slider
+ * the shortfall in perceptual travel was under 4% at either end of the user's own brightness range.
+ * The backlight stretch delivered 94% of the ratio it promised at maximum and 80% for a user already
+ * at their system minimum, and the shade half is exactly geometric because alpha genuinely
+ * multiplies. The correction would cost a fifth constant whose value (`498.3` and `1.66`) is **this
+ * panel's and is not readable from an app**: a device-specific number carried for every device.
+ *
+ * **Since [MIN_BACKLIGHT] moved to the floor, the distortion is no longer small.** It bites in the
+ * float's bottom decade, where the 1.66-nit offset is most of the light, and the ramp now ends inside
+ * that decade. Between `0.01` and the floor the float falls 14.6× and the light only 3.3×, so the last
+ * stretch of the backlight half darkens the screen more slowly per point than the rest of the slider.
+ * That is feel, not safety: monotonicity and continuity still hold. It is left alone until someone
+ * notices, and the same panel-specific constant would still be the price of fixing it.
  *
  * ## What it deliberately does not promise
  *
@@ -226,8 +229,8 @@ private fun linearise(channel: Float): Float =
  *   re-read while it is live. **Null means the backlight half does nothing this session**, which is
  *   also what a failed or untrustworthy read decays to; see [readBacklight].
  * @param minBacklight the lowest override the ramp may ask for. Always [MIN_BACKLIGHT] in a release
- *   build; a parameter only so the debug build can compare it against the floor on a real page
- *   (`src/debug/.../shade/MinBacklight.kt`). The tests hold the default.
+ *   build; a parameter only so the debug build can switch back up to the previous `0.01f` on a real
+ *   page (`src/debug/.../shade/MinBacklight.kt`). The tests hold the default.
  */
 fun shadeValuesFor(
     settings: DimSettings,
