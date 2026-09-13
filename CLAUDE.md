@@ -72,7 +72,7 @@ let us do otherwise".
   rule: [ADR-0011](docs/adr/0011-the-panel-is-touchable-and-what-keeps-it-from-trapping-the-user.md),
   and a `MATCH_PARENT` in its `LayoutParams` is a bug rather than a simplification.
   **The cap belongs to the composite, not to a `View`.** From Phase 1 the shade is a `FrameLayout`
-  with two children, black at the dim level and amber at the warmth, and bounding each child alone
+  with two children, black at the dim level and a tint at the warmth, and bounding each child alone
   does not bound the result: black at `MAX_SHADE_ALPHA` still leaves content visible, and a heavy
   amber wash over it is a screen nothing can be read through, with neither child past its own limit.
   **It takes two bounds, not one**: `(1 - shadeAlpha) * (1 - warmthAlpha) ≥ 1 - MAX_SHADE_ALPHA` for

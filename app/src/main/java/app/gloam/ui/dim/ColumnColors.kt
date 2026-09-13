@@ -23,8 +23,9 @@ import app.gloam.theme.LocalDarkTheme
  * - **It must not move with the palette.** A plate painted from a role would change whenever the
  *   seeds do — and when Material You was still a toggle (removed, ADR-0006's amendment) it would have
  *   turned blue or green: a picture of light that is not the colour of light, while the shade this
- *   app actually draws stays amber. `shade/` already holds its amber as a constant for a related
- *   reason (ADR-0010, the second luminance bound); this is the same argument one layer up.
+ *   app actually draws stays between amber and deep red. `shade/` holds both ends of that tint as
+ *   constants for a related reason (ADR-0010, the second luminance bound); this is the same argument
+ *   one layer up.
  *
  * **What is *not* here is as deliberate.** Everything *around* the column — buttons, chips, the
  * switch, every piece of text — takes `MaterialTheme` roles as usual, so
