@@ -324,6 +324,26 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       full-screen overlay is the trap the app exists not to be — so 2b's honest options are the
       backlight (already at `MIN_BACKLIGHT` there), or accepting the ceiling and saying so in the
       copy. Read `phase-3.md`'s R13 and ADR-0010's fourth amendment before designing the feature.
+      **Priced, 2026-09-13, on the dev phone.** The goal is **headroom**: dark enough that the level
+      someone actually reads at sits well below 100, with the top of the range kept for the nights
+      that need it. The backlight is not "already at `MIN_BACKLIGHT`" in the sense that matters,
+      because `MIN_BACKLIGHT` (0.01, 6.64 nits) sits well above the panel's floor (6.84e-4, 2.0 nits).
+      Nits reaching the eye at dim 100:
+      - **Shipped:** 1.59, measured.
+      - **Backlight at the floor:** ~0.48, about 3× darker. The cost is R5: the notification and the
+        panel dim with it. The debug switch in Settings → Developer flips it live; **the by-eye
+        verdict is still owed**, and it decides whether 2b takes this lever.
+      - **Shade cap raised to the 0.8 clamp:** ~0.40. About 17% more, and it breaks ADR-0010's
+        invariants, so it is not worth it.
+      - **Extra dim** (Reduce Bright Colors) on top: ~0.07, computed from framework-res rather than
+        measured. It is the only lever past the ceiling, and it is the user's: an app can deep-link
+        `android.settings.REDUCE_BRIGHT_COLORS_SETTINGS` but cannot set it.
+      - **`FLAG_DIM_BEHIND` is dead.** Its dim is not clamped (`a:0.95` in SurfaceFlinger), but the
+        layer belongs to uid 1000, and the input dispatcher treats it as a blocking occluder, so every
+        touch to any other app is dropped, at any `dimAmount`. The system Settings app is uid 1000 and
+        exempt, so it is the wrong place to test touches. Stacking a second full-screen shade window
+        is dead too: one uid's opacities add up, and two windows at 0.8 read as 0.96. The readings are
+        in `DimBehindWindow`'s KDoc in `src/debug/`.
 - [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
       inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
       What stood behind the old default was an argument rather than a reading — that a first launcher
