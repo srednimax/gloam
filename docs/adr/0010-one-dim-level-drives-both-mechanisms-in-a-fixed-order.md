@@ -248,3 +248,40 @@ response because `0.01f` kept the ramp out of the float's bottom decade. The flo
 decade: between the two values the float falls 14.6× and the light only 3.3×, so the bottom of the
 backlight half darkens the screen more slowly per point. Recorded there, and left alone until someone
 notices.
+
+Amendment, 2026-09-13 (sixth). **The warmth child's colour becomes a setting on a fixed path**, from
+`SHADE_AMBER` to `SHADE_RED`, where it used to be the one constant. The decision and both invariants
+stand. The second invariant is now a sweep over the path rather than an assertion on one colour.
+
+**Why.** The tester's verdict on the Phase 2b build was that the warmth colours were poor. Other
+dimmers call this control a reading mode and give it a colour of its own: Twilight has colour
+temperature, intensity and dim, and HyperOS's system Reading mode has a warm tint with its own
+strength. So Gloam gets a warmth colour beside warmth. Its name stays warmth, because HyperOS already
+puts a "Reading mode" in the same quick settings.
+
+**The path is shaped by the veil bound.** Both ends sit at the same relative luminance, `0.0727`, and
+they are blended in linear light, where luminance is linear. So every point on the bar adds the same
+veil, and the invariant cannot depend on where the handle sits. A free colour picker was rejected on
+this bound: any bright colour would have to be held to a near-zero alpha to pass, so most of a picker
+would do nothing. The setting is one integer, so it is a setting and not a table (ADR-0007).
+
+**What the colour does, measured on the composite rather than claimed.** Black text on a white page
+under full warmth and no dim:
+
+| Warmth colour | Tint | Contrast | Green light left | Blue light left |
+| --- | --- | --- | --- | --- |
+| 0 | `#7A3B00` | 6.0 : 1 | 34% | 21% |
+| 50 (default) | `#8D2900` | 5.8 : 1 | 30% | 21% |
+| 100 | `#9E0000` | 5.3 : 1 | 21% | 21% |
+
+The blue is the same at every point, because neither end carries any: **warmth sets the blue, and
+the colour trades green light and a natural-looking screen against a little contrast.** The default
+is the middle, about the hue of a 1000 K light, where Twilight's documentation puts its ideal colour
+temperature. The red end is there for a fully dark room, since red is the light night vision is least
+sensitive to. None of this is a sleep claim. A 2021 study of iOS Night Shift found no difference in
+sleep, and Gloam's listing already avoids health wording (`DOD.md`).
+
+**The compact controls and the panel carry warmth without its colour.** The colour is set once, and
+strength is what somebody changes while reading. Their warmth column is painted in the chosen tint, so
+those surfaces still show it. `PLAN.md`'s *colour filters beyond warmth* stays out of scope: this is
+warmth's own colour, not a second filter.

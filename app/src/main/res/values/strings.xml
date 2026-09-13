@@ -88,8 +88,12 @@
 
     <!-- The warmth slider. "Warmth" per CONTEXT.md: not "night mode" — that is the app's own dark
          theme — and not any wording about filtering or cutting blue light, which an overlay cannot
-         do. It adds amber over an already-dark screen. -->
+         do. It adds a tint, somewhere between amber and deep red, over an already-dark screen. -->
     <string name="dim_warmth_label">Warmth</string>
+    <!-- The bar under Warmth: which tint, from amber at one end to deep red at the other. "Colour"
+         in the sense of hue only. How strong the tint is belongs to the Warmth bar, and this one has
+         no number beside it. Short: it sits in a column beside a slider on a phone held upright. -->
+    <string name="dim_warmth_color_label">Colour</string>
 
     <!-- The compact controls (docs/phase-3.md §2, §10). The floating window shows the same sliders
          and nothing else, so this is its one way to the rest of the app — without it the dialog is a

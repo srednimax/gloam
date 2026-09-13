@@ -304,6 +304,7 @@ fun DimScreen(
             DimControls(
                 dimLevel = state.dimLevel,
                 warmth = state.warmth,
+                warmthColor = state.warmthColor,
                 // `shadeUp`, not the intent: after HyperOS kills the process the intent still says
                 // running over a screen with nothing on it, and this button is the thing that has
                 // to say so. Start from there re-asks for what was already stored, which is a fresh
@@ -311,6 +312,7 @@ fun DimScreen(
                 running = state.shadeUp,
                 onDimLevel = viewModel::setDimLevel,
                 onWarmth = viewModel::setWarmth,
+                onWarmthColor = viewModel::setWarmthColor,
                 onToggleRunning = {
                     when {
                         state.shadeUp -> {

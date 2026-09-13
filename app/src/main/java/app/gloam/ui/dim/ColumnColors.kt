@@ -27,7 +27,7 @@ import app.gloam.theme.LocalDarkTheme
  *   reason (ADR-0010, the second luminance bound); this is the same argument one layer up.
  *
  * **What is *not* here is as deliberate.** Everything *around* the column — buttons, chips, the
- * switch, every piece of text, the warmth ramp's warm end — takes `MaterialTheme` roles as usual, so
+ * switch, every piece of text — takes `MaterialTheme` roles as usual, so
  * the palette still decides everything a palette should. What is fixed here is the picture: the
  * light, the shade over it, the line between them, and the ink that has to be legible on each.
  *
@@ -64,9 +64,11 @@ data class ColumnColors(
     /** The run/stop band at the foot of the compact bar, and its top border. */
     val foot: Color,
     val footBorder: Color,
-    /** The warmth ramp's cool end and its middle; the warm end is the theme's `primary`. */
+    /**
+     * The warmth ramp's cool end. The warm end is not in this set, because it is not a theme colour:
+     * it is the tint the shade actually paints (`warmthTint`), which no theme switch may move.
+     */
     val warmthCool: Color,
-    val warmthMid: Color,
 )
 
 /**
@@ -85,15 +87,14 @@ private val DarkColumnColors =
         foot = Color(0xFFF2C489),
         footBorder = Color(0x4D5C3403),
         warmthCool = Color(0xFF3D3529),
-        warmthMid = Color(0xFF8A5A1E),
     )
 
 /**
  * The light set (design 6a / 6b), and it is an **inversion rather than a tint**: the plate becomes
  * paper and the covered area becomes the dark thing on it, because on a white ground the shade is
  * what has to be visible. Three of these are forced by the pale ground rather than chosen —
- * the plate's hairline goes opaque (a translucent glow is invisible on paper), the warmth ramp runs
- * cool-to-warm so it ends at `primary` instead of starting near it, and the foot band is one step
+ * the plate's hairline goes opaque (a translucent glow is invisible on paper), the warmth ramp's
+ * cool end is pale so that the dark tint at its other end is what stands out, and the foot band is one step
  * darker than the plate's own bottom so a 72dp band reads without a heavier border.
  */
 private val LightColumnColors =
@@ -109,7 +110,6 @@ private val LightColumnColors =
         foot = Color(0xFFFFCE96),
         footBorder = Color(0x525C3403),
         warmthCool = Color(0xFFEFE7DC),
-        warmthMid = Color(0xFFD8A45E),
     )
 
 /**

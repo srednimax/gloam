@@ -1,6 +1,7 @@
 package app.gloam.shade
 
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * What the user asked for. Read from DataStore and combined into one value.
@@ -79,10 +80,10 @@ const val MAX_SHADE_ALPHA = 0.95f
 const val MIN_BACKLIGHT = 6.83661E-4f
 
 /**
- * The most amber the warmth child may ever carry.
+ * The most tint the warmth child may ever carry.
  *
  * It is half of the pair that keeps the composite legible — see [shadeValuesFor]'s two invariants —
- * and it is what caps the amber's own luminance at `0.10`, which is why the shade's colour cannot
+ * and it is what caps the tint's own luminance at `0.10`, which is why the shade's colour cannot
  * come from `MaterialTheme`.
  */
 const val MAX_WARMTH_ALPHA = 0.5f
@@ -102,8 +103,9 @@ const val MAX_WARMTH_ALPHA = 0.5f
 const val WARMTH_EASE_FROM = 0.88f
 
 /**
- * The amber the warmth child is painted with, ARGB — and **deliberately not a `MaterialTheme`
- * colour**, the one exception to the house rule that every colour comes from the palette.
+ * The amber end of the warmth colour's path ([warmthTint]), ARGB — and **deliberately not a
+ * `MaterialTheme` colour**, the one exception to the house rule that every colour comes from the
+ * palette. Until ADR-0010's sixth amendment it was the only colour the warmth child could be.
  *
  * Three things separate it from every other colour in the app: the shade is not a surface but a
  * physical quantity chosen for its effect on light; it must not change when the user switches the
@@ -121,6 +123,50 @@ const val WARMTH_EASE_FROM = 0.88f
  * `ShadeRampTest` holds both ends of it.
  */
 const val SHADE_AMBER = 0xFF7A3B00.toInt()
+
+/**
+ * The deep-red end of the warmth colour's path, ARGB: pure red at **the same relative luminance as
+ * [SHADE_AMBER]** (`0.0727` against `0.0727`), which is what picked `9E` out of its neighbours.
+ *
+ * Red at the far end because it is the light the eye's night vision is least sensitive to, which is
+ * the one case where going past orange buys something for a reader in a dark room. Equal luminance
+ * because of what [warmthTint] does with the pair.
+ */
+const val SHADE_RED = 0xFF9E0000.toInt()
+
+/**
+ * The colour the warmth child is painted with at a warmth colour of 0–100 (CONTEXT.md: **warmth
+ * colour**): [SHADE_AMBER] at 0, [SHADE_RED] at 100.
+ *
+ * **The bar moves the hue and never the light the tint adds.** The two ends are blended in *linear*
+ * light rather than in the stored bytes, and relative luminance is a weighted sum of linear channels,
+ * so it is linear along the blend. Two ends of equal luminance make it constant across the whole bar —
+ * `0.0719 … 0.0734` after rounding to bytes — and the veil invariant cannot depend on where the handle
+ * sits. What the bar trades is how natural the screen looks against how much green light gets
+ * through. Black text on a white page under full warmth and no dim keeps **6.0 : 1** at the amber end,
+ * **5.8** in the middle and **5.3** at the red end, with 34%, 30% and 21% of the page's green light
+ * left. The blue left is 21% everywhere, because neither end carries any blue: blue is set by the
+ * warmth, not by its colour.
+ *
+ * A blend of the stored bytes would dip in the middle instead, because the transfer function is
+ * convex. That is still inside the bound, but it would make the middle of the bar darker and duller than
+ * either end, and nothing about the middle asks for that.
+ *
+ * The middle, `#8D2900`, is where [app.gloam.data.DEFAULT_WARMTH_COLOR] puts a first run: about the
+ * hue of a 1000 K light.
+ */
+fun warmthTint(warmthColor: Int): Int {
+    val t = warmthColor.coerceIn(0, 100) / 100f
+
+    // Kotlin note: a function declared inside a function is a closure over `t`, the same as a nested
+    // `function` in JS. It exists so each channel's blend is written once, not three times.
+    fun channel(shift: Int): Int {
+        val from = linearise((SHADE_AMBER shr shift and 0xFF) / 255f)
+        val to = linearise((SHADE_RED shr shift and 0xFF) / 255f)
+        return (encode(from + (to - from) * t) * 255f).roundToInt().coerceIn(0, 255)
+    }
+    return (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+}
 
 /**
  * WCAG relative luminance of an ARGB colour, alpha ignored: how much light the colour itself
@@ -141,6 +187,10 @@ fun relativeLuminance(color: Int): Float {
 /** sRGB's transfer function, undone: the stored byte is gamma-encoded and light is not. */
 private fun linearise(channel: Float): Float =
     if (channel <= 0.03928f) channel / 12.92f else ((channel + 0.055f) / 1.055f).pow(2.4f)
+
+/** [linearise] run forwards: linear light back to the gamma-encoded value a byte stores. */
+private fun encode(light: Float): Float =
+    if (light <= 0.0030402f) light * 12.92f else 1.055f * light.pow(1f / 2.4f) - 0.055f
 
 /**
  * One dim level, one ramp, in a fixed order (ADR-0010): spend the **backlight** first, then draw the
@@ -209,7 +259,7 @@ private fun linearise(channel: Float): Float =
  *
  * ```
  * (1 - shadeAlpha) * (1 - warmthAlpha)  ≥  1 - MAX_SHADE_ALPHA
- * MAX_WARMTH_ALPHA * relativeLuminance(amber)  ≤  1 - MAX_SHADE_ALPHA
+ * MAX_WARMTH_ALPHA * relativeLuminance(tint)  ≤  1 - MAX_SHADE_ALPHA   // every warmthTint(0..100)
  * ```
  *
  * The first says the composite may never take more signal than the black child alone was allowed to

@@ -116,6 +116,7 @@ private fun CompactSection.toggling(target: CompactSection): CompactSection =
 fun CompactControls(
     dimLevel: Int,
     warmth: Int,
+    warmthColor: Int,
     running: Boolean,
     autoOff: AutoOff,
     onDimLevel: (Int) -> Unit,
@@ -177,7 +178,7 @@ fun CompactControls(
             ) {
                 when (section) {
                     CompactSection.Warmth ->
-                        WarmthSection(warmth = warmth, onWarmth = onWarmth)
+                        WarmthSection(warmth = warmth, warmthColor = warmthColor, onWarmth = onWarmth)
                     CompactSection.Timer ->
                         TimerSection(autoOff = autoOff, onAutoOff = onAutoOff)
                     CompactSection.None -> Unit
@@ -440,10 +441,17 @@ private fun FootBand(
     }
 }
 
-/** The warmth column, opened to the left of the bar. Up is warmer — the opposite axis, on purpose. */
+/**
+ * The warmth column, opened to the left of the bar. Up is warmer — the opposite axis, on purpose.
+ *
+ * **Strength only; the colour is not here.** It is set once in the full app, and what somebody changes
+ * while reading is how much tint, not which one. The column is painted in the chosen colour, so this
+ * surface still shows it.
+ */
 @Composable
 private fun WarmthSection(
     warmth: Int,
+    warmthColor: Int,
     onWarmth: (Int) -> Unit,
 ) {
     Column(
@@ -455,7 +463,7 @@ private fun WarmthSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        WarmthColumn(warmth = warmth, onWarmth = onWarmth)
+        WarmthColumn(warmth = warmth, warmthColor = warmthColor, onWarmth = onWarmth)
     }
 }
 

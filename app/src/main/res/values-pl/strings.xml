@@ -44,6 +44,7 @@
     <string name="compact_auto_off_4h">4 godz.</string>
 
     <string name="dim_warmth_label">Ciepło barwy</string>
+    <string name="dim_warmth_color_label">Odcień</string>
 
     <string name="controls_open_app">Otwórz Gloam</string>
     <string name="panel_close">Zamknij sterowanie</string>

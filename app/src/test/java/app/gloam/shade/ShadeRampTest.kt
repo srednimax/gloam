@@ -298,18 +298,66 @@ class ShadeRampTest {
      * underneath, it lays light *on top of* it, and how much depends on the amber's own luminance. A
      * bright amber passes every other assertion in this file and produces a screen nothing can be
      * read through — `#FFB000` at half alpha is four times more veil than content — so the second
-     * bound says the amber may never add more light than the black child was allowed to leave.
+     * bound says the tint may never add more light than the black child was allowed to leave.
      *
-     * One assertion, no sweep: it is a property of the constants rather than of any input.
+     * Swept over every warmth colour rather than asserted on one constant, because since the colour bar
+     * the tint is an input: whatever the handle says is what gets painted.
      */
     @Test
-    fun `the amber never adds more light than the black layer was allowed to leave`() {
-        val luminance = relativeLuminance(SHADE_AMBER)
-        val veil = MAX_WARMTH_ALPHA * luminance
-        assertTrue(
-            "SHADE_AMBER has luminance $luminance, so it veils $veil against a bound of ${1f - MAX_SHADE_ALPHA}",
-            veil <= 1f - MAX_SHADE_ALPHA,
-        )
+    fun `no warmth colour adds more light than the black layer was allowed to leave`() {
+        for (warmthColor in 0..100) {
+            val luminance = relativeLuminance(warmthTint(warmthColor))
+            val veil = MAX_WARMTH_ALPHA * luminance
+            assertTrue(
+                "warmth colour $warmthColor has luminance $luminance, so it veils $veil " +
+                    "against a bound of ${1f - MAX_SHADE_ALPHA}",
+                veil <= 1f - MAX_SHADE_ALPHA,
+            )
+        }
+    }
+
+    /** The bar's two ends are the two constants, so the constants are what the rest of this file proves. */
+    @Test
+    fun `the warmth colour runs from the amber to the red`() {
+        assertEquals("0 is the amber", SHADE_AMBER, warmthTint(0))
+        assertEquals("100 is the red", SHADE_RED, warmthTint(100))
+        assertEquals("below the range clamps", SHADE_AMBER, warmthTint(-5))
+        assertEquals("above the range clamps", SHADE_RED, warmthTint(150))
+    }
+
+    /**
+     * **The colour bar moves the hue and not the veil**, which is the property the blend in linear light
+     * was chosen for. Within 2% end to end, and the slack is only bytes being rounded. A blend of the
+     * stored bytes would fail this in the middle, which is what it is here to catch.
+     */
+    @Test
+    fun `every warmth colour carries the same light`() {
+        val reference = relativeLuminance(SHADE_AMBER)
+        assertEquals("the ends were picked to match", reference, relativeLuminance(SHADE_RED), reference * 0.02f)
+        for (warmthColor in 0..100) {
+            assertEquals(
+                "warmth colour $warmthColor",
+                reference.toDouble(),
+                relativeLuminance(warmthTint(warmthColor)).toDouble(),
+                reference * 0.02,
+            )
+        }
+    }
+
+    /** Redder all the way along: the green share never rises, and the tint never picks up blue. */
+    @Test
+    fun `the warmth colour only ever gets redder`() {
+        var previous = Float.MAX_VALUE
+        for (warmthColor in 0..100) {
+            val tint = warmthTint(warmthColor)
+            val red = tint shr 16 and 0xFF
+            val green = tint shr 8 and 0xFF
+            val share = green.toFloat() / red
+            assertTrue("warmth colour $warmthColor turned greener", share <= previous)
+            assertEquals("warmth colour $warmthColor carries blue", 0, tint and 0xFF)
+            assertEquals("warmth colour $warmthColor is not opaque", 0xFF, tint ushr 24)
+            previous = share
+        }
     }
 
     /**
