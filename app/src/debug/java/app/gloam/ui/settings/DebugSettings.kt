@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,6 +32,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import app.gloam.ControlsActivity
 import app.gloam.MainApplication
+import app.gloam.shade.DebugMinBacklight
+import app.gloam.shade.MIN_BACKLIGHT
 import app.gloam.shade.armGateAlarm
 import app.gloam.shade.readBacklight
 import app.gloam.shade.showShadePanel
@@ -155,9 +158,34 @@ fun DebugSettings() {
         Log.i(TAG, "sweep done, override released")
     }
 
+    // Phase 2b's comparison: where the ramp stops the backlight. The service collects the same flow,
+    // so a tap re-paints a live shade without restarting it. `collectAsState` is the Compose end of a
+    // `Flow` — it re-renders this row on each new value, like a `useSyncExternalStore` subscription.
+    val lowest by DebugMinBacklight.value.collectAsState()
+    val atFloor = lowest != MIN_BACKLIGHT
+
     SectionHeader("Developer")
 
     Column(modifier = Modifier.padding(horizontal = Spacing.base)) {
+        Text(
+            text =
+                "lowest backlight: $lowest (${"%.2f".format(nitsOnDevPanel(lowest))} nits)" +
+                    if (atFloor) " — the floor, escape hatches darker too" else " — shipped",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Row(modifier = Modifier.padding(top = Spacing.tight, bottom = Spacing.base)) {
+            Button(
+                onClick = {
+                    DebugMinBacklight.value.value = if (atFloor) MIN_BACKLIGHT else DebugMinBacklight.FLOOR
+                    Log.i(TAG, "lowest backlight -> ${DebugMinBacklight.value.value}")
+                },
+            ) {
+                Text(if (atFloor) "Back to shipped (6.6 nits)" else "Down to the floor (2.0 nits)")
+            }
+        }
+
         Text(
             text = reading.readout(),
             style = MaterialTheme.typography.bodySmall,
@@ -431,6 +459,9 @@ private tailrec fun Context.findActivity(): Activity? =
     }
 
 private const val TAG = "GloamSweep"
+
+/** Phase 1's R1 fit for the development panel — affine, not a power law. Other panels differ. */
+private fun nitsOnDevPanel(override: Float): Float = 498.3f * override + 1.66f
 
 /** `BRIGHTNESS_OVERRIDE_NONE`: hand the window back to the user's own brightness. */
 private const val RELEASED = -1f

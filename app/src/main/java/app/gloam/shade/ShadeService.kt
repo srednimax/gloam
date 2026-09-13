@@ -234,6 +234,12 @@ class ShadeService : Service() {
     private var backlightTop: Float? = null
 
     /**
+     * The lowest override the ramp may ask for. [MIN_BACKLIGHT] for good in a release build; the
+     * debug build can switch it to the floor from Settings to compare the two (`MinBacklight.kt`).
+     */
+    private var appliedMinBacklight = MIN_BACKLIGHT
+
+    /**
      * What the notification on screen right now says: whether it carries the line about the paused
      * brightness slider, and which deadline it names.
      *
@@ -407,6 +413,14 @@ class ShadeService : Service() {
             .onEach { settings ->
                 lastSettings = settings
                 applyShadeValues(settings)
+            }.launchIn(scope)
+
+        // Separate from the combine above so the release half, a one-value flow, costs nothing: it
+        // emits once, before or after the first settings, and either order ends painted correctly.
+        minBacklight
+            .onEach { value ->
+                appliedMinBacklight = value
+                lastSettings?.let { applyShadeValues(it) }
             }.launchIn(scope)
 
         // Auto-off. `collectLatest` is `switchMap` rather than `forEach`: a new deadline cancels the
@@ -982,7 +996,7 @@ class ShadeService : Service() {
             backlightTop = null
         }
 
-        val values = shadeValuesFor(settings, backlightTop)
+        val values = shadeValuesFor(settings, backlightTop, appliedMinBacklight)
         // A view property, unlike the backlight below: `alpha` takes effect on its own, where
         // `params.screenBrightness` does nothing until the window layout is handed back.
         dimLayer?.alpha = values.shadeAlpha
