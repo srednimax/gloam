@@ -136,20 +136,32 @@
             What it opens is the app's own first screen — no side effect an outside caller could
             trigger by opening it.
 
+            **Portrait only, the product owner's call (2026-09-13).** This screen is a settings page
+            for a dimmer, and in landscape it was cramped and needed scrolling. A landscape layout
+            was judged not worth building. The lock covers this Activity only: the phone still turns
+            under every other app, and under the compact controls, which follow the app beneath
+            them. Two things this does not cover. Android 16 ignores the lock on large screens
+            (smallest width 600dp and up), so tablets and foldables still get landscape. And the
+            nightly edge-to-edge matrix dropped its landscape cells with this, because every scene
+            it walks starts here and would have captured portrait under a landscape name.
+
             **`configChanges` is here for the shade's backlight, not for this screen.** Android
-            recreates an Activity on rotation unless the manifest says the Activity handles it. That
-            recreation runs on the main thread, and on Android 16 the shade's own redraw request is
-            delivered through the main thread behind it. Until the shade redraws, the backlight
-            override is off. With this screen in front, a turn cost ~400 ms of the user's own
-            brightness. The shade's views moved to their own thread (`shade/ShadeThread.kt`), which
-            got that down to ~150 ms, and this attribute took it to 24-75 ms, the same as with any
-            other app in front. Measured on the phone on 2026-09-13. Compose lays itself out again for
-            the new size without a recreation, and nothing in `onCreate` depends on orientation.
-            `ControlsActivity` carries the same attribute for the same reason.
+            recreates an Activity on a configuration change unless the manifest says the Activity
+            handles it. That recreation runs on the main thread, and on Android 16 the shade's own
+            redraw request is delivered through the main thread behind it. Until the shade redraws,
+            the backlight override is off. Before the lock, with this screen in front, a turn cost
+            ~400 ms of the user's own brightness. The shade's views moved to their own thread
+            (`shade/ShadeThread.kt`), which got that down to ~150 ms, and this attribute took it to
+            24-75 ms, the same as with any other app in front. Measured on the phone on 2026-09-13.
+            It stays beside the lock because the lock does not hold everywhere: a large screen still
+            rotates, and a resize still changes the size. Compose lays itself out again without a
+            recreation, and nothing in `onCreate` depends on orientation. `ControlsActivity` carries
+            the same attribute for the same reason.
         -->
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true" />
 

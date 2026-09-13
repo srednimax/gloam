@@ -4,7 +4,7 @@
 Play Console raises edge-to-edge against every app targeting SDK 35+, and the notice is generic
 advice rather than a detected defect. `MainActivity` already calls `enableEdgeToEdge()` and the
 shell's `Scaffold` owns the insets, so the mechanism is in place; what is owed is *evidence*, and
-evidence for four configurations across every screen the app has is not something anyone captures by
+evidence for every configuration across every screen the app has is not something anyone captures by
 hand twice.
 
 So this drives it. For each cell of the matrix it sets the rotation and the navigation mode, walks
@@ -18,7 +18,7 @@ The screenshots are still the deliverable: this narrows which ones a human has t
 
 Usage:
     scripts/edge-to-edge.py --out /path/to/dir            # the whole matrix
-    scripts/edge-to-edge.py --out DIR --config landscape-threebutton
+    scripts/edge-to-edge.py --out DIR --config portrait-threebutton
     scripts/edge-to-edge.py --out DIR --scene dim,settings
     scripts/edge-to-edge.py --out DIR --locale pl         # the same walk, in Polish
     scripts/edge-to-edge.py --out DIR --assert-clean       # exit 1 on a defect, for CI
@@ -53,8 +53,8 @@ PACKAGE = project.DEBUG_APPLICATION_ID
 ACTIVITY = project.MAIN_ACTIVITY
 
 # The three inset types a screen can be wrongly drawn under. `displayCutout` is listed separately
-# from `statusBars` on purpose: in portrait they coincide, and in landscape they do not — which is
-# the whole reason landscape is in this matrix.
+# from `statusBars` on purpose: in portrait they coincide, and in landscape they do not. That was the
+# reason landscape was in this matrix until the app went portrait-only; see [CONFIGS].
 INSET_TYPES = ("statusBars", "navigationBars", "displayCutout")
 
 
@@ -104,8 +104,14 @@ CONFIGS = [
     # anyway, because the screens 4a-4e added have no prior evidence in any cell.
     Config("portrait-gesture", 0, "gesture"),
     Config("portrait-threebutton", 0, "threebutton"),
-    Config("landscape-gesture", 1, "gesture"),
-    Config("landscape-threebutton", 1, "threebutton"),
+    # **No landscape cells since 2026-09-13, and that is a decision, not a gap.** `MainActivity` is
+    # portrait-only (the manifest carries why), and every scene in this table starts from it, the
+    # compact controls included. A landscape cell would pin `user_rotation` 1 over an Activity that
+    # refuses to turn, and capture portrait under a landscape name, which is the defect
+    # [repin_rotation] was written to catch. The engine keeps its landscape handling: if the lock is
+    # ever lifted, these two lines come back with it.
+    #   Config("landscape-gesture", 1, "gesture"),
+    #   Config("landscape-threebutton", 1, "threebutton"),
 ]
 
 
