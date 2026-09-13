@@ -122,8 +122,8 @@ import androidx.compose.ui.graphics.Color
 // Error stays M3 baseline (hue 25, chroma 84): a safety signal, not a brand choice.
 //
 // To change the palette, edit the seeds in scripts/gen_scheme.py and re-run it.
-// Colours come from MaterialTheme, never literals, and dynamic colour defaults
-// off (ADR-0006) so this file is what a user actually sees.
+// Colours come from MaterialTheme, never literals, and there is no dynamic
+// colour (ADR-0006) so this file is what a user actually sees.
 """)
     emit("AppLightColors", LIGHT)
     emit("AppDarkColors", DARK)

@@ -282,7 +282,6 @@ data class PanelState(
     val running: Boolean,
     val autoOff: AutoOff,
     val themeMode: ThemeMode,
-    val materialYou: Boolean,
 )
 
 /**
@@ -317,7 +316,7 @@ internal fun PanelContent(
     // lifecycle this reads comes from `PanelHost`, which is the whole reason that class exists.
     val current by state.collectAsStateWithLifecycle()
 
-    AppTheme(themeMode = current.themeMode, dynamicColor = current.materialYou) {
+    AppTheme(themeMode = current.themeMode) {
         // **No `Surface` around it any more.** The old panel was a card with controls on it, so it
         // needed one; the edge bar paints its own shape on a translucent window, and a surface
         // behind it would be a rectangle of theme colour standing between the bar and the app the

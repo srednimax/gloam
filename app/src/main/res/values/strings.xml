@@ -103,8 +103,6 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_material_you">Use my wallpaper colours</string>
-    <string name="settings_material_you_hint">Android 12 and later. Off by default, so the app keeps its own palette.</string>
     <!-- The launcher route (docs/phase-3.md §2, §10). "The small controls" rather than "compact
          mode": there is no mode, and the notification and the tile reach the same window whatever
          this is set to. "The icon" rather than "the launcher", which is a developer's word. The

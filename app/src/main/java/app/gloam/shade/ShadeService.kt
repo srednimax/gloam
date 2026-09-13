@@ -692,7 +692,6 @@ class ShadeService : Service() {
             running = intent.running,
             autoOff = preferences.autoOff.first(),
             themeMode = preferences.themeMode.first(),
-            materialYou = preferences.materialYou.first(),
         )
     }
 
@@ -912,7 +911,6 @@ class ShadeService : Service() {
                 .onEach { v -> state.update { it.copy(running = v.running) } }
                 .launchIn(this)
             preferences.themeMode.onEach { v -> state.update { it.copy(themeMode = v) } }.launchIn(this)
-            preferences.materialYou.onEach { v -> state.update { it.copy(materialYou = v) } }.launchIn(this)
 
             launch {
                 panelTouches.onStart { emit(Unit) }.collectLatest {

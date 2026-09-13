@@ -68,7 +68,10 @@ class AppPreferences(
 ) {
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
-        val MATERIAL_YOU = booleanPreferencesKey("material_you")
+
+        // Retired, never reuse: `material_you` was a boolean until the toggle was removed (ADR-0006's
+        // amendment), and installs from before still carry it. Nothing reads it, so it costs nothing
+        // — but a new key under that name with another type would throw on those installs' first read.
         val DIM_LEVEL = intPreferencesKey("dim_level")
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
         val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
@@ -110,14 +113,6 @@ class AppPreferences(
                 runCatching { enumValueOf<ThemeMode>(name) }.getOrNull()
             } ?: ThemeMode.DARK
         }
-
-    /**
-     * Whether to take the wallpaper's palette instead of the app's own (ADR-0006).
-     *
-     * Defaults **off**. With it on, nothing on Android 12+ reads the generated scheme at all, so the
-     * app's identity would be invisible on almost every device that runs it.
-     */
-    val materialYou: Flow<Boolean> = store.data.map { it[Keys.MATERIAL_YOU] ?: false }
 
     /**
      * How dark the shade is, 0–100. **Not a brightness** — it runs the other way, and the backlight
@@ -306,10 +301,6 @@ class AppPreferences(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         store.edit { it[Keys.THEME_MODE] = mode.name }
-    }
-
-    suspend fun setMaterialYou(enabled: Boolean) {
-        store.edit { it[Keys.MATERIAL_YOU] = enabled }
     }
 
     suspend fun setDimLevel(level: Int) {

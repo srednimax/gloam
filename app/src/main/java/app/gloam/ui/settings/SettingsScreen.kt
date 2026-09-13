@@ -60,13 +60,6 @@ fun SettingsScreen(
                 }
             }
 
-            SwitchRow(
-                title = stringResource(R.string.settings_material_you),
-                subtitle = stringResource(R.string.settings_material_you_hint),
-                checked = state.materialYou,
-                onChange = viewModel::setMaterialYou,
-            )
-
             // Its own section rather than a row under *Appearance*: this is not what the app
             // looks like, it is which of Gloam's two control surfaces the icon opens. The hint
             // names the routes it does **not** move, because the preference only moves one of

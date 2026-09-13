@@ -1,16 +1,12 @@
 package app.gloam.theme
 
-import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import app.gloam.data.ThemeMode
@@ -18,14 +14,12 @@ import app.gloam.data.ThemeMode
 /**
  * The app's theme.
  *
- * [dynamicColor] defaults to **false** per ADR-0006: the app owns its palette and Material You is
- * opt-in. This is not a style preference. With dynamic colour on, nothing on Android 12+ reads
- * [LightColors] or [DarkColors] at all — so the brand you generated in `Color.kt` would be
- * invisible on almost every device that runs the app. It is only visible because this defaults off.
+ * **The scheme is always the app's own**, [LightColors] or [DarkColors] — there is no Material You
+ * (wallpaper-derived) branch any more. It was an opt-in toggle until testers found wallpaper palettes
+ * looked worse and differed on every phone, which is ADR-0006's own argument against it: a palette
+ * you do not control is a contrast guarantee you cannot check. See ADR-0006's amendment.
  *
- * A Settings toggle that lets a user turn Material You back on passes `true` here.
- *
- * [themeMode] is the other Settings lever. It decides which of the two schemes applies; the window
+ * [themeMode] is the one Settings lever. It decides which of the two schemes applies; the window
  * background and the system-bar scrim are outside Compose's reach and are moved by [applyThemeMode]
  * instead. Resolved here rather than read back from the configuration so the scheme is right on the
  * *first* composition — AppCompat's `onConfigurationChanged` arrives a beat later, and one frame in
@@ -34,7 +28,6 @@ import app.gloam.data.ThemeMode
 @Composable
 fun AppTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -44,17 +37,7 @@ fun AppTheme(
             ThemeMode.DARK -> true
         }
 
-    val colorScheme =
-        when {
-            // Wallpaper-derived schemes exist only on Android 12+; below that the opt-in silently
-            // has nothing to opt into, and the app's own palette applies.
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
-            darkTheme -> DarkColors
-            else -> LightColors
-        }
+    val colorScheme = if (darkTheme) DarkColors else LightColors
 
     SystemBarAppearance(darkTheme)
 

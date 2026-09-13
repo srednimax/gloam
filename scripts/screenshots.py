@@ -360,9 +360,8 @@ def main() -> int:
     manifest = {
         "config": CONFIG.name,
         "themes": [],
-        # the app's own generated scheme: `dynamicColor` defaults **off**
-        # (ADR-0027) and every cell here starts from a wipe, so the Material You toggle is at its
-        # default and the colours are reproducible from `theme/Color.kt` alone.
+        # the app's own generated scheme, and the only one: the Material You toggle is gone
+        # (ADR-0006's amendment), so the colours are reproducible from `theme/Color.kt` alone.
         #
         # The *before* set is not, and the difference is the point rather than a caveat: it was shot
         # while `dynamicColor = true`, so its colours are this phone's wallpaper on that day. Compare

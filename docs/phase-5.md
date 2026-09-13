@@ -267,7 +267,7 @@ memory:
 
 | Key | What it is, in the policy's own register |
 | --- | --- |
-| `theme_mode`, `material_you` | your theme choice, and whether to follow the system colours |
+| `theme_mode` | your theme choice (an install from before 2026-09-13 may still hold a retired `material_you` flag, which nothing reads) |
 | `dim_level`, `warmth`, `lower_backlight` | how dim you set the screen, how warm, and whether Gloam may lower the backlight |
 | `shade_running`, `off_at_millis` | whether the shade should be on, and when it is due to come down |
 | `auto_off_minutes` | how long a shade you start by hand lasts |
