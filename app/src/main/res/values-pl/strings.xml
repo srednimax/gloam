@@ -56,6 +56,8 @@
     <string name="settings_controls">Sterowanie</string>
     <string name="settings_launcher_compact">Otwieraj małe sterowanie z ikony</string>
     <string name="settings_launcher_compact_hint">Dotknięcie ikony Gloam otwiera same suwaki zamiast całej aplikacji. Powiadomienie zawsze otwiera małe sterowanie.</string>
+    <string name="settings_lock_screen">Ekran blokady</string>
+    <string name="settings_lock_screen_body">Gloam nie może przyciemnić ekranu blokady: Android pokazuje go z jasnością ustawioną w telefonie. Na noc ustaw niską jasność, żeby ekran blokady nie był najjaśniejszym punktem w ciemnym pokoju.</string>
 
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Systemowy</string>

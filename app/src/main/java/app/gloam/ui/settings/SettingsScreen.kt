@@ -72,6 +72,19 @@ fun SettingsScreen(
                 onChange = viewModel::setLauncherCompact,
             )
 
+            // Advice rather than a control, because the platform leaves nothing to control: the
+            // keyguard hides every `TYPE_APPLICATION_OVERLAY` window, which releases the shade's
+            // backlight override along with it, so the lock screen comes up at the user's own
+            // brightness however far Gloam was dimming (docs/night-reading-research.md §4). No
+            // button to display settings — the brightness slider is one pull away in quick settings.
+            SectionHeader(stringResource(R.string.settings_lock_screen))
+            Text(
+                text = stringResource(R.string.settings_lock_screen_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.base),
+            )
+
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
 
