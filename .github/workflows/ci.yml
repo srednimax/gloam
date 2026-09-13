@@ -196,9 +196,13 @@ jobs:
   # **The prize is the configuration grid, not the API floor.** It used to be API 26-28, on the
   # argument that every claim about drawing under the system bars below API 29 was argued from theme
   # XML and never observed — true until `minSdk` 33 put those levels out of reach entirely. What is
-  # left is the axis that still varies on devices this app ships to: orientation and navigation mode
-  # vary by device and by user setting rather than by platform release, and the phone is one device
-  # in one configuration. An emulator observes the other seven.
+  # left is the axis that still varies on devices this app ships to: navigation mode varies by device
+  # and by user setting rather than by platform release, and the phone is one device in one
+  # configuration. An emulator observes the others.
+  #
+  # **Portrait only since 2026-09-13.** `MainActivity` is locked to portrait and every scene starts
+  # from it, so the landscape cells would have captured portrait under a landscape name. They are
+  # gone rather than kept green. `scripts/edge-to-edge.py`'s `CONFIGS` says how to bring them back.
   #
   # Deliberately NOT on `pull_request`, and deliberately not part of `instrumented-gate`:
   # `edge-to-edge.py` walks ~75 scenes per cell by driving uiautomator taps, and its `settle()`
@@ -224,7 +228,7 @@ jobs:
       fail-fast: false
       matrix:
         api-level: [33, 36]
-        config: [portrait-gesture, portrait-threebutton, landscape-gesture, landscape-threebutton]
+        config: [portrait-gesture, portrait-threebutton]
         include:
           # `default`, not `aosp_atd`, and API 36 next door keeps ATD deliberately. This is the
           # lesson the API 34 leg cost: its ATD image ships no `com.android.internal.systemui.navbar.*`
