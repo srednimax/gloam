@@ -254,6 +254,13 @@ class ShadeService : Service() {
     private var appliedMinBacklight = MIN_BACKLIGHT
 
     /**
+     * The colour the warmth child is painted with: [warmthTint] of the stored warmth colour, kept
+     * here so that [addShadeWindow] can paint a new child with it before any emission reaches it.
+     * [SHADE_AMBER] only until the first read lands, and the child is transparent until then anyway.
+     */
+    private var appliedTint = SHADE_AMBER
+
+    /**
      * What the notification on screen right now says: whether it carries the line about the paused
      * brightness slider, and which deadline it names.
      *
@@ -441,6 +448,18 @@ class ShadeService : Service() {
                 lastSettings?.let { applyShadeValues(it) }
             }.launchIn(scope)
 
+        // The warmth child's colour, collected on its own rather than folded into the combine above.
+        // A colour is not an alpha: a trip through [applyShadeValues] would re-apply the backlight and
+        // re-post the notification for a change that touches neither. With no window up yet, storing
+        // it is enough, because [addShadeWindow] paints the child from [appliedTint].
+        preferences.warmthColor
+            .map(::warmthTint)
+            .distinctUntilChanged()
+            .onEach { tint ->
+                appliedTint = tint
+                warmthLayer?.let { layer -> shadeThread.run { layer.setBackgroundColor(tint) } }
+            }.launchIn(scope)
+
         // Auto-off. `collectLatest` is `switchMap` rather than `forEach`: a new deadline cancels the
         // wait still running for the old one, which is what re-arms the loop when the user taps a
         // different chip while the shade is up, and when the boot receiver restores a deadline. The
@@ -586,7 +605,7 @@ class ShadeService : Service() {
             }
         val warmth =
             View(this).apply {
-                setBackgroundColor(SHADE_AMBER)
+                setBackgroundColor(appliedTint)
                 alpha = 0f
             }
         val view =
@@ -725,6 +744,7 @@ class ShadeService : Service() {
         return PanelState(
             dimLevel = preferences.dimLevel.first(),
             warmth = preferences.warmth.first(),
+            warmthColor = preferences.warmthColor.first(),
             running = intent.running,
             autoOff = preferences.autoOff.first(),
             themeMode = preferences.themeMode.first(),
@@ -957,6 +977,7 @@ class ShadeService : Service() {
         coroutineScope {
             preferences.dimLevel.onEach { v -> state.update { it.copy(dimLevel = v) } }.launchIn(this)
             preferences.warmth.onEach { v -> state.update { it.copy(warmth = v) } }.launchIn(this)
+            preferences.warmthColor.onEach { v -> state.update { it.copy(warmthColor = v) } }.launchIn(this)
             preferences.autoOff.onEach { v -> state.update { it.copy(autoOff = v) } }.launchIn(this)
             // The intent's deadline half is no longer drawn here — the edge bar shows the chips and
             // not the time they resolve to — so this collector reads the flag and lets the rest of

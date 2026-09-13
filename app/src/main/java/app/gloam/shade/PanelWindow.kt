@@ -283,6 +283,7 @@ private class TouchReportingLayout(
 data class PanelState(
     val dimLevel: Int,
     val warmth: Int,
+    val warmthColor: Int,
     val running: Boolean,
     val autoOff: AutoOff,
     val themeMode: ThemeMode,
@@ -334,6 +335,7 @@ internal fun PanelContent(
         CompactControls(
             dimLevel = current.dimLevel,
             warmth = current.warmth,
+            warmthColor = current.warmthColor,
             running = current.running,
             autoOff = current.autoOff,
             onDimLevel = onDimLevel,

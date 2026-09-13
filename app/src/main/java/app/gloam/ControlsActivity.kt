@@ -303,6 +303,7 @@ private fun ControlsBody(
     CompactControls(
         dimLevel = state.dimLevel,
         warmth = state.warmth,
+        warmthColor = state.warmthColor,
         // The live half as well as the intent, as on the full screen — see `DimUiState.shadeUp`.
         running = state.shadeUp,
         autoOff = state.autoOff,

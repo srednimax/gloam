@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import app.gloam.R
 import app.gloam.shade.AutoOff
 import app.gloam.shade.Schedule
+import app.gloam.shade.warmthTint
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SwitchRow
 import java.time.LocalDate
@@ -96,9 +98,11 @@ import kotlin.math.roundToInt
 fun DimControls(
     dimLevel: Int,
     warmth: Int,
+    warmthColor: Int,
     running: Boolean,
     onDimLevel: (Int) -> Unit,
     onWarmth: (Int) -> Unit,
+    onWarmthColor: (Int) -> Unit,
     onToggleRunning: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -140,7 +144,9 @@ fun DimControls(
 
         WarmthRow(
             warmth = warmth,
+            warmthColor = warmthColor,
             onWarmth = onWarmth,
+            onWarmthColor = onWarmthColor,
             modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.base),
         )
 
@@ -186,41 +192,94 @@ private fun DimLevelValue(dimLevel: Int) {
 }
 
 /**
- * Warmth: a label, a ramp and a number — **and it stays a slider on purpose.**
+ * Warmth and its colour: a label and a ramp each, and the warmth's number — **and both stay sliders on
+ * purpose.**
  *
  * Two columns side by side would be two controls that look like the same control, and the one thing
  * a user must never do by accident in the dark is set the wrong one. A horizontal track is a
  * different gesture with a different picture.
+ *
+ * **Three columns of cells rather than a `Row` per bar**, so the two tracks start and end on the same
+ * pixels however long either label runs in a translation. A `Row` each would start each track wherever
+ * its own label happened to end. Every cell is the tracks' hit height, which is what keeps each label
+ * level with its track.
+ *
+ * **Both ramps paint the shade's own tint**, not the app's accent. The warmth track runs from nothing
+ * to the chosen tint, and the colour track is the tint's whole path. That makes them the same kind of
+ * exception `ColumnColors` is: a picture of what the shade does, which the palette does not own.
  */
 @Composable
 fun WarmthRow(
     warmth: Int,
+    warmthColor: Int,
     onWarmth: (Int) -> Unit,
+    onWarmthColor: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = columnColors()
+    val warmthLabel = stringResource(R.string.dim_warmth_label)
+    val colorLabel = stringResource(R.string.dim_warmth_color_label)
+
     Row(
-        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.snug),
         modifier = modifier.fillMaxWidth(),
     ) {
+        Column {
+            RampLabel(warmthLabel)
+            RampLabel(colorLabel)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            RampTrack(
+                value = warmth,
+                onValue = onWarmth,
+                label = warmthLabel,
+                brush = Brush.horizontalGradient(listOf(colors.warmthCool, Color(warmthTint(warmthColor)))),
+            )
+            RampTrack(
+                value = warmthColor,
+                onValue = onWarmthColor,
+                label = colorLabel,
+                brush = Brush.horizontalGradient(COLOR_TRACK_STOPS),
+            )
+        }
+        // The colour has no number: 0–100 along a hue says nothing a reader can use, and the track
+        // under the thumb already shows the answer.
+        Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(TRACK_HIT_HEIGHT)) {
+            Text(
+                text = stringResource(R.string.dim_level_number, warmth),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(28.dp),
+            )
+        }
+    }
+}
+
+/** A ramp's label, in a cell as tall as the ramp's hit area so the two stay level. */
+@Composable
+private fun RampLabel(text: String) {
+    Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.height(TRACK_HIT_HEIGHT)) {
         Text(
-            text = stringResource(R.string.dim_warmth_label),
+            text = text,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        WarmthTrack(warmth = warmth, onWarmth = onWarmth, modifier = Modifier.weight(1f))
-        Text(
-            text = stringResource(R.string.dim_level_number, warmth),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(28.dp),
         )
     }
 }
 
+/** The tracks' touch height; the painted line inside is 10dp. */
+private val TRACK_HIT_HEIGHT = 44.dp
+
 /**
- * The ramp itself: cool at the left, the theme's `primary` at the right, and a bar for a thumb.
+ * The colour track's paint: five samples of `warmthTint` along its path. The gradient between two
+ * samples blends stored bytes rather than light, so it drifts from the real path by a byte or two in
+ * between, which is too little to see on a 10dp line.
+ */
+private val COLOR_TRACK_STOPS = (0..4).map { Color(warmthTint(it * 25)) }
+
+/**
+ * One ramp: a painted track, and a bar for a thumb. Warmth and its colour each draw one.
  *
  * **The 10dp track sits inside a 44dp hit area.** What the finger has to find is the whole row, not
  * the line — the same reason `SwitchRow` makes the row the target rather than the switch.
@@ -234,36 +293,36 @@ fun WarmthRow(
  * boxing a `Float` into an object on every layout pass. Same semantics, one fewer allocation.
  */
 @Composable
-private fun WarmthTrack(
-    warmth: Int,
-    onWarmth: (Int) -> Unit,
+private fun RampTrack(
+    value: Int,
+    onValue: (Int) -> Unit,
+    label: String,
+    brush: Brush,
     modifier: Modifier = Modifier,
 ) {
-    val colors = columnColors()
     var widthPx by remember { mutableFloatStateOf(0f) }
-    val label = stringResource(R.string.dim_warmth_label)
 
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier =
             modifier
-                .height(44.dp)
+                .height(TRACK_HIT_HEIGHT)
                 .onSizeChanged { widthPx = it.width.toFloat() }
                 .pointerInput(widthPx) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         down.consume()
-                        onWarmth(alongTrack(down.position.x, widthPx))
+                        onValue(alongTrack(down.position.x, widthPx))
                         drag(down.id) { change ->
                             change.consume()
-                            onWarmth(alongTrack(change.position.x, widthPx))
+                            onValue(alongTrack(change.position.x, widthPx))
                         }
                     }
                 }.semantics {
                     contentDescription = label
-                    progressBarRangeInfo = ProgressBarRangeInfo(warmth.toFloat(), 0f..100f, steps = 99)
+                    progressBarRangeInfo = ProgressBarRangeInfo(value.toFloat(), 0f..100f, steps = 99)
                     setProgress { target ->
-                        onWarmth(target.roundToInt().coerceIn(0, 100))
+                        onValue(target.roundToInt().coerceIn(0, 100))
                         true
                     }
                 },
@@ -274,11 +333,7 @@ private fun WarmthTrack(
                     .fillMaxWidth()
                     .height(10.dp)
                     .clip(RoundedCornerShape(percent = 50))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(colors.warmthCool, colors.warmthMid, MaterialTheme.colorScheme.primary),
-                        ),
-                    ),
+                    .background(brush),
         )
         Box(
             modifier =
@@ -286,7 +341,7 @@ private fun WarmthTrack(
                     // Half the thumb's own width back, so it is centred on the value rather than
                     // starting at it. Inside `offset`'s lambda the receiver is a `Density`, which is
                     // what makes a dp convertible to pixels here without a `LocalDensity` read.
-                    .offset { IntOffset(x = handleX(warmth, widthPx) - 2.dp.roundToPx(), y = 0) }
+                    .offset { IntOffset(x = handleX(value, widthPx) - 2.dp.roundToPx(), y = 0) }
                     .size(4.dp, 36.dp)
                     .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp)),
         )
@@ -304,9 +359,9 @@ private fun alongTrack(
 
 /** The thumb's left edge, pulled back by half its own width so it is centred on the value. */
 private fun handleX(
-    warmth: Int,
+    value: Int,
     widthPx: Float,
-): Int = (widthPx * warmth.coerceIn(0, 100) / 100f).roundToInt()
+): Int = (widthPx * value.coerceIn(0, 100) / 100f).roundToInt()
 
 /**
  * The one control whose tap changes what the *screen* looks like rather than what this window shows,
