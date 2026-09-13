@@ -898,8 +898,11 @@ An `AlarmManager` alarm is **not durable**. Five things destroy it and all five 
 recovery above arms `nextOn`, which is **strictly future** — so recovering the alarm after a
 force-stop at 21:50 arms it for *tomorrow* 22:00, and tonight is skipped in silence while the screen
 still says the schedule is on. Losing the alarm and losing the night are different failures, and on
-HyperOS the second is the ordinary one: swiping Gloam out of recents force-stops it, and the whole
-reason this phase is expensive is that this ROM kills things. A table that recovers only the alarm is
+HyperOS the second is the ordinary one: **Clear all** in recents kills Gloam whenever another app is
+in front, a running shade included, and without autostart nothing brings the shade back — and the
+whole reason this phase is expensive is that this ROM kills things. (Corrected 2026-09-13: this line
+first said *swiping* Gloam out of recents force-stops it. Measured, a swipe only removes the card and
+leaves a running shade alone, and Clear all's kill is not a force-stop either — `stopped=false`.) A table that recovers only the alarm is
 a table that answers *"is an alarm armed?"* when the user's question is *"did it come on?"*
 
 Which gives **three call sites** for five loss paths, and one of them carries two:
