@@ -13,16 +13,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.shade.PANEL_SIDE_MARGIN_DP
 import app.gloam.shade.ShadeEnd
 import app.gloam.shade.canDrawShade
+import app.gloam.shade.dismissPanel
 import app.gloam.shade.escapeHatchLive
+import app.gloam.shade.panelOnScreen
 import app.gloam.shade.startShade
 import app.gloam.shade.stopShade
 import app.gloam.theme.AppTheme
 import app.gloam.ui.dim.CompactControls
 import app.gloam.ui.dim.DimViewModel
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * **The compact controls: the same sliders in a floating window, for the shade that is already up.**
@@ -71,6 +77,11 @@ class ControlsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // **One edge bar at a time, the one opened last** (`panelOnScreen` has the why). Opening this
+        // takes a panel down, and first rather than after the guards: the forward to the full app is
+        // an opening too, and the panel's own cog already closes the panel on its way there.
+        dismissPanel()
+
         // Before anything is composed: a dialog with a broken start button on it is worse than no
         // dialog, and so is a dialog the user asked the icon not to open. `finish()` from `onCreate`
         // skips straight to `onDestroy` without composing.
@@ -80,6 +91,19 @@ class ControlsActivity : AppCompatActivity() {
         if (forwardIfFullAppWanted(intent) || forwardIfUnusable()) return
 
         val app = application as MainApplication
+
+        // The other half: a panel appearing *after* this opened is the user asking for that one, so
+        // this one goes. `drop(1)` skips the value current at subscription — a panel that is up right
+        // now is one [dismissPanel] above is already taking down, not a new one.
+        //
+        // Kotlin note: `lifecycleScope` is cancelled in `onDestroy`, so this wait needs no manual
+        // unsubscribe — the `AbortController` is the Activity's own lifetime. Not `repeatOnLifecycle`:
+        // a panel summoned while this sits stopped in the background should still close it, or it
+        // is back on screen the moment the user returns.
+        lifecycleScope.launch {
+            panelOnScreen.drop(1).first { up -> up }
+            finish()
+        }
 
         // **The same edge the panel uses, for the same reason.** These two surfaces are one thing
         // to the user — the notification opens whichever the shade's state allows — so the bar has
@@ -160,6 +184,8 @@ class ControlsActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // A second tap on the icon is an opening as well, for `onCreate`'s rule.
+        dismissPanel()
         // `isFinishing` for [forwardIfUnusable]'s reason: this window may already be on its way out,
         // and starting the full app twice is two task animations for one tap.
         if (!isFinishing) forwardIfFullAppWanted(intent)

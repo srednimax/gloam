@@ -417,6 +417,10 @@ class ShadeService : Service() {
                 applyShadeValues(settings)
             }.launchIn(scope)
 
+        // The compact controls opening, asking for the panel to go: one edge bar at a time, the one
+        // opened last. See [panelOnScreen].
+        panelDismissals.onEach { removePanelWindow() }.launchIn(scope)
+
         // Separate from the combine above so the release half, a one-value flow, costs nothing: it
         // emits once, before or after the first settings, and either order ends painted correctly.
         minBacklight
@@ -807,6 +811,7 @@ class ShadeService : Service() {
                 panelHost = host
                 panelState = state
                 panelParams = params
+                reportPanelOnScreen(true)
                 // **`RESUMED` is not a formality.** Below `STARTED` the `Recomposer` stops applying
                 // recompositions, and the window draws its first frame correctly and then never
                 // changes again — a slider that will not move under a finger, with nothing in
@@ -892,6 +897,7 @@ class ShadeService : Service() {
         panelHost = null
         panelState = null
         panelParams = null
+        reportPanelOnScreen(false)
     }
 
     /**
