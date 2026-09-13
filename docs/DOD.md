@@ -356,7 +356,8 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       where this panel switches from DC dimming to PWM, which decides whether the backlight toggle's
       copy should mention flicker (§2), and a timed reading test before `DEFAULT_WARMTH_COLOR` moves
       from 50 towards 25 (§3). **§2 needs a second camera** to film the screen in slow motion, and
-      none is to hand.
+      none is to hand. **§3's test is built** (debug Settings → *Reading test*), and what it still
+      needs is a few nights of runs in a dark room.
 - [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
       inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
       What stood behind the old default was an argument rather than a reading — that a first launcher

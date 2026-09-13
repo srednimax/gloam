@@ -50,6 +50,15 @@ Optional, and only after a test.
 - Consider `DEFAULT_WARMTH_COLOR` 50 → about 25 in `data/AppPreferences.kt`, but only after an
   objective check. For example, a timed reading test on the phone at dim 90, at colour 0, 50 and 100.
 - If it changes, add a note to ADR-0010's sixth amendment.
+- **The test is built, 2026-09-13**: debug build, Settings → Developer → *Reading test (warmth
+  colour)*. It puts a white page with one short sentence under the real shade (dim 90, warmth 100,
+  lowered backlight), and you tap True or False. It compares colours 0, 25, 50 and 100 in 16 blocks
+  in a mirrored order, takes about eight minutes, and puts your settings back afterwards. Run it at
+  night in a dark room. It keeps one row per trial across sessions, so pool a few nights before
+  deciding:
+  ```bash
+  adb shell run-as io.github.srednimax.gloam.debug cat files/reading-test.csv
+  ```
 
 ## 4. One line of copy for the lock screen
 
