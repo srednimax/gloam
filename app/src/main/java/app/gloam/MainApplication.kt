@@ -154,7 +154,8 @@ class MainApplication : Application() {
  * `nextOn`, which is *strictly future*, so recovering the alarm after a force-stop at 21:50 arms it
  * for tomorrow and tonight is skipped in silence while the screen still says the schedule is on.
  * Losing the alarm and losing the night are different failures, and on HyperOS the second is the
- * ordinary one — swiping Gloam out of recents force-stops it.
+ * ordinary one — *Clear all* in recents kills Gloam whenever another app is in front, a running
+ * shade included, and without autostart nothing restarts it. Swiping the card alone does not.
  *
  * **The marker is the whole of why this is safe.** The naive version — *window open, shade down,
  * raise it* — breaks the Stop button: the user stops at 23:00 inside a 22:00-to-07:00 window and the
