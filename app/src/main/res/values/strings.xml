@@ -115,6 +115,15 @@
     <string name="settings_launcher_compact">Open the small controls from the icon</string>
     <string name="settings_launcher_compact_hint">Tapping Gloam opens just the sliders instead of the whole app. The notification always opens the small controls.</string>
 
+    <!-- The lock screen (docs/night-reading-research.md §4). The keyguard hides every overlay
+         window, and the shade's backlight override goes with it, so waking the phone at night is the
+         brightest moment of the session and nothing Gloam draws can change that. The first sentence
+         says whose behaviour it is, so it does not read as a Gloam defect; the second is the only
+         help there is. "Brightness", not "backlight": it is the user's own setting, in Android's
+         word. Glare, never sleep - no health claims. -->
+    <string name="settings_lock_screen">Lock screen</string>
+    <string name="settings_lock_screen_body">Gloam cannot dim the lock screen: Android shows it at your phone\'s own brightness. Keep that brightness low at night, so the lock screen is not the brightest thing in a dark room.</string>
+
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>
     <string name="settings_language_english" translatable="false">English</string>
