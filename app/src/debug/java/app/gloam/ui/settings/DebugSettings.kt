@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -41,6 +43,7 @@ import app.gloam.shade.startShade
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SectionHeader
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -183,6 +186,33 @@ fun DebugSettings() {
                 },
             ) {
                 Text(if (atFloor) "Back to shipped (6.6 nits)" else "Down to the floor (2.0 nits)")
+            }
+        }
+
+        // Also Phase 2b: the system dim, as a separate window over whatever is on screen. Measured
+        // dead - it freezes touch for as long as it is up. Kept to retake the reading, not to use.
+        val dimBehindUp by DimBehindWindow.up.collectAsState()
+        Text(
+            text =
+                "dim-behind window: " +
+                    if (dimBehindUp) "up, touch blocked, removes itself after 60 s" else "down (blocks all touch)",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+        )
+        Row(modifier = Modifier.padding(top = Spacing.tight)) {
+            DIM_AMOUNTS.forEach { amount ->
+                OutlinedButton(
+                    onClick = { DimBehindWindow.add(context, amount) },
+                    enabled = !dimBehindUp,
+                    modifier = Modifier.padding(end = Spacing.tight),
+                ) {
+                    Text("Dim $amount")
+                }
+            }
+        }
+        Row(modifier = Modifier.padding(top = Spacing.tight, bottom = Spacing.base)) {
+            OutlinedButton(onClick = { DimBehindWindow.remove() }, enabled = dimBehindUp) {
+                Text("Remove dim")
             }
         }
 
@@ -424,6 +454,114 @@ private object SecondWindow {
     private fun Context.windowManager(): WindowManager = applicationContext.getSystemService(WindowManager::class.java)
 }
 
+/**
+ * Phase 2b's one untested lever: **does the system's own dim escape the 0.8 overlay clamp?**
+ *
+ * The shade's darkness is capped by the platform, not by us. Since Android 12, WindowManager clamps
+ * the `alpha` of any overlay window that carries `FLAG_NOT_TOUCHABLE` to the maximum obscuring
+ * opacity (0.8), because a window that lets touches through must stay see-through enough that the
+ * user can see what they are touching. The clamp reads `LayoutParams.alpha` and nothing else.
+ *
+ * `FLAG_DIM_BEHIND` asks for something else: WindowManager paints a black layer of its own, at
+ * `dimAmount`, behind the window. The bet was that a layer with no input region escapes both the
+ * alpha clamp and the input dispatcher's occlusion check. **Measured on HyperOS (API 36) on
+ * 2026-09-13: it escapes the first and not the second, so the lever is dead.**
+ *
+ * - **(a) The dim is not clamped.** SurfaceFlinger lists `Dim Layer for - Display 0` at
+ *   `a:0.950195`, and a screencap passes 5.4% of the undimmed pixel values. The only warning in
+ *   logcat is this window's own alpha clamp, the same one the shade gets.
+ * - **(b) It blocks every touch.** The dim layer belongs to the system (uid 1000), and the input
+ *   dispatcher counts it as a *blocking* occluder rather than by its opacity: `Untrusted touch due
+ *   to occlusion by /1000/Dim Layer…`, with no opacity in the line, and the touch is dropped at 0.5
+ *   as surely as at 0.95. **The system Settings app runs as uid 1000 too**, and a window is never
+ *   occluded by its own uid, so a swipe there scrolls and reads as a pass. Take R7 over any other
+ *   app.
+ * - **(c) Over the shade**, the dim lands between the shade and this window. A full-screen version
+ *   of this window also blocked touches on its own account: the dispatcher adds up one uid's
+ *   opacities, and two windows at 0.8 read as 0.96. That is why the window is one pixel, and why
+ *   stacking a second shade cannot beat the clamp either.
+ *
+ * Kept rather than deleted, so the reading can be retaken on another ROM or API level, and so the
+ * next person to reach for this flag finds the answer next to it.
+ *
+ * **It takes itself down after [DIM_BEHIND_MILLIS]**, because (b) is real: while it is up the phone
+ * is frozen, with the button that would remove it underneath. The power button hides overlays behind
+ * the keyguard, but they come back on unlock, and a debug button must not need its own way out.
+ * [DIM_AMOUNTS] stops below 1.0 for the same reason.
+ */
+private object DimBehindWindow {
+    private var view: View? = null
+
+    /**
+     * A flow rather than a getter like [SecondWindow.isUp], because this window also goes away on a
+     * timer nobody tapped, and a label that only re-reads on its own button would say "up" over an
+     * empty screen.
+     */
+    val up = MutableStateFlow(false)
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val expire = Runnable { removeView() }
+
+    // Kept for the expiry, which fires with no screen around to hand it a Context. The application's
+    // rather than the one passed in, because an Activity held past its screen is a leak, and the
+    // application context lives exactly as long as this window can.
+    private var appContext: Context? = null
+
+    fun add(
+        context: Context,
+        amount: Float,
+    ) {
+        if (view != null) return
+        appContext = context.applicationContext
+        // No background: the view draws nothing, so whatever reaches the eye is the system's dim.
+        val empty = View(context)
+        // **One pixel, and that is measured rather than tidy.** The dim layer belongs to the display,
+        // not to this window (`Dim Layer for - Display 0` in SurfaceFlinger), so the window's size
+        // does not bound it. But the window's own alpha still counts: the input dispatcher adds up the
+        // opacity of every window of one uid over the touch point, and an empty full-screen window at
+        // the clamped 0.8 over the shade's 0.8 reads as 0.96. Every touch was dropped. A pixel in the
+        // corner is over no touch point anyone makes.
+        val params =
+            WindowManager
+                .LayoutParams(
+                    1,
+                    1,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    app.gloam.shade.SHADE_WINDOW_FLAGS or WindowManager.LayoutParams.FLAG_DIM_BEHIND,
+                    PixelFormat.TRANSLUCENT,
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    dimAmount = amount
+                }
+        runCatching { context.applicationContext.getSystemService(WindowManager::class.java).addView(empty, params) }
+            .onSuccess {
+                view = empty
+                up.value = true
+                handler.postDelayed(expire, DIM_BEHIND_MILLIS)
+                Log.i(TAG, "dim-behind window added: dimAmount=$amount, expires in ${DIM_BEHIND_MILLIS}ms")
+            }.onFailure { Log.w(TAG, "dim-behind window refused", it) }
+    }
+
+    fun remove() {
+        handler.removeCallbacks(expire)
+        removeView()
+    }
+
+    private fun removeView() {
+        val empty = view ?: return
+        runCatching { windowManager()?.removeView(empty) }
+        view = null
+        up.value = false
+        Log.i(TAG, "dim-behind window removed")
+    }
+
+    // The application's window manager, for the same reason as SecondWindow's: an Activity's would
+    // take the window down with the activity, before the reading is taken from another app.
+    private fun windowManager(): WindowManager? = appContext?.getSystemService(WindowManager::class.java)
+}
+
 /** The computed number beside every ingredient that went into it, so a wrong one is visible. */
 private fun app.gloam.shade.BacklightReading.readout(): String =
     buildString {
@@ -540,3 +678,13 @@ private const val GATE_EARLY_MILLIS = 5L * 60 * 60 * 1000
 
 /** Big enough to see and to land a `screencap` on, small enough to obscure nothing that matters. */
 private const val SIDE_DP = 200
+
+/** Long enough to take all three readings from another app, short enough to wait out if trapped. */
+private const val DIM_BEHIND_MILLIS = 60_000L
+
+/**
+ * One tap each. 0.5 shows whether the dim appears at all, 0.9 sits past the shade's 0.8 clamp, and
+ * 0.95 is as far as this goes. **Never 1.0**, which is a black screen, for the reason in
+ * [DimBehindWindow]'s notes.
+ */
+private val DIM_AMOUNTS = listOf(0.5f, 0.9f, 0.95f)
