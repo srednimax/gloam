@@ -133,6 +133,33 @@ class ShadeWindowTest {
     }
 
     /**
+     * **[shadeOnScreen] follows the window, both ways.** It is what the Start/Stop button reads to
+     * avoid claiming a shade HyperOS killed, so a flag that stuck at `true` would bring that lie back
+     * and one that stuck at `false` would offer *Start* over a dimmed screen. Readable from here at
+     * all because `am instrument` runs this test inside the app's own process — the same memory the
+     * service writes it in.
+     */
+    @Test
+    fun theScreenIsToldWhetherTheShadeIsUp() {
+        context.startShade()
+        awaitShadeWindow() ?: throw AssertionError("No shade window appeared.")
+        assertTrue("The window is up and shadeOnScreen does not say so.", awaitOnScreen(true))
+
+        context.stopShade()
+        awaitNoOverlayWindows()
+        assertTrue("The window is gone and shadeOnScreen still says it is up.", awaitOnScreen(false))
+    }
+
+    /** Polled for the same reason [awaitShadeWindow] is: `dumpsys` and the service's main thread race. */
+    private fun awaitOnScreen(expected: Boolean): Boolean {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (shadeOnScreen.value != expected && System.currentTimeMillis() < deadline) {
+            Thread.sleep(POLL_MS)
+        }
+        return shadeOnScreen.value == expected
+    }
+
+    /**
      * **The whole display, navigation bar included.** `fillxfill` says what the shade *asked* for,
      * and the window manager is free to answer with less: until `fitInsetsTypes = 0` it laid the
      * shade out clear of the navigation bar, and the frame ended 48 px short of the display's bottom
@@ -141,24 +168,35 @@ class ShadeWindowTest {
      *
      * Compared against `maximumWindowMetrics`, which is the display in its current rotation with no
      * inset taken off — the frame the shade should have.
+     *
+     * **Polled, and a single read did flake on the phone.** A window is in the dump from the moment it
+     * is added, but its frame is assigned at its first relayout, which a cold process reaches later:
+     * the first run after an install failed here and the rerun passed. So the test waits for a frame
+     * that covers the display and fails only when none arrives within the timeout — which a
+     * regression to the inset frame never does.
      */
     @Test
     fun theShadeCoversTheWholeDisplay() {
         context.startShade()
-        val window = awaitShadeWindow() ?: throw AssertionError("No shade window appeared.")
-
         val display = context.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
-        val frame =
-            FRAME.find(window)?.destructured?.let { (left, top, right, bottom) ->
-                Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
-            } ?: throw AssertionError("No frame= line in the shade's window block:\n$window")
 
-        assertTrue(
-            "The shade's frame $frame does not cover the display $display — a strip of the screen " +
-                "is left undimmed. Window was:\n$window",
-            frame.contains(display),
+        var window: String? = null
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            window = shadeWindowBlock()
+            if (window != null && frameOf(window)?.contains(display) == true) return
+            Thread.sleep(POLL_MS)
+        }
+        throw AssertionError(
+            "The shade's frame ${window?.let(::frameOf)} never covered the display $display within " +
+                "${TIMEOUT_MS}ms — a strip of the screen is left undimmed. Window was:\n$window",
         )
     }
+
+    private fun frameOf(window: String): Rect? =
+        FRAME.find(window)?.destructured?.let { (left, top, right, bottom) ->
+            Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+        }
 
     /**
      * Poll `dumpsys` until the shade's window shows up, and hand back the block describing it.

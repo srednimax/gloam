@@ -272,7 +272,7 @@ fun DimScreen(
 
             // Only while the shade is actually up. A first-launch user who has started nothing is
             // not missing an escape hatch, because there is nothing to escape from yet.
-            if (state.running && !hatchLive) {
+            if (state.shadeUp && !hatchLive) {
                 // Computed here rather than above, because it is only meaningful under this guard:
                 // the last branch is "the channel is muted", and that is only what is left over once
                 // the hatch is known dead and the permission known present.
@@ -304,12 +304,16 @@ fun DimScreen(
             DimControls(
                 dimLevel = state.dimLevel,
                 warmth = state.warmth,
-                running = state.running,
+                // `shadeUp`, not the intent: after HyperOS kills the process the intent still says
+                // running over a screen with nothing on it, and this button is the thing that has
+                // to say so. Start from there re-asks for what was already stored, which is a fresh
+                // deadline from now — the same as any other Start.
+                running = state.shadeUp,
                 onDimLevel = viewModel::setDimLevel,
                 onWarmth = viewModel::setWarmth,
                 onToggleRunning = {
                     when {
-                        state.running -> {
+                        state.shadeUp -> {
                             viewModel.endShade(ShadeEnd.ByHand)
                             context.stopShade()
                         }
@@ -332,7 +336,7 @@ fun DimScreen(
             AutoOffCard(
                 autoOff = state.autoOff,
                 offAtMillis = state.offAtMillis,
-                running = state.running,
+                running = state.shadeUp,
                 onAutoOff = viewModel::setAutoOff,
                 lowerBacklight = state.lowerBacklight,
                 backlightAvailable = backlightAvailable,

@@ -614,6 +614,7 @@ class ShadeService : Service() {
                 dimLayer = dim
                 warmthLayer = warmth
                 shadeParams = params
+                reportShadeOnScreen(true)
                 // The children are born transparent and the collector that would darken them is
                 // `distinctUntilChanged`, so on every path where it has already emitted, this is
                 // the only thing that paints them. See [lastSettings].
@@ -642,6 +643,7 @@ class ShadeService : Service() {
         warmthLayer = null
         shadeParams = null
         backlightTop = null
+        reportShadeOnScreen(false)
     }
 
     /**

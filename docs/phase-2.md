@@ -1308,6 +1308,15 @@ Dim screen when the intent says running and no service is alive, or say so rathe
 claiming otherwise — and checkpoint B deliberately does neither, because both change what "running"
 means to Phase 2b's gate.
 
+(Answered 2026-09-13, after C had shipped without it: a tester cleared all recent apps, the shade
+went, and Gloam reopened on *Stop dimming* until they pressed Stop and then Start. **Say so** — the
+button now shows *Stop* only while the intent says running *and* the shade's window is up in this
+process (`shade/ShadeOnScreen.kt`), and offers *Start* otherwise; the stored intent is not written.
+Restoring on open was built first and turned down by the user: with auto-off at *Never* it would
+dim the screen the next afternoon because the app was opened. Measured on the way: `am force-stop`
+is **not** a stand-in for Clear all here — the next launch delivers `BOOT_COMPLETED` and
+`BootReceiver` restores the shade by itself.)
+
 ### R8b — proven off the stored file, not off the screen
 
 `phase-1.md` learned to distrust a reading that looks like a pass; the DataStore equivalent of the
