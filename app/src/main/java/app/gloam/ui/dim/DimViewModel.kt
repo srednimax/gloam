@@ -14,6 +14,8 @@ import app.gloam.shade.ShadeEnd
 import app.gloam.shade.ShadeStart
 import app.gloam.shade.beginShadeAt
 import app.gloam.shade.endShadeAt
+import app.gloam.shade.shadeOnScreen
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -41,6 +43,8 @@ import java.time.LocalTime
  *   `ViewModel` has no setter for it, because the screen that edits a schedule is the schedule's
  *   own. Whether the battery exemption puts that schedule at risk is a live `Context` read and
  *   therefore the host's, not this one's.
+ * @param onScreen whether the shade's window is up in this process — [shadeOnScreen], the live half
+ *   that [running] deliberately is not.
  */
 data class DimUiState(
     val dimLevel: Int = 0,
@@ -50,23 +54,41 @@ data class DimUiState(
     val autoOff: AutoOff = AutoOff.Default,
     val offAtMillis: Long? = null,
     val schedule: Schedule = Schedule(enabled = false, onAt = LocalTime.MIDNIGHT, offAt = LocalTime.MIDNIGHT),
-)
+    val onScreen: Boolean = false,
+) {
+    /**
+     * **What the Start/Stop button and the deadline line show**: asked for *and* on screen.
+     *
+     * After HyperOS kills the process the intent still says running and nothing is drawn, and the
+     * button then offers *Start* rather than a *Stop* for a shade that is not there. Anything that
+     * decides what *should* happen — the deadline reconcile, the boot receiver — keeps reading
+     * [running]; this is only for saying what *is*.
+     *
+     * Kotlin note: a property with a getter in the class body is not part of `copy()` or `equals()`,
+     * so it can never disagree with the two fields it is computed from.
+     */
+    val shadeUp: Boolean
+        get() = running && onScreen
+}
 
 class DimViewModel(
     private val preferences: AppPreferences,
+    onScreen: Flow<Boolean> = shadeOnScreen,
 ) : ViewModel() {
     val state: StateFlow<DimUiState> =
         combine(
             preferences.dimLevel,
             preferences.warmth,
-            preferences.shadeIntent,
+            // The intent and the live window paired, because they are the two halves of one
+            // question — what the button says — and the arity limit below leaves no sixth slot.
+            combine(preferences.shadeIntent, onScreen, ::Pair),
             preferences.lowerBacklight,
             // Kotlin note: `combine` is typed for two to five flows and the schedule is the sixth,
             // so the two that already belong to one section of the screen are paired first. Nesting
             // rather than the vararg overload, which hands back an `Array<Any?>` and a cast per
             // field — the type checker is doing real work here and is worth keeping.
             combine(preferences.autoOff, preferences.schedule, ::Pair),
-        ) { level, warmth, intent, lowerBacklight, (autoOff, schedule) ->
+        ) { level, warmth, (intent, up), lowerBacklight, (autoOff, schedule) ->
             DimUiState(
                 dimLevel = level,
                 warmth = warmth,
@@ -75,6 +97,7 @@ class DimViewModel(
                 autoOff = autoOff,
                 offAtMillis = intent.offAtMillis,
                 schedule = schedule,
+                onScreen = up,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DimUiState())
 
