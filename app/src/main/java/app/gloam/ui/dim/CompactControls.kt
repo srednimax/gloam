@@ -147,9 +147,11 @@ fun CompactControls(
     // the bottom of the screen. `BoxWithConstraints` is the one composable that can read what its
     // parent is offering, which in both hosts is the display.
     // `CenterEnd` rather than a corner, so the box agrees with the gravity both hosts give their
-    // window (`ShadeService.addPanelWindow` says why that is the centre). Both windows wrap this
-    // content, so the alignment only decides anything if one is ever given room to spare — and
-    // then it should put the bar where the window itself is aimed.
+    // window (`ShadeService.addPanelWindow` says why that is the centre). **This alignment is what
+    // places the bar in the compact host**: its window fills the area between the system bars and
+    // this centres the group inside it, while the panel's window wraps the group and is centred in
+    // that same area by gravity. Same group, same area, same pixels — as long as both hosts pass the
+    // same buttons, which is why the compact host now passes `onClose` too.
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.CenterEnd) {
         // `hasBoundedHeight` rather than a comparison against `Dp.Infinity`: an unbounded parent —
         // a scrolling column, or a measure pass before the window has been given a size — reports

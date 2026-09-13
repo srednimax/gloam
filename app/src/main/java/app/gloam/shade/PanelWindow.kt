@@ -329,8 +329,8 @@ internal fun PanelContent(
         // **`onClose` is not optional here, and it is the reason the parameter is nullable at all.**
         // With `FLAG_NOT_FOCUSABLE` the Back key never reaches this window, so there is no system
         // gesture that closes it: this button and the service's idle timeout are the only two ways
-        // out that do not also take the shade down. The compact host passes nothing, because an
-        // Activity already has a back gesture.
+        // out that do not also take the shade down. The compact host passes one too, though it has a
+        // back gesture: the same controls in both is what puts the bar on the same pixels.
         CompactControls(
             dimLevel = current.dimLevel,
             warmth = current.warmth,
