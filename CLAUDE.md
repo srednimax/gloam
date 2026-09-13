@@ -146,8 +146,9 @@ app/src/main/java/<namespace>/
   work/        notification channels, the notification-permission ask, Xiaomi battery/autostart
 
 app/src/debug/    the developer-only build: Settings' debug section — the backlight sweep, the
-                  two-minute deadline, a second overlay window, and summons for the compact
-                  controls and the panel. None of it is reachable from outside the app
+                  two-minute deadline, a second overlay window, summons for the compact
+                  controls and the panel, and the timed reading test for the warmth colour.
+                  None of it is reachable from outside the app
 app/src/release/  only the no-op half of that seam, so main/ can call it unconditionally
 scripts/          the Python toolchain. project.py is the one place the app's identity lives
 art/             mark.py is the identity; both generators derive from it

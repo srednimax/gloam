@@ -23,5 +23,17 @@
         <receiver
             android:name=".shade.GateReceiver"
             android:exported="false" />
+
+        <!--
+            The timed reading test (`docs/night-reading-research.md` §3), opened only from
+            Settings' debug section. Portrait like the full app, and it keeps its own state across
+            the configuration changes a test in progress might meet, because being rebuilt would
+            throw the session away.
+        -->
+        <activity
+            android:name=".ui.settings.ReadingTestActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboardHidden" />
     </application>
 </manifest>

@@ -118,6 +118,12 @@ import kotlinx.coroutines.launch
  * the same `showShadePanel()` the notification will, so what is measured here is the route rather
  * than an approximation of it.
  *
+ * ## The reading test — `docs/night-reading-research.md` §3
+ *
+ * Whether `DEFAULT_WARMTH_COLOR` should move is a question about how fast someone reads under the
+ * shade, and **only the app can put the shade over a page it controls and time a tap on it**. So
+ * the test is an Activity of its own behind this button. `ReadingTest.kt` has the protocol.
+ *
  * None of this reaches a release binary, and none of its strings reach the translation gate — which
  * is why the text here is hardcoded English rather than a string resource.
  */
@@ -361,6 +367,12 @@ fun DebugSettings() {
                 },
             ) {
                 Text("Open compact controls")
+            }
+        }
+
+        Row(modifier = Modifier.padding(bottom = Spacing.base)) {
+            Button(onClick = { context.startActivity(Intent(context, ReadingTestActivity::class.java)) }) {
+                Text("Reading test (warmth colour)")
             }
         }
 
