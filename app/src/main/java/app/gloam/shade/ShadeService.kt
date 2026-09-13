@@ -136,9 +136,11 @@ const val SHADE_WINDOW_FLAGS =
  * neither child past its own limit, so the bound belongs to the composite. [shadeValuesFor] is
  * where that is enforced, and it is proven on the JVM rather than by looking at a screen.
  *
- * `FLAG_LAYOUT_IN_SCREEN` and `FLAG_LAYOUT_NO_LIMITS` together with `MATCH_PARENT` are what carry it
- * over the status and navigation bars. Without them the shade stops at the app area and the two
- * system bars stay at full brightness, which reads as a bug rather than as a design.
+ * `MATCH_PARENT`, the two layout flags, the cutout mode and `fitInsetsTypes = 0` are what carry it
+ * over the status and navigation bars. Each covers a different edge — the flags alone left the
+ * navigation bar's strip bright — and without all of them a system bar stays at full brightness,
+ * which reads as a bug rather than as a design. `ShadeWindowTest` reads the frame back off the
+ * window manager, because a missing one shows up only on a device.
  *
  * ## The backlight the window carries
  *
@@ -594,6 +596,16 @@ class ShadeService : Service() {
                     // device this app ships to, and one of them had never executed anywhere.
                     layoutInDisplayCutoutMode =
                         WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    // **The bottom strip, and the flags above do not reach it.** Since Android 11 a
+                    // window is laid out clear of every system bar in `fitInsetsTypes`, and the
+                    // default is all of them. `FLAG_LAYOUT_IN_SCREEN` takes only the *status* bar
+                    // out of that set, so the navigation bar stayed in it — the dump read
+                    // `fitTypes=NAVIGATION_BARS` and a frame ending at 2664 of a 2712 px display —
+                    // and `FLAG_LAYOUT_NO_LIMITS` cannot help, because it lifts the clip rather than
+                    // the inset the frame was measured inside. The strip was undimmed wherever the
+                    // navigation bar is showing, and gone in an immersive reader that hides it,
+                    // which is why it looked like a per-app bug. Zero asks for the whole display.
+                    fitInsetsTypes = 0
                 }
 
         runCatching { windowManager?.addView(view, params) }
