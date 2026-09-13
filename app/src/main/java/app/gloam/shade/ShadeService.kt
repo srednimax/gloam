@@ -823,7 +823,13 @@ class ShadeService : Service() {
                 panelHost = host
                 panelState = state
                 panelParams = params
-                reportPanelOnScreen(true)
+                // **After the first frame is on the surface, not when `addView` returns.** The
+                // compact controls finish the moment this reads true, and a window that has been
+                // added has not yet drawn anything: the phone showed one frame with *no* bar at all
+                // between the two, which read as the panel jumping in. A frame-commit callback runs
+                // once, after the frame it follows has reached the surface, so the compact controls
+                // now go only when the panel is there to take their place.
+                host.view.viewTreeObserver.registerFrameCommitCallback { reportPanelOnScreen(panelView != null) }
                 // **`RESUMED` is not a formality.** Below `STARTED` the `Recomposer` stops applying
                 // recompositions, and the window draws its first frame correctly and then never
                 // changes again — a slider that will not move under a finger, with nothing in
