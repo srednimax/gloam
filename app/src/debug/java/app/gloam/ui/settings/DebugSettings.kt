@@ -165,7 +165,7 @@ fun DebugSettings() {
     // so a tap re-paints a live shade without restarting it. `collectAsState` is the Compose end of a
     // `Flow` — it re-renders this row on each new value, like a `useSyncExternalStore` subscription.
     val lowest by DebugMinBacklight.value.collectAsState()
-    val atFloor = lowest != MIN_BACKLIGHT
+    val raised = lowest != MIN_BACKLIGHT
 
     SectionHeader("Developer")
 
@@ -173,7 +173,7 @@ fun DebugSettings() {
         Text(
             text =
                 "lowest backlight: $lowest (${"%.2f".format(nitsOnDevPanel(lowest))} nits)" +
-                    if (atFloor) " — the floor, escape hatches darker too" else " — shipped",
+                    if (raised) " — the previous value, for comparison" else " — shipped, the floor",
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.primary,
@@ -181,11 +181,11 @@ fun DebugSettings() {
         Row(modifier = Modifier.padding(top = Spacing.tight, bottom = Spacing.base)) {
             Button(
                 onClick = {
-                    DebugMinBacklight.value.value = if (atFloor) MIN_BACKLIGHT else DebugMinBacklight.FLOOR
+                    DebugMinBacklight.value.value = if (raised) MIN_BACKLIGHT else DebugMinBacklight.PREVIOUS
                     Log.i(TAG, "lowest backlight -> ${DebugMinBacklight.value.value}")
                 },
             ) {
-                Text(if (atFloor) "Back to shipped (6.6 nits)" else "Down to the floor (2.0 nits)")
+                Text(if (raised) "Back down to the floor (2.0 nits)" else "Up to the previous (6.6 nits)")
             }
         }
 

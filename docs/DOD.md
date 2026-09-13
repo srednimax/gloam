@@ -9,7 +9,8 @@ Phases and sequence live in [`PLAN.md`](PLAN.md). This file is the worklist.
 **Phase 1 is closed, and its record is [`phase-1.md`](phase-1.md)** — the entry gate, the ramp,
 warmth and the readings, as five checkpoints. **A, B, C and D shipped on 2026-08-30, E and the
 API-33 pass on 2026-08-31**: the dim level drives the backlight and then the shade, amber is tinted
-over the top of it, `MIN_BACKLIGHT` is `0.01f` — **6.64 nits**, set by R2 — and the whole ramp is a
+over the top of it, `MIN_BACKLIGHT` was `0.01f` — **6.64 nits**, set by R2, and since ADR-0010's
+fifth amendment the panel's floor, **2.0 nits** — and the whole ramp is a
 pure function proven by a table sweep rather than by a screen. B could have vetoed the backlight half
 and did not; **ADR-0010's third amendment** says why, and withdraws the reading that had made a veto
 look likely — the panel was in its own inactivity dimming, not at the user's setting.
@@ -326,13 +327,16 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       copy. Read `phase-3.md`'s R13 and ADR-0010's fourth amendment before designing the feature.
       **Priced, 2026-09-13, on the dev phone.** The goal is **headroom**: dark enough that the level
       someone actually reads at sits well below 100, with the top of the range kept for the nights
-      that need it. The backlight is not "already at `MIN_BACKLIGHT`" in the sense that matters,
-      because `MIN_BACKLIGHT` (0.01, 6.64 nits) sits well above the panel's floor (6.84e-4, 2.0 nits).
+      that need it. The backlight was not "already at `MIN_BACKLIGHT`" in the sense that mattered,
+      because `MIN_BACKLIGHT` (0.01, 6.64 nits) sat well above the panel's floor (6.84e-4, 2.0 nits).
       Nits reaching the eye at dim 100:
-      - **Shipped:** 1.59, measured.
-      - **Backlight at the floor:** ~0.48, about 3× darker. The cost is R5: the notification and the
-        panel dim with it. The debug switch in Settings → Developer flips it live; **the by-eye
-        verdict is still owed**, and it decides whether 2b takes this lever.
+      - **The old `0.01f`:** 1.59, measured.
+      - **Backlight at the floor:** ~0.48, about 3× darker. **Taken the same day**: `MIN_BACKLIGHT`
+        is now the floor ([ADR-0010](adr/0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
+        fifth amendment). The cost is R5: the notification and the panel dim with it, to 2.0 nits.
+        **R2 is owed again by eye**: at dim 100, pull the notification shade down and tap *Stop*, in
+        a dark room and a lit one. The debug build's Settings → Developer switches back up to the old
+        0.01 for the comparison, and if R2 fails it is the way back.
       - **Shade cap raised to the 0.8 clamp:** ~0.40. About 17% more, and it breaks ADR-0010's
         invariants, so it is not worth it.
       - **Extra dim** (Reduce Bright Colors) on top: ~0.07, computed from framework-res rather than
@@ -360,7 +364,7 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 - [ ] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
       Should the phone's own brightness slider mean *"give me more light"* while Gloam is dimming?
       Phase 3 ships the cheap half — the ongoing notification now says the slider is paused, on the one
-      surface that can be read at 6.64 nits — and deliberately ships no `ContentObserver`.
+      surface that can be read at maximum dim — and deliberately ships no `ContentObserver`.
       **The engineering objection is gone and the taste one is not.** `phase-3.md`'s R10 measured that
       the backlight override switches the framework's auto-brightness controller off entirely, so an
       observer listening while the shade is up cannot mistake an adaptive write for a user's drag, and

@@ -235,7 +235,7 @@ class ShadeService : Service() {
 
     /**
      * The lowest override the ramp may ask for. [MIN_BACKLIGHT] for good in a release build; the
-     * debug build can switch it to the floor from Settings to compare the two (`MinBacklight.kt`).
+     * debug build can switch it back up to the previous `0.01f` from Settings (`MinBacklight.kt`).
      */
     private var appliedMinBacklight = MIN_BACKLIGHT
 
@@ -1016,7 +1016,7 @@ class ShadeService : Service() {
      * nulled with the window, so this reads false in every one of those states.
      *
      * That matters more than it looks: the line is being put on the notification *because* it is
-     * the one surface a user can read at 6.64 nits, and a false explanation there is worse than no
+     * the one surface a user can read at the backlight floor, and a false explanation there is worse than no
      * explanation in the app underneath.
      */
     private fun backlightOverrideLive(): Boolean {
@@ -1092,7 +1092,7 @@ class ShadeService : Service() {
         // **The row's plain tap summons the panel, and launches no Activity at all.** Phase 1's R8
         // read what a tap does on HyperOS: the *Stop* action is behind a long-press and is not in
         // the collapsed row, so a plain tap follows this intent — which used to land on the full app
-        // *under* the shade, at 0.33 nits. The panel is above the shade instead, at 6.64, so this
+        // *under* the shade. The panel is above the shade instead, at the backlight's own level, so this
         // is the one route in this phase that is a legibility improvement rather than a reach one.
         //
         // `getService` rather than `getActivity`, which also settles the caching question: pending

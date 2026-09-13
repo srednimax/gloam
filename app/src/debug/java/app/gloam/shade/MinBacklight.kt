@@ -4,27 +4,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * The debug half of the lowest-backlight seam: a switch between the shipped [MIN_BACKLIGHT] and the
- * **floor**, so Phase 2b's biggest lever can be judged on a real page rather than on paper.
+ * The debug half of the lowest-backlight seam: a switch between the shipped [MIN_BACKLIGHT] and
+ * [PREVIOUS], the value it replaced.
  *
- * **Debug builds start at the floor, since 2026-09-13.** The floor is what is being judged, night after
- * night, and a switch that went back to shipped whenever HyperOS killed the process was quietly handing
- * back readings of the wrong thing. Below `MIN_BACKLIGHT` the escape hatches get darker too: the
- * notification shade and quick settings read back our override unchanged (`MIN_BACKLIGHT`'s R5). That
- * cost is accepted on the development phone, where the person carrying it chose it. The release half
- * is still the constant, so nobody else pays it before 2b decides.
+ * **Kept for the by-eye reading that is still owed.** Since 2026-09-13 [MIN_BACKLIGHT] is the panel's
+ * floor, and below `0.01f` the escape hatches get darker too: the notification shade and quick
+ * settings read back our override unchanged (`MIN_BACKLIGHT`'s R5). If *Stop* turns out to be
+ * unfindable at 2.0 nits, this is the way back up to 6.64 on the development phone without a rebuild,
+ * and the way to see what the change bought.
  *
- * **Still in memory, never in DataStore.** The switch back to shipped lasts until the process dies,
- * and then the floor returns. Nothing here survives into a build that is not this one.
+ * **In memory, never in DataStore.** It starts at the shipped value, and a switch up lasts until the
+ * process dies.
  *
  * Kotlin note: a `MutableStateFlow` is a value with subscribers, closest to RxJS's `BehaviorSubject`:
  * it always holds a current value, and a new collector receives that value immediately.
  */
 object DebugMinBacklight {
-    /** The development panel's floor, `mScreenBrightnessRangeMinimum`: 2.0 nits by R1's fit. */
-    const val FLOOR = 6.83661E-4f
+    /** What [MIN_BACKLIGHT] was until 2026-09-13: 6.64 nits on the development panel, set by R2. */
+    const val PREVIOUS = 0.01f
 
-    val value = MutableStateFlow(FLOOR)
+    val value = MutableStateFlow(MIN_BACKLIGHT)
 }
 
 internal val minBacklight: Flow<Float> = DebugMinBacklight.value
