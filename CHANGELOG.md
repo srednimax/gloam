@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.0](https://github.com/srednimax/gloam/compare/v0.6.0...v0.7.0) (2026-09-13)
+
+
+### Features
+
+* dim the backlight down to the panel's floor ([c4944f5](https://github.com/srednimax/gloam/commit/c4944f5e049edfaed175ee61c8868233d892d536))
+* remove the Material You toggle ([0d347c0](https://github.com/srednimax/gloam/commit/0d347c043fc0d5e536bf0b5c0e2c2009c61d964d))
+
+
+### Bug Fixes
+
+* close the compact controls only once the panel has drawn ([4890e65](https://github.com/srednimax/gloam/commit/4890e6599f6f8601769bced8b6adeedd20cf4cab))
+* dim the strip above the navigation bar ([e34ef2f](https://github.com/srednimax/gloam/commit/e34ef2f683b37df211ac2ebcc3995995f76012a0))
+* keep one edge bar on screen, the one opened last ([ce2c5c2](https://github.com/srednimax/gloam/commit/ce2c5c2b8a688c5c01f7f9b5536d8dbf55f1e41b))
+* keep the dim through a rotation with Gloam's own screen in front ([8241af2](https://github.com/srednimax/gloam/commit/8241af26e0c0d950915d6b01d0505aa88a2522cc))
+* keep the full app in portrait ([d08e101](https://github.com/srednimax/gloam/commit/d08e1019d5e8210cb23c83eb501d1a90b2fea5e6))
+* offer Start when HyperOS killed the shade ([b969f88](https://github.com/srednimax/gloam/commit/b969f88211fb4e35982bb8db1e2cb6c4bfb16e7c))
+* put both edge bars on the same pixels ([e265795](https://github.com/srednimax/gloam/commit/e265795b765b1a63a40b88bb34e607f6cca759ac))
+* **test:** wait for the panel's relayout before reading its width ([ab3f391](https://github.com/srednimax/gloam/commit/ab3f3918d2fece06d7013b8e0703c73bcbf03280))
+
 ## [0.6.0](https://github.com/srednimax/gloam/compare/v0.5.0...v0.6.0) (2026-09-08)
 
 
