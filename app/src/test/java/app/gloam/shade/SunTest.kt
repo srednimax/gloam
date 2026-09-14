@@ -35,7 +35,12 @@ class SunTest {
         actual: Long?,
     ) {
         assertNotNull("$what: expected $expectedLocal, got no event", actual)
-        val expected = LocalDateTime.parse(expectedLocal).atZone(zone).toInstant().toEpochMilli()
+        val expected =
+            LocalDateTime
+                .parse(expectedLocal)
+                .atZone(zone)
+                .toInstant()
+                .toEpochMilli()
         val off = actual!! - expected
         assertTrue("$what: ${off / 1000}s from USNO's $expectedLocal in $zone", abs(off) <= 60_000L)
     }
