@@ -8,15 +8,20 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.gloam.shade.AutoOff
+import app.gloam.shade.Coordinates
+import app.gloam.shade.Location
 import app.gloam.shade.NO_DEADLINE
 import app.gloam.shade.Schedule
+import app.gloam.shade.ScheduleKind
 import app.gloam.shade.deadlineOrNull
 import app.gloam.shade.minutesOf
 import app.gloam.shade.timeOf
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalTime
+import kotlin.math.roundToInt
 
 /**
  * The two values that say what the shade should be doing, read together because they are written
@@ -65,7 +70,17 @@ enum class ThemeMode {
  */
 class AppPreferences(
     private val store: DataStore<Preferences>,
+    /** The lent location's own file, kept out of backup. See `lentLocationStore` for why it is separate. */
+    private val lentLocationStore: DataStore<Preferences>,
 ) {
+    private object LentKeys {
+        // Tenths of a degree as whole numbers. The 0.1° rounding ADR-0013 §8 asks for is then what the
+        // file holds, not something applied after reading a more precise value from disk.
+        val LATITUDE_TENTHS = intPreferencesKey("latitude_tenths")
+        val LONGITUDE_TENTHS = intPreferencesKey("longitude_tenths")
+        val ZONE_ID = stringPreferencesKey("zone_id")
+    }
+
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
 
@@ -84,6 +99,7 @@ class AppPreferences(
         val SCHEDULE_ON_MINUTES = intPreferencesKey("schedule_on_minutes")
         val SCHEDULE_OFF_MINUTES = intPreferencesKey("schedule_off_minutes")
         val SCHEDULE_HONOURED_AT = longPreferencesKey("schedule_honoured_at")
+        val SCHEDULE_KIND = stringPreferencesKey("schedule_kind")
     }
 
     /**
@@ -244,15 +260,46 @@ class AppPreferences(
      * makes [DEFAULT_DIM_LEVEL] modest and warmth zero. The two times are defaults for a *disabled*
      * schedule, so they cost nothing and exist only so the picker opens on something plausible
      * rather than on midnight.
+     *
+     * **The kind defaults to fixed times** (ADR-0013), which is what every install had before the sun
+     * was an option, so nobody's schedule moves on an update. It is stored by name like [themeMode],
+     * with an unknown name falling back to the default for the same reason.
+     *
+     * **The lent location comes from a second file**, and `combine` is what keeps this one value
+     * rather than two Flows a reader could take apart: it re-emits when either file changes, with the
+     * latest of both. That way a location read re-arms the alarm the way an edited time does.
+     *
+     * Kotlin note: `combine` is RxJS's `combineLatest`. It waits for one emission from each input,
+     * then emits on every emission from either one.
      */
     val schedule: Flow<Schedule> =
-        store.data.map { prefs ->
+        combine(store.data, lentLocationStore.data) { prefs, lent ->
             Schedule(
                 enabled = prefs[Keys.SCHEDULE_ENABLED] ?: false,
                 onAt = timeOf(prefs[Keys.SCHEDULE_ON_MINUTES] ?: DEFAULT_SCHEDULE_ON_MINUTES),
                 offAt = timeOf(prefs[Keys.SCHEDULE_OFF_MINUTES] ?: DEFAULT_SCHEDULE_OFF_MINUTES),
+                kind =
+                    prefs[Keys.SCHEDULE_KIND]?.let { name ->
+                        runCatching { enumValueOf<ScheduleKind>(name) }.getOrNull()
+                    } ?: ScheduleKind.FixedTimes,
+                lent = lentLocationOf(lent),
             )
         }
+
+    /**
+     * The lent location, or `null` unless all three keys are there. [lendLocation] writes them in one
+     * transaction, so a partial set can only mean a file from a build that stored something else.
+     * Coerced into range like every number read here.
+     */
+    private fun lentLocationOf(prefs: Preferences): Location.Lent? {
+        val latitude = prefs[LentKeys.LATITUDE_TENTHS] ?: return null
+        val longitude = prefs[LentKeys.LONGITUDE_TENTHS] ?: return null
+        val zoneId = prefs[LentKeys.ZONE_ID] ?: return null
+        return Location.Lent(
+            Coordinates(latitude.coerceIn(-900, 900) / 10.0, longitude.coerceIn(-1800, 1800) / 10.0),
+            zoneId,
+        )
+    }
 
     /**
      * The on-instant of the night most recently acted on, or `0L` for none.
@@ -411,6 +458,30 @@ class AppPreferences(
         }
     }
 
+    suspend fun setScheduleKind(kind: ScheduleKind) {
+        store.edit { it[Keys.SCHEDULE_KIND] = kind.name }
+    }
+
+    /**
+     * Stores a location the phone reported, rounded to 0.1°, with the zone it was read in. **One
+     * transaction for all three**, because a latitude from one read beside a zone from another is a
+     * location nobody was ever at.
+     *
+     * This does not check whether a window is open. Replacing a location during one would move that
+     * night's sunset and with it the night's identity (ADR-0013's consequences). That is the caller's
+     * policy, like `honouredAt` on [endShade], and this file stays keys, defaults and transactions.
+     */
+    suspend fun lendLocation(
+        coordinates: Coordinates,
+        zoneId: String,
+    ) {
+        lentLocationStore.edit {
+            it[LentKeys.LATITUDE_TENTHS] = (coordinates.latitude * 10).roundToInt().coerceIn(-900, 900)
+            it[LentKeys.LONGITUDE_TENTHS] = (coordinates.longitude * 10).roundToInt().coerceIn(-1800, 1800)
+            it[LentKeys.ZONE_ID] = zoneId
+        }
+    }
+
     /** Records that a night has been acted on. No screen calls this; see [scheduleHonouredAt]. */
     suspend fun setScheduleHonouredAt(onInstant: Long) {
         store.edit { it[Keys.SCHEDULE_HONOURED_AT] = onInstant }
@@ -436,6 +507,12 @@ const val DEFAULT_DIM_LEVEL = 40
  * `warmthTint`'s, and ADR-0010's sixth amendment has the reasoning.
  */
 const val DEFAULT_WARMTH_COLOR = 50
+
+/**
+ * The lent location's DataStore file name. The backup rules name the file on disk it becomes,
+ * `datastore/lent_location.preferences_pb`, and `BackupRulesTest` holds the two names together.
+ */
+const val LENT_LOCATION_STORE = "lent_location"
 
 /** 22:00, in minutes since local midnight. The plan's own example, and the shape of the thing. */
 const val DEFAULT_SCHEDULE_ON_MINUTES = 22 * 60

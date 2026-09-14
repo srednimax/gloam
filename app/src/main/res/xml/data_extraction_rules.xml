@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Everything is backed up except the lent location (ADR-0013 §8). With only <exclude> rules and no
+    <include>, the platform backs up everything else exactly as it did with no rules file at all.
+
+    **Both sections exclude it.** Cloud backup is the case the ADR names: "kept on the phone" must not
+    turn into "kept on the phone and in your Google backup". Device transfer goes straight to the
+    user's new phone rather than through Google, but the location it carries is where the old phone
+    was, so it is stale on arrival either way. The cost is the estimate until the new phone's first
+    read, which is at most one evening's accuracy.
+
+    The path is DataStore's file for `LENT_LOCATION_STORE`: `filesDir/datastore/<name>.preferences_pb`.
+    `BackupRulesTest` holds this path and that constant together.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/lent_location.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/lent_location.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>
