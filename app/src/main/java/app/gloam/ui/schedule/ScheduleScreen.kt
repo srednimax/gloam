@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,9 +20,11 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,22 +37,37 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.gloam.MainApplication
 import app.gloam.R
+import app.gloam.shade.Location
 import app.gloam.shade.Schedule
+import app.gloam.shade.ScheduleKind
+import app.gloam.shade.locationIn
 import app.gloam.shade.minutesOf
+import app.gloam.shade.tonight
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.DetailScaffold
 import app.gloam.ui.common.SwitchRow
 import app.gloam.ui.common.WarningBanner
 import app.gloam.ui.dim.rememberTimeText
+import app.gloam.work.LocationAskOutcome
 import app.gloam.work.hasAutostartSettings
 import app.gloam.work.isIgnoringBatteryOptimisations
+import app.gloam.work.locationGranted
+import app.gloam.work.openAppDetailsSettings
 import app.gloam.work.openBatteryOptimisationSettings
+import app.gloam.work.refreshLentLocation
+import app.gloam.work.rememberLocationAsk
 import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * **When the shade goes up, and when it comes down: one pair of times, every night.**
+ *
+ * Or sunset to sunrise (ADR-0013), where the pair becomes the fallback for nights the sun gives no
+ * answer. This screen is also the one place the location is asked for, and the ask comes when the
+ * user picks the sun rather than when the screen opens.
  *
  * A detail screen reached from the dim screen's summary row rather than from Settings, because when
  * the shade is on is not a property of the app — it is the thing the app does, and it belongs beside
@@ -95,11 +113,18 @@ fun ScheduleScreen(
     // are the other two that can, and Xiaomi's autostart is the one that cannot (§7's table).
     var exempt by remember { mutableStateOf(context.isIgnoringBatteryOptimisations()) }
 
+    // The location grant, re-read on resume for the same reason: the app's settings page can change
+    // it, and an *Only this time* grant lapses by itself.
+    var locationGranted by remember { mutableStateOf(context.locationGranted()) }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) exempt = context.isIgnoringBatteryOptimisations()
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    exempt = context.isIgnoringBatteryOptimisations()
+                    locationGranted = context.locationGranted()
+                }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -109,6 +134,46 @@ fun ScheduleScreen(
     // that reopening the row costs less than carrying a half-made time across a configuration
     // change, and the values it would restore are already on disk unchanged.
     var picking by remember { mutableStateOf<Edge?>(null) }
+
+    // True once Android has said it will not show the dialog again. Nothing stores it: the first ask
+    // after reopening the screen comes straight back with the same answer and sets it again.
+    var askSpent by rememberSaveable { mutableStateOf(false) }
+
+    // A read the user asked for, which the effect below performs once the *stored* kind is sunset to
+    // sunrise. It waits for the stored kind, not the tap, because `refreshLentLocation` checks the
+    // stored kind, and a read started before the write had landed would be refused.
+    var readWanted by remember { mutableStateOf(false) }
+    val preferences = (context.applicationContext as MainApplication).preferences
+    LaunchedEffect(readWanted, schedule.kind) {
+        if (readWanted && schedule.kind == ScheduleKind.SunsetToSunrise) {
+            context.refreshLentLocation(preferences)
+            readWanted = false
+        }
+    }
+
+    val askForLocation =
+        rememberLocationAsk { outcome ->
+            when (outcome) {
+                LocationAskOutcome.Granted -> {
+                    locationGranted = true
+                    readWanted = true
+                }
+                LocationAskOutcome.Denied -> Unit // the estimate stands, and the row still offers
+                LocationAskOutcome.PermanentlyDenied -> askSpent = true
+            }
+        }
+
+    // The one action the location row and the kind chip share: read if allowed, ask if Android
+    // will still show the dialog, and hand off to Settings if it will not.
+    val lendLocation: (fromRow: Boolean) -> Unit = { fromRow ->
+        when {
+            locationGranted -> readWanted = true
+            !askSpent -> askForLocation()
+            // Only a tap on the row goes to Settings. Picking the kind is not a request to leave the
+            // screen, and the row now offers Settings in words.
+            fromRow -> context.openAppDetailsSettings()
+        }
+    }
 
     DetailScaffold(
         title = stringResource(R.string.schedule_title),
@@ -128,6 +193,31 @@ fun ScheduleScreen(
                 onChange = viewModel::setEnabled,
             )
 
+            Row(modifier = Modifier.padding(horizontal = Spacing.base)) {
+                for (kind in ScheduleKind.entries) {
+                    FilterChip(
+                        selected = schedule.kind == kind,
+                        onClick = {
+                            viewModel.setKind(kind)
+                            // ADR-0013 §6: the ask comes at the moment the user picks the sun, and
+                            // at no other time without a tap.
+                            if (kind == ScheduleKind.SunsetToSunrise) lendLocation(false)
+                        },
+                        label = { Text(stringResource(kind.labelRes())) },
+                        modifier = Modifier.padding(end = Spacing.tight),
+                    )
+                }
+            }
+
+            if (schedule.kind == ScheduleKind.SunsetToSunrise) {
+                SunSection(
+                    schedule = schedule,
+                    askSpent = askSpent,
+                    onLendLocation = { lendLocation(true) },
+                )
+                Note(stringResource(R.string.schedule_sun_fallback_note))
+            }
+
             TimeRow(
                 label = stringResource(R.string.schedule_on_at),
                 time = schedule.onAt,
@@ -141,11 +231,12 @@ fun ScheduleScreen(
 
             // The one derived fact worth saying, and the single most common way a person mis-reads a
             // pair of times. Nothing at all when the window does not cross midnight, rather than a
-            // line saying it does not.
-            if (schedule.onAt > schedule.offAt) {
+            // line saying it does not. Fixed times only: under the sun these are a fallback, and the
+            // note above already says when they apply.
+            if (schedule.kind == ScheduleKind.FixedTimes && schedule.onAt > schedule.offAt) {
                 Note(stringResource(R.string.schedule_overnight))
             }
-            if (schedule.isShort()) {
+            if (schedule.kind == ScheduleKind.FixedTimes && schedule.isShort()) {
                 Note(stringResource(R.string.schedule_short_window))
             }
 
@@ -230,6 +321,86 @@ private fun Schedule.isShort(): Boolean {
 
 private const val SHORT_WINDOW_MINUTES = 10
 private const val MINUTES_PER_DAY = 24 * 60
+
+private fun ScheduleKind.labelRes(): Int =
+    when (this) {
+        ScheduleKind.FixedTimes -> R.string.schedule_kind_fixed
+        ScheduleKind.SunsetToSunrise -> R.string.schedule_kind_sun
+    }
+
+/**
+ * Tonight's sunset and sunrise, where they come from, and the offer to lend a location.
+ *
+ * **The source is always stated** (ADR-0013 §6), because an estimated sunset can be half an hour off,
+ * and a user who sees *estimated* knows what the offer below it is for.
+ *
+ * Tonight is read at composition, with the phone's zone at that moment. The screen recomposes whenever
+ * the schedule changes, which covers a new location. A screen left open across a sunrise shows the
+ * night before until something redraws it, and that costs nothing: the alarm and the reconcile never
+ * read these numbers.
+ */
+@Composable
+private fun SunSection(
+    schedule: Schedule,
+    askSpent: Boolean,
+    onLendLocation: () -> Unit,
+) {
+    val zone = ZoneId.systemDefault()
+    val location = remember(schedule, zone) { schedule.locationIn(zone) }
+    val tonight = remember(schedule, zone) { schedule.tonight(System.currentTimeMillis(), zone) }
+
+    if (tonight != null && tonight.followsSun) {
+        Text(
+            text =
+                stringResource(
+                    R.string.schedule_sun_tonight,
+                    rememberTimeText(tonight.start),
+                    rememberTimeText(tonight.end),
+                ),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
+        )
+    } else if (location != null) {
+        Note(stringResource(R.string.schedule_sun_fallback_tonight))
+    }
+
+    Note(
+        stringResource(
+            when (location) {
+                is Location.Lent -> R.string.schedule_location_lent
+                is Location.Estimated -> R.string.schedule_location_estimated
+                null -> R.string.schedule_location_none
+            },
+        ),
+    )
+
+    // Nothing to offer once the location is lent in this zone. A lent location from another zone
+    // reads as the estimate here, and the offer comes back with it, which is the travel case.
+    if (location !is Location.Lent) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onLendLocation)
+                    .padding(horizontal = Spacing.base, vertical = Spacing.snug),
+        ) {
+            Text(
+                text =
+                    stringResource(
+                        if (askSpent) R.string.schedule_location_settings else R.string.schedule_location_ask,
+                    ),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.schedule_location_ask_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
 
 /** A row that states a time and opens the picker that changes it. */
 @Composable

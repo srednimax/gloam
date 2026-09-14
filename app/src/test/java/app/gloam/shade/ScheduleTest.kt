@@ -310,6 +310,16 @@ class ScheduleTest {
             start.isNear("2026-12-21T15:25", warsaw),
         )
         assertEquals(sunrise(LocalDate.parse("2026-12-22"), place), sunOvernight.windowEnd(evening, warsaw))
+
+        // What the screen shows, and it shows it on a schedule that is off and still on fixed times.
+        assertEquals(
+            Night(
+                sunOvernight.nextOn(afternoon, warsaw)!!,
+                sunOvernight.windowEnd(evening, warsaw)!!,
+                followsSun = true,
+            ),
+            overnight.copy(enabled = false).tonight(afternoon, warsaw),
+        )
     }
 
     /** Samoa's calendar date is a day ahead of the sun's there, so this is the row that catches a mix-up. */

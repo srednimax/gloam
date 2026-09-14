@@ -181,7 +181,30 @@
          24-hour follows the phone and the locale for free. -->
     <string name="schedule_title">Schedule</string>
     <string name="schedule_enable">Dim on a schedule</string>
-    <string name="schedule_enable_hint">Gloam puts the shade up and takes it down at the times below, every night.</string>
+    <string name="schedule_enable_hint">Gloam puts the shade up and takes it down on its own, every night.</string>
+    <!-- The two kinds of schedule (ADR-0013). "Sunset to sunrise", never "twilight" or "dusk":
+         sunset is the moment weather apps print, and CONTEXT.md keeps the darker one after it out of
+         the copy. -->
+    <string name="schedule_kind_fixed">Fixed times</string>
+    <string name="schedule_kind_sun">Sunset to sunrise</string>
+    <!-- %1$s is tonight's sunset and %2$s the sunrise after it, as times of day in the phone's own
+         format. After midnight it describes the night already under way, which is still "tonight". -->
+    <string name="schedule_sun_tonight">Tonight: sunset %1$s, sunrise %2$s</string>
+    <!-- Polar nights, when the sun does not set (midnight sun) or does not rise (polar night). The
+         schedule falls back to the fixed times for that night rather than doing nothing. -->
+    <string name="schedule_sun_fallback_tonight">The sun does not set or rise here tonight, so the times below are used.</string>
+    <string name="schedule_sun_fallback_note">On nights the sun does not set or rise here, the shade uses these times.</string>
+    <!-- Which location sunset is worked out for, which the screen always says (ADR-0013 §6).
+         "Location", never "position" or "GPS" (CONTEXT.md): Gloam asks only for the approximate one,
+         and says so, because that is the word Android's own permission dialog uses. -->
+    <string name="schedule_location_estimated">Sunset is estimated from your time zone.</string>
+    <string name="schedule_location_lent">Sunset uses this phone\'s approximate location.</string>
+    <string name="schedule_location_none">Your time zone gives no location, so the times below are used every night.</string>
+    <string name="schedule_location_ask">Use this phone\'s location</string>
+    <string name="schedule_location_ask_hint">For a more accurate sunset. Gloam asks for approximate location only, and keeps it on this phone.</string>
+    <!-- Replaces schedule_location_ask once Android has stopped showing the permission dialog, which
+         it does after two refusals. The only way to allow it then is the app's page in Settings. -->
+    <string name="schedule_location_settings">Allow location in settings</string>
     <string name="schedule_on_at">Turns on</string>
     <string name="schedule_off_at">Turns off</string>
     <!-- Shown only when the pair crosses midnight. It is one derived fact and it is the single most

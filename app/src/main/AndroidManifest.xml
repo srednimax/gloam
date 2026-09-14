@@ -38,6 +38,19 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!--
+        ACCESS_COARSE_LOCATION is the schedule's, for sunset to sunrise (ADR-0013 §6), and it is the
+        only location permission here. It is a **runtime** permission, asked from the schedule screen
+        at the moment the user picks the sun, and never at launch or from a receiver. Every answer
+        leaves a working schedule, because the time zone's estimate needs no permission at all.
+
+        **Not ACCESS_FINE_LOCATION, and that absence is part of the ask.** Declaring both would put
+        a Precise toggle into Android 12's dialog. Sunset moves by under a minute per 10 km, so
+        precision buys nothing a user could notice. `scripts/aab-permissions.py` forbids fine and
+        background location on the built artifact, where a merged declaration would show up.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!--
         Package visibility (API 30+) for the one OEM screen the app offers to open: Xiaomi's
         autostart manager, which on HyperOS decides whether background work runs at all. Without
         this declaration `resolveActivity` returns null on a phone where the activity exists, and

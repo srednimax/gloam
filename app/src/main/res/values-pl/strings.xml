@@ -84,7 +84,18 @@
 
     <string name="schedule_title">Harmonogram</string>
     <string name="schedule_enable">Przyciemniaj według harmonogramu</string>
-    <string name="schedule_enable_hint">Gloam zaciąga i zdejmuje zasłonę o poniższych godzinach, każdej nocy.</string>
+    <string name="schedule_enable_hint">Gloam sam zaciąga i zdejmuje zasłonę, każdej nocy.</string>
+    <string name="schedule_kind_fixed">Stałe godziny</string>
+    <string name="schedule_kind_sun">Od zachodu do wschodu słońca</string>
+    <string name="schedule_sun_tonight">Tej nocy: zachód słońca %1$s, wschód słońca %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Tej nocy słońce tu nie zachodzi albo nie wschodzi, więc obowiązują godziny poniżej.</string>
+    <string name="schedule_sun_fallback_note">W noce, gdy słońce tu nie zachodzi albo nie wschodzi, zasłona działa według tych godzin.</string>
+    <string name="schedule_location_estimated">Zachód słońca jest szacowany na podstawie strefy czasowej.</string>
+    <string name="schedule_location_lent">Zachód słońca jest liczony dla przybliżonej lokalizacji telefonu.</string>
+    <string name="schedule_location_none">Strefa czasowa nie wskazuje lokalizacji, więc godziny poniżej obowiązują każdej nocy.</string>
+    <string name="schedule_location_ask">Użyj lokalizacji telefonu</string>
+    <string name="schedule_location_ask_hint">Dla dokładniejszego zachodu słońca. Gloam prosi tylko o przybliżoną lokalizację i przechowuje ją wyłącznie w tym telefonie.</string>
+    <string name="schedule_location_settings">Zezwól na lokalizację w ustawieniach</string>
     <string name="schedule_on_at">Włącza się</string>
     <string name="schedule_off_at">Wyłącza się</string>
     <string name="schedule_overnight">Przez noc — zasłona znika następnego ranka.</string>
