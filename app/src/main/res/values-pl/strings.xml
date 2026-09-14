@@ -58,6 +58,8 @@
     <string name="settings_launcher_compact_hint">Dotknięcie ikony Gloam otwiera same suwaki zamiast całej aplikacji. Powiadomienie zawsze otwiera małe sterowanie.</string>
     <string name="settings_lock_screen">Ekran blokady</string>
     <string name="settings_lock_screen_body">Gloam nie może przyciemnić ekranu blokady: Android pokazuje go z jasnością ustawioną w telefonie. Na noc ustaw niską jasność, żeby ekran blokady nie był najjaśniejszym punktem w ciemnym pokoju.</string>
+    <string name="settings_flicker">Migotanie</string>
+    <string name="settings_flicker_body">Przy niskiej jasności wiele ekranów migocze zbyt szybko, by dało się to zobaczyć, a niektórych to męczy. Jeśli to ciebie dotyczy, wyłącz „%1$s”, a jasność w telefonie ustaw wyżej. Ekran nie będzie wtedy tak ciemny, ale nie będzie migotać. Niektóre telefony mają też w ustawieniach wyświetlacza opcję redukcji migotania lub ściemniania DC.</string>
 
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Systemowy</string>
