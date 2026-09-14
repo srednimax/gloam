@@ -12,6 +12,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlin.math.abs
 
 /**
  * The window, proven by sweeping time rather than by reasoning about midnight.
@@ -262,5 +263,168 @@ class ScheduleTest {
         val evening = at("2026-06-15", "23:00", warsaw)
         assertEquals(at("2026-06-15", "22:00", warsaw), overnight.windowStart(evening, warsaw))
         assertEquals(at("2026-06-16", "07:00", warsaw), overnight.windowEnd(evening, warsaw))
+    }
+
+    // ------------------------------------------------------------------------------ sunset to sunrise
+
+    private val oslo = ZoneId.of("Europe/Oslo")
+    private val newYork = ZoneId.of("America/New_York")
+    private val tromso = Coordinates(69.65, 18.96)
+
+    /** Warsaw on its zone's estimate, which tzdata puts at Warsaw. */
+    private val sunOvernight = overnight.copy(kind = ScheduleKind.SunsetToSunrise)
+
+    /** Tromsø has to be lent. Its zone is Oslo's, and Oslo, the estimate, has a sunset every day. */
+    private val sunTromso = sunOvernight.copy(lent = Location.Lent(tromso, "Europe/Oslo"))
+
+    /**
+     * A fixed pair that overlaps a polar sunrise, so the sweep reaches the clip between a sun night and
+     * the fallback night after it. An overnight pair never does.
+     */
+    private val sunTromsoMorning = sunTromso.copy(onAt = LocalTime.of(6, 0), offAt = LocalTime.of(9, 0))
+
+    private fun Long.isNear(
+        local: String,
+        zone: ZoneId,
+    ) = abs(
+        this -
+            LocalDateTime
+                .parse(local)
+                .atZone(zone)
+                .toInstant()
+                .toEpochMilli(),
+    ) <= 60_000L
+
+    @Test
+    fun `a winter night in Warsaw runs from sunset to the next sunrise`() {
+        val place = sunOvernight.locationIn(warsaw)!!.coordinates
+        val afternoon = at("2026-12-21", "14:00", warsaw)
+        val evening = at("2026-12-21", "18:00", warsaw)
+
+        assertFalse("before sunset", sunOvernight.contains(afternoon, warsaw))
+        assertEquals(sunset(LocalDate.parse("2026-12-21"), place), sunOvernight.nextOn(afternoon, warsaw))
+
+        val start = sunOvernight.windowStart(evening, warsaw)!!
+        assertTrue(
+            "USNO's 15:25, a minute either way, not ${start.timeIn(warsaw)}",
+            start.isNear("2026-12-21T15:25", warsaw),
+        )
+        assertEquals(sunrise(LocalDate.parse("2026-12-22"), place), sunOvernight.windowEnd(evening, warsaw))
+    }
+
+    /** Samoa's calendar date is a day ahead of the sun's there, so this is the row that catches a mix-up. */
+    @Test
+    fun `Samoa's evening uses the sunset on its own calendar date`() {
+        val apia = ZoneId.of("Pacific/Apia")
+        val start = sunOvernight.windowStart(at("2026-06-21", "20:00", apia), apia)!!
+        assertTrue(
+            "USNO's 18:08, not ${start.dateIn(apia)} ${start.timeIn(apia)}",
+            start.isNear("2026-06-21T18:08", apia),
+        )
+    }
+
+    @Test
+    fun `a location lent in Warsaw is not used in New York`() {
+        val lentInWarsaw = sunOvernight.copy(lent = Location.Lent(Coordinates(52.2, 21.0), "Europe/Warsaw"))
+        assertTrue(lentInWarsaw.locationIn(warsaw) is Location.Lent)
+
+        val estimate = lentInWarsaw.locationIn(newYork)
+        assertTrue("New York gets its own estimate", estimate is Location.Estimated)
+        val evening = at("2026-06-21", "23:00", newYork)
+        assertEquals(
+            sunset(LocalDate.parse("2026-06-21"), estimate!!.coordinates),
+            lentInWarsaw.windowStart(evening, newYork),
+        )
+    }
+
+    /** No location at all, and every night is the fixed pair, minute for minute. */
+    @Test
+    fun `in UTC a sun schedule is the fixed pair`() {
+        val utc = ZoneOffset.UTC
+        assertNull(sunOvernight.locationIn(utc))
+        val start = at("2026-06-15", "00:00", utc)
+        for (minute in 0 until 24 * 60) {
+            val now = start + minute * 60_000L
+            assertEquals("contains at $minute", overnight.contains(now, utc), sunOvernight.contains(now, utc))
+            assertEquals("nextOn at $minute", overnight.nextOn(now, utc), sunOvernight.nextOn(now, utc))
+            assertEquals("windowEnd at $minute", overnight.windowEnd(now, utc), sunOvernight.windowEnd(now, utc))
+            assertEquals("windowStart at $minute", overnight.windowStart(now, utc), sunOvernight.windowStart(now, utc))
+        }
+    }
+
+    @Test
+    fun `Tromso falls back to the fixed pair in the midnight sun and the polar night, and only then`() {
+        for (day in listOf("2026-06-21", "2026-12-21")) {
+            val night = at(day, "23:00", oslo)
+            assertEquals("$day opens at the fixed 22:00", at(day, "22:00", oslo), sunTromso.windowStart(night, oslo))
+            val next = LocalDate.parse(day).plusDays(1).toString()
+            assertEquals("$day closes at the fixed 07:00", at(next, "07:00", oslo), sunTromso.windowEnd(night, oslo))
+        }
+        val september = at("2026-09-14", "23:00", oslo)
+        assertEquals(sunset(LocalDate.parse("2026-09-14"), tromso), sunTromso.windowStart(september, oslo))
+    }
+
+    @Test
+    fun `a year of sun nights in Warsaw, both clock changes included`() {
+        val nights = sweepSunYear(sunOvernight, warsaw)
+        assertTrue("every Warsaw night follows the sun", nights.none { it.timeIn(warsaw) == overnight.onAt })
+    }
+
+    @Test
+    fun `a year at 70 degrees north, where sun nights and fallback nights take turns`() {
+        val nights = sweepSunYear(sunTromso, oslo)
+        val fallback = nights.count { it.timeIn(oslo) == sunTromso.onAt }
+        assertTrue("midnight sun and polar night fall back ($fallback nights)", fallback > 60)
+        assertTrue("spring and autumn follow the sun (${nights.size - fallback} nights)", nights.size - fallback > 120)
+
+        sweepSunYear(sunTromsoMorning, oslo)
+    }
+
+    /**
+     * A year in 13-minute steps, returning every night seen. A minute sweep costs a hundred times the
+     * fixed kind's here, because every question computes a few sunsets, and 13 is prime to 60, so the
+     * samples fall on every minute of the hour over the year. The edges are probed exactly instead:
+     * every `nextOn` is checked as the instant a night opens, and the millisecond before it.
+     */
+    private fun sweepSunYear(
+        schedule: Schedule,
+        zone: ZoneId,
+    ): Set<Long> {
+        val starts = mutableSetOf<Long>()
+        var previousStart: Long? = null
+        var previousEnd: Long? = null
+        var now = at("2026-01-01", "00:00", zone)
+        val end = at("2027-01-01", "00:00", zone)
+        while (now < end) {
+            val inside = schedule.contains(now, zone)
+            val begun = schedule.windowStart(now, zone)
+            val closes = schedule.windowEnd(now, zone)
+            assertEquals("$now: windowStart disagrees with contains", inside, begun != null)
+            assertEquals("$now: windowEnd disagrees with contains", inside, closes != null)
+            if (inside) {
+                assertTrue("$now: not within [$begun, $closes)", begun!! <= now && now < closes!!)
+                starts += begun
+            }
+
+            // The night's identity may not move while the night it identifies is still open.
+            if (previousEnd != null && now < previousEnd) {
+                assertEquals("windowStart drifted inside one night at $now", previousStart, begun)
+            }
+            previousStart = begun
+            previousEnd = closes
+
+            val next = schedule.nextOn(now, zone)
+            assertNotNull("nextOn is null at $now", next)
+            assertTrue("nextOn ($next) is not strictly after $now", next!! > now)
+            assertEquals("nextOn ($next) is not the start of a night", next, schedule.windowStart(next, zone))
+            val justBefore = schedule.windowStart(next - 1, zone)
+            assertTrue(
+                "a night other than now's is open just before nextOn ($next)",
+                justBefore == null || justBefore == begun,
+            )
+
+            now += 13 * 60_000L
+        }
+        return starts
     }
 }
