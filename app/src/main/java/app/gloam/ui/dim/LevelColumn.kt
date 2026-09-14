@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.gloam.R
+import app.gloam.shade.warmthTint
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -288,6 +290,7 @@ fun DimColumn(
 @Composable
 fun WarmthColumn(
     warmth: Int,
+    warmthColor: Int,
     onWarmth: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -302,9 +305,9 @@ fun WarmthColumn(
                 .size(WARMTH_COLUMN_WIDTH_DP.dp, height)
                 .clip(RoundedCornerShape(WARMTH_COLUMN_RADIUS_DP.dp))
                 .background(
-                    Brush.verticalGradient(
-                        listOf(MaterialTheme.colorScheme.primary, colors.warmthMid, colors.warmthCool),
-                    ),
+                    // From the colour the shade actually paints down to nothing, so the top of the
+                    // column is the tint the user chose rather than the app's accent.
+                    Brush.verticalGradient(listOf(Color(warmthTint(warmthColor)), colors.warmthCool)),
                 ).levelDrag(trackHeightPx = trackPx, onLevel = onWarmth, inverted = true)
                 .levelSemantics(label, warmth, onWarmth),
     ) {

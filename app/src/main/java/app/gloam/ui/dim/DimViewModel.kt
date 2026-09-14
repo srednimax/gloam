@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.gloam.MainApplication
 import app.gloam.data.AppPreferences
+import app.gloam.data.DEFAULT_WARMTH_COLOR
 import app.gloam.shade.AutoOff
 import app.gloam.shade.Schedule
 import app.gloam.shade.ShadeEnd
@@ -26,9 +27,12 @@ import java.time.LocalTime
 
 /**
  * @param dimLevel 0–100, the one value the product is about.
- * @param warmth 0–100, how far the shade is tinted amber. Its *applied* strength is not this number
+ * @param warmth 0–100, how far the shade is tinted. Its *applied* strength is not this number
  *   — the ramp scales it by the headroom the dim level leaves — which is why the slider shows what
  *   was asked for rather than what the composite ended up with.
+ * @param warmthColor 0–100, where the tint sits between amber and deep red. The default here is only
+ *   the first frame's; the stored default is [DEFAULT_WARMTH_COLOR], and the two agree so that frame
+ *   does not paint a different colour from the next.
  * @param running whether the user has asked for the shade. **The stored intent, not the live state
  *   of the service** — the service can be killed by the ROM without the user having changed their
  *   mind, and this is the value that survives that.
@@ -49,6 +53,7 @@ import java.time.LocalTime
 data class DimUiState(
     val dimLevel: Int = 0,
     val warmth: Int = 0,
+    val warmthColor: Int = DEFAULT_WARMTH_COLOR,
     val running: Boolean = false,
     val lowerBacklight: Boolean = true,
     val autoOff: AutoOff = AutoOff.Default,
@@ -78,7 +83,9 @@ class DimViewModel(
     val state: StateFlow<DimUiState> =
         combine(
             preferences.dimLevel,
-            preferences.warmth,
+            // Warmth and its colour paired for the same arity reason as the two pairs below, and
+            // they are one section of the screen as well.
+            combine(preferences.warmth, preferences.warmthColor, ::Pair),
             // The intent and the live window paired, because they are the two halves of one
             // question — what the button says — and the arity limit below leaves no sixth slot.
             combine(preferences.shadeIntent, onScreen, ::Pair),
@@ -88,10 +95,11 @@ class DimViewModel(
             // rather than the vararg overload, which hands back an `Array<Any?>` and a cast per
             // field — the type checker is doing real work here and is worth keeping.
             combine(preferences.autoOff, preferences.schedule, ::Pair),
-        ) { level, warmth, (intent, up), lowerBacklight, (autoOff, schedule) ->
+        ) { level, (warmth, warmthColor), (intent, up), lowerBacklight, (autoOff, schedule) ->
             DimUiState(
                 dimLevel = level,
                 warmth = warmth,
+                warmthColor = warmthColor,
                 running = intent.running,
                 lowerBacklight = lowerBacklight,
                 autoOff = autoOff,
@@ -118,6 +126,11 @@ class DimViewModel(
      */
     fun setWarmth(warmth: Int) {
         viewModelScope.launch { preferences.setWarmth(warmth) }
+    }
+
+    /** Written on every drag, like [setWarmth]: the service repaints the tint as the handle moves. */
+    fun setWarmthColor(warmthColor: Int) {
+        viewModelScope.launch { preferences.setWarmthColor(warmthColor) }
     }
 
     /**

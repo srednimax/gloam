@@ -329,7 +329,8 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       someone actually reads at sits well below 100, with the top of the range kept for the nights
       that need it. The backlight was not "already at `MIN_BACKLIGHT`" in the sense that mattered,
       because `MIN_BACKLIGHT` (0.01, 6.64 nits) sat well above the panel's floor (6.84e-4, 2.0 nits).
-      Nits reaching the eye at dim 100:
+      Nits reaching the eye at dim 100, *reckoned in stored values. In light, 1.59 is ≈0.31 and 0.48
+      is ≈0.09 (ADR-0010's seventh amendment)*:
       - **The old `0.01f`:** 1.59, measured.
       - **Backlight at the floor:** ~0.48, about 3× darker. **Taken the same day**: `MIN_BACKLIGHT`
         is now the floor ([ADR-0010](adr/0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
@@ -348,6 +349,15 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
         exempt, so it is the wrong place to test touches. Stacking a second full-screen shade window
         is dead too: one uid's opacities add up, and two windows at 0.8 read as 0.96. The readings are
         in `DimBehindWindow`'s KDoc in `src/debug/`.
+- [x] **Read the shade's transmission in light, not in stored values.** Done 2026-09-13, from the
+      phone alone, and the ramp now derives the shade alpha from light. The readings and what moved
+      are in ADR-0010's seventh amendment.
+- [ ] **A reading the night-reading research still owes** ([`night-reading-research.md`](night-reading-research.md)):
+      a timed reading test before `DEFAULT_WARMTH_COLOR` moves from 50 towards 25 (§3). **§2 is
+      done** (2026-09-14): the panel is PWM from somewhere between 126 and 64 nits downwards, so the
+      floor flickers, and turning the toggle off helps only at a brightness that leaves the page at
+      3–6 nits. Settings now has a *Flicker* section that says so. **§3's test is built** (debug Settings → *Reading test*), and what it still
+      needs is a few nights of runs in a dark room.
 - [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
       inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
       What stood behind the old default was an argument rather than a reading — that a first launcher

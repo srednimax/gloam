@@ -189,6 +189,7 @@ between two windows of ours exactly as it held against everyone else's. The pane
 `BRIGHTNESS_OVERRIDE_NONE` and the shade keeps the override, which is what makes the panel legible at
 the backlight the shade left rather than under the shade, where every Activity of ours sits (R3, R6).
 That was 6.64 against 1.59 nits when measured; since the fifth amendment it is **2.0 against ≈0.48**.
+*(Both shaded figures are stored values. In light they are ≈0.31 and ≈0.09: the seventh amendment.)*
 The field-copy fallback the phase had written down — the panel carrying the shade's own
 `screenBrightness` on every update — is **not built**, and stays in `phase-3.md` §6 as the thing to
 reach for if a ROM ever disagrees.
@@ -225,7 +226,7 @@ by choice, and this amendment says what the choice costs.
 reach the eye, and every lever past it except one was ruled out: raising the shade cap buys about
 17% and breaks this ADR's invariants, `FLAG_DIM_BEHIND` blocks every touch, and a second shade window
 blocks touches because one uid's opacities add up. The backlight was the lever left, and at the floor
-dim 100 is **≈0.48 nits**, about 3.3× darker. The goal is **headroom**: a level someone actually reads
+dim 100 is **≈0.48 nits** *(≈0.09 in light, by the seventh amendment)*, about 3.3× darker. The goal is **headroom**: a level someone actually reads
 at that sits well below 100, rather than a darker number at the top.
 
 **What it costs is R2's criterion, knowingly.** `0.01f` was the value at which the notification
@@ -248,3 +249,95 @@ response because `0.01f` kept the ramp out of the float's bottom decade. The flo
 decade: between the two values the float falls 14.6× and the light only 3.3×, so the bottom of the
 backlight half darkens the screen more slowly per point. Recorded there, and left alone until someone
 notices.
+
+Amendment, 2026-09-13 (sixth). **The warmth child's colour becomes a setting on a fixed path**, from
+`SHADE_AMBER` to `SHADE_RED`, where it used to be the one constant. The decision and both invariants
+stand. The second invariant is now a sweep over the path rather than an assertion on one colour.
+
+**Why.** The tester's verdict on the Phase 2b build was that the warmth colours were poor. Other
+dimmers call this control a reading mode and give it a colour of its own: Twilight has colour
+temperature, intensity and dim, and HyperOS's system Reading mode has a warm tint with its own
+strength. So Gloam gets a warmth colour beside warmth. Its name stays warmth, because HyperOS already
+puts a "Reading mode" in the same quick settings.
+
+**The path is shaped by the veil bound.** Both ends sit at the same relative luminance, `0.0727`, and
+they are blended in linear light, where luminance is linear. So every point on the bar adds the same
+veil, and the invariant cannot depend on where the handle sits. A free colour picker was rejected on
+this bound: any bright colour would have to be held to a near-zero alpha to pass, so most of a picker
+would do nothing. The setting is one integer, so it is a setting and not a table (ADR-0007).
+
+**What the colour does, measured on the composite rather than claimed.** Black text on a white page
+under full warmth and no dim:
+
+| Warmth colour | Tint | Contrast | Green light left | Blue light left |
+| --- | --- | --- | --- | --- |
+| 0 | `#7A3B00` | 6.0 : 1 | 34% | 21% |
+| 50 (default) | `#8D2900` | 5.8 : 1 | 30% | 21% |
+| 100 | `#9E0000` | 5.3 : 1 | 21% | 21% |
+
+The blue is the same at every point, because neither end carries any: **warmth sets the blue, and
+the colour trades green light and a natural-looking screen against a little contrast.** The default
+is the middle, about the hue of a 1000 K light, where Twilight's documentation puts its ideal colour
+temperature. The red end is there for a fully dark room, since red is the light night vision is least
+sensitive to. None of this is a sleep claim. A 2021 study of iOS Night Shift found no difference in
+sleep, and Gloam's listing already avoids health wording (`DOD.md`).
+
+**The compact controls and the panel carry warmth without its colour.** The colour is set once, and
+strength is what somebody changes while reading. Their warmth column is painted in the chosen tint, so
+those surfaces still show it. `PLAN.md`'s *colour filters beyond warmth* stays out of scope: this is
+warmth's own colour, not a second filter.
+
+Amendment, 2026-09-13 (seventh). **The shade's alpha is derived from the light it should leave,
+rather than set to the light it should remove.** The decision, the cap and both invariants stand. What
+changes is the one line of the ramp that turned a share of light into an alpha. It had been wrong
+since Phase 1, and nothing on screen said so.
+
+**Why.** The night-reading research ([`night-reading-research.md`](../night-reading-research.md) §1)
+noticed that the fourth amendment's readings are stored values, not light. Two platform facts sit
+between an alpha and the eye: the 0.8 window-alpha clamp above, and a compositor that blends
+gamma-encoded values, which the panel then turns into light along the sRGB curve. So the black child
+at `a` leaves a white page `linearise(1 − 0.8a)` of its light, roughly `(1 − 0.8a)^2.2`, rather than
+`1 − a`.
+
+**Read off the phone, with no light meter.** There is none to hand, and the phone's own light sensors
+cannot see its screen: the front one sits under the panel, and the other is on the back. Three
+readings stand in for one:
+
+- R3 and R6 read the shade at dim 100 as **0.2393** and **0.2411** of the page's stored value.
+  Blending in light would have read 0.53.
+- `dumpsys SurfaceFlinger` lists the shade as **`CLIENT`** composition in 10 reads out of 12. That is
+  the same GPU renderer `screencap` uses, so those values are what the panel receives. In the other
+  two it was `DEVICE`, composited in hardware, and a hardware composer is required to produce the same
+  pixels as the GPU path it stands in for.
+- The display runs in **`ColorMode::SRGB`**, whose curve is the one `linearise` undoes.
+
+The last step is the display standard rather than a photon count. Any exponent from 2.0 to 2.4 leaves
+every conclusion below standing.
+
+**What it had cost.** With the backlight toggle off, a white page kept:
+
+| Dim level | Meant | Before | Now |
+| ---: | ---: | ---: | ---: |
+| 20 | 54% | 37% | 54% |
+| 60 | 16% | 9% | 16% |
+| 100 | 4.7% | 4.7% | 4.7% |
+
+Most of the darkening happened in the first half of the slider, and the last forty points only halved
+the light. `ShadeRamp.kt` said the shade half was *"exactly geometric because alpha genuinely
+multiplies"* and that the perceived rate could not kink. Neither was true.
+
+**What moves, and what does not.**
+
+- **Dim 100 is no darker than it was**, because `MAX_SHADE_ALPHA` does not move. The figure this ADR
+  quotes for it does: **≈0.09 nits at the floor, not ≈0.48**. The shade had always been darker than
+  the fifth amendment said, and so had anything of Gloam's own under it. The fourth amendment's 1.59
+  was ≈0.31 in light.
+- **Every level between the handover and 100 is now lighter than before**, because the alpha climbs
+  later. Warmth's ease starts at dim ≈86 with the toggle off, and ≈96 with it on at full brightness,
+  rather than ≈71 and ≈91.
+- **The invariants are stated over alphas**, where the two layers multiply, so this change cannot
+  move them. `ShadeRampTest` holds them unchanged. Its constant-rate test now measures light through
+  `shadeTransmission`, and a new test pins that model to R3's reading.
+- **The clamp becomes a constant, `WINDOW_ALPHA_CLAMP`**, read rather than chosen. It shapes the ramp
+  and does not bound it: on a device where somebody has moved the global, the steps are uneven and the
+  child still stops at `MAX_SHADE_ALPHA`.

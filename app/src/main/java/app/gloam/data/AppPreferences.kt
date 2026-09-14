@@ -76,6 +76,7 @@ class AppPreferences(
         val SHADE_RUNNING = booleanPreferencesKey("shade_running")
         val LOWER_BACKLIGHT = booleanPreferencesKey("lower_backlight")
         val WARMTH = intPreferencesKey("warmth")
+        val WARMTH_COLOR = intPreferencesKey("warmth_color")
         val AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
         val OFF_AT_MILLIS = longPreferencesKey("off_at_millis")
         val LAUNCHER_COMPACT = booleanPreferencesKey("launcher_compact")
@@ -169,7 +170,7 @@ class AppPreferences(
     val lowerBacklight: Flow<Boolean> = store.data.map { it[Keys.LOWER_BACKLIGHT] ?: true }
 
     /**
-     * How far the shade is tinted amber, 0–100 (CONTEXT.md: **warmth**).
+     * How far the shade is tinted, 0–100 (CONTEXT.md: **warmth**).
      *
      * **Defaults to 0**, for the same reason [DEFAULT_DIM_LEVEL] is modest: a colour cast nobody
      * asked for is indistinguishable from a broken screen, and warmth is only worth having because
@@ -183,6 +184,19 @@ class AppPreferences(
      * underneath stays legible. That arithmetic is `shadeValuesFor`'s, not this key's.
      */
     val warmth: Flow<Int> = store.data.map { (it[Keys.WARMTH] ?: 0).coerceIn(0, 100) }
+
+    /**
+     * Where warmth's tint sits between amber (0) and deep red (100) (CONTEXT.md: **warmth colour**).
+     * `warmthTint` turns it into the colour the shade paints.
+     *
+     * **Unlike [warmth], it has no visible effect of its own**, so a non-zero default costs nothing:
+     * at warmth 0 there is no tint to colour. That is why the default can be the colour we would
+     * recommend rather than the one that does nothing. See [DEFAULT_WARMTH_COLOR].
+     *
+     * Coerced on read and on write, like [warmth].
+     */
+    val warmthColor: Flow<Int> =
+        store.data.map { (it[Keys.WARMTH_COLOR] ?: DEFAULT_WARMTH_COLOR).coerceIn(0, 100) }
 
     /**
      * Whether a tap on the launcher icon opens the **compact controls** instead of the full app
@@ -365,6 +379,10 @@ class AppPreferences(
         store.edit { it[Keys.WARMTH] = warmth.coerceIn(0, 100) }
     }
 
+    suspend fun setWarmthColor(warmthColor: Int) {
+        store.edit { it[Keys.WARMTH_COLOR] = warmthColor.coerceIn(0, 100) }
+    }
+
     suspend fun setLauncherCompact(enabled: Boolean) {
         store.edit { it[Keys.LAUNCHER_COMPACT] = enabled }
     }
@@ -407,6 +425,17 @@ class AppPreferences(
  * no longer see.
  */
 const val DEFAULT_DIM_LEVEL = 40
+
+/**
+ * Where the warmth colour bar starts on a first run: **the middle, which is also the recommendation.**
+ *
+ * The tint there is `#8D2900`, about the hue of a 1000 K light, which is where Twilight's own guidance
+ * puts its ideal colour temperature. Against the amber end it lets through less green light (30% of the
+ * page's green against 34% at full warmth), and text contrast stays 5.8 : 1 against 6.0. The deep-red
+ * end is still one drag away for a fully dark room, where red spares night vision. The numbers are
+ * `warmthTint`'s, and ADR-0010's sixth amendment has the reasoning.
+ */
+const val DEFAULT_WARMTH_COLOR = 50
 
 /** 22:00, in minutes since local midnight. The plan's own example, and the shape of the thing. */
 const val DEFAULT_SCHEDULE_ON_MINUTES = 22 * 60

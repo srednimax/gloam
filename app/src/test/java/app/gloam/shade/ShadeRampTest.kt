@@ -51,21 +51,23 @@ class ShadeRampTest {
     ): Float {
         val effective = effectiveTop(top, lowerBacklight)
         val ratio = if (effective == null) 1f else effective / MIN_BACKLIGHT
-        return ratio * (1f / (1f - MAX_SHADE_ALPHA))
+        return ratio * (1f / shadeTransmission(MAX_SHADE_ALPHA))
     }
 
     /**
      * Total light reaching the eye at this dim level, as a fraction of what reaches it at dim 0.
      *
      * Released and *held at the top* are the same amount of light — that is the whole point of the
-     * 5% trim in `readBacklight` — so a released override reads as the top here.
+     * 5% trim in `readBacklight` — so a released override reads as the top here. The shade's share is
+     * [shadeTransmission] rather than `1 - shadeAlpha`: an alpha is not a share of the light on this
+     * platform, and `the shade model is anchored to the phone` below is what ties the model to a reading.
      */
     private fun light(
         values: ShadeValues,
         effectiveTop: Float?,
     ): Float {
         val top = effectiveTop ?: 1f
-        return (values.backlight ?: top) / top * (1f - values.shadeAlpha)
+        return (values.backlight ?: top) / top * shadeTransmission(values.shadeAlpha)
     }
 
     private fun sweep(body: (DimSettings, Float?, ShadeValues) -> Unit) {
@@ -130,7 +132,7 @@ class ShadeRampTest {
     /**
      * **The signal invariant, stated over the composite rather than over either child.**
      *
-     * Two layers each inside its own cap still multiply: black at `0.95` under amber at `0.5` leaves
+     * Two layers each inside its own cap still multiply: black at `0.95` under the tint at `0.5` leaves
      * 2.5% of the content with neither child past its limit. The worst case over this grid is
      * *exactly* `1 - MAX_SHADE_ALPHA`, at dim 100, which is why the epsilon is load-bearing rather
      * than defensive.
@@ -179,18 +181,20 @@ class ShadeRampTest {
     /**
      * No jump where the backlight runs out and the shade takes over.
      *
-     * The bound is derived rather than guessed: the steepest the shade alpha can fall is
-     * `ln(ratio × span)` per unit of `t`, reached exactly at the handover, so one point of the
-     * slider can move it by at most a hundredth of that. A fencepost at the seam would move it by
-     * an order of magnitude more, which is what this catches — it does not catch a *wrong*
-     * breakpoint, and is not meant to.
+     * The bound is derived rather than guessed. The shade alpha is `(1 - encode(s)) / clamp`, where
+     * `s` is the light left for it to take and falls by `ln(ratio × span)` of itself per unit of `t`.
+     * So the alpha climbs at `ln(ratio × span) × s × encode'(s) / clamp`, and `s × encode'(s)` is
+     * largest at `s = 1` — exactly the handover — where the sRGB encode's slope is `1.055 / 2.4`. One
+     * point of the slider can move the alpha by at most a hundredth of that. A fencepost at the seam
+     * would move it by an order of magnitude more, which is what this catches — it does not catch a
+     * *wrong* breakpoint, and is not meant to.
      */
     @Test
     fun `nothing jumps where the backlight runs out`() {
         for (top in listOf(1.0f, 0.5f, 0.1f, 0.02f, MIN_BACKLIGHT)) {
             for (lower in listOf(true, false)) {
                 val fall = fall(top, lower)
-                val alphaStep = ln(fall) / 100f * 1.05f
+                val alphaStep = ln(fall) * (1.055f / 2.4f) / WINDOW_ALPHA_CLAMP / 100f * 1.05f
                 val backlightStep = fall.pow(1f / 100f) * 1.001f
                 for (level in 1..100) {
                     val before = shadeValuesFor(DimSettings(level - 1, 0, lower), top)
@@ -292,24 +296,90 @@ class ShadeRampTest {
     }
 
     /**
-     * **The veil invariant, which the signal bound cannot see.**
+     * **The shade model is anchored to the phone**, so the rate test above is not the model agreeing
+     * with itself.
      *
-     * Source-over is `w x amber + (1 - w) x content`: the amber does not only attenuate what is
-     * underneath, it lays light *on top of* it, and how much depends on the amber's own luminance. A
-     * bright amber passes every other assertion in this file and produces a screen nothing can be
-     * read through — `#FFB000` at half alpha is four times more veil than content — so the second
-     * bound says the amber may never add more light than the black child was allowed to leave.
-     *
-     * One assertion, no sweep: it is a property of the constants rather than of any input.
+     * `phase-3.md`'s R3 and R6 read the shade at dim 100 off `screencap` as 0.2393 and 0.2411 of the
+     * page's stored value: that is `1 - WINDOW_ALPHA_CLAMP × MAX_SHADE_ALPHA`, and it pins the clamp.
+     * The light that value emits is its sRGB decode, ≈ 0.047 — which is why the pair of readings meant
+     * a darker shade than the `0.24` they looked like, and what this says in numbers. And no alpha
+     * leaves no light behind: a transparent shade passes all of it.
      */
     @Test
-    fun `the amber never adds more light than the black layer was allowed to leave`() {
-        val luminance = relativeLuminance(SHADE_AMBER)
-        val veil = MAX_WARMTH_ALPHA * luminance
-        assertTrue(
-            "SHADE_AMBER has luminance $luminance, so it veils $veil against a bound of ${1f - MAX_SHADE_ALPHA}",
-            veil <= 1f - MAX_SHADE_ALPHA,
-        )
+    fun `the shade model is anchored to the phone`() {
+        val storedAtCap = 1f - WINDOW_ALPHA_CLAMP * MAX_SHADE_ALPHA
+        assertEquals("R3 and R6 read 0.2393-0.2411 at the cap", 0.240f, storedAtCap, 0.002f)
+        assertEquals("light at the cap", 0.047f, shadeTransmission(MAX_SHADE_ALPHA), 0.001f)
+        assertEquals("a transparent shade", 1f, shadeTransmission(0f), EPSILON)
+    }
+
+    /**
+     * **The veil invariant, which the signal bound cannot see.**
+     *
+     * Source-over is `w x tint + (1 - w) x content`: the tint does not only attenuate what is
+     * underneath, it lays light *on top of* it, and how much depends on the tint's own luminance. A
+     * bright amber passes every other assertion in this file and produces a screen nothing can be
+     * read through — `#FFB000` at half alpha is four times more veil than content — so the second
+     * bound says the tint may never add more light than the black child was allowed to leave.
+     *
+     * Swept over every warmth colour rather than asserted on one constant, because since the colour bar
+     * the tint is an input: whatever the handle says is what gets painted.
+     */
+    @Test
+    fun `no warmth colour adds more light than the black layer was allowed to leave`() {
+        for (warmthColor in 0..100) {
+            val luminance = relativeLuminance(warmthTint(warmthColor))
+            val veil = MAX_WARMTH_ALPHA * luminance
+            assertTrue(
+                "warmth colour $warmthColor has luminance $luminance, so it veils $veil " +
+                    "against a bound of ${1f - MAX_SHADE_ALPHA}",
+                veil <= 1f - MAX_SHADE_ALPHA,
+            )
+        }
+    }
+
+    /** The bar's two ends are the two constants, so the constants are what the rest of this file proves. */
+    @Test
+    fun `the warmth colour runs from the amber to the red`() {
+        assertEquals("0 is the amber", SHADE_AMBER, warmthTint(0))
+        assertEquals("100 is the red", SHADE_RED, warmthTint(100))
+        assertEquals("below the range clamps", SHADE_AMBER, warmthTint(-5))
+        assertEquals("above the range clamps", SHADE_RED, warmthTint(150))
+    }
+
+    /**
+     * **The colour bar moves the hue and not the veil**, which is the property the blend in linear light
+     * was chosen for. Within 2% end to end, and the slack is only bytes being rounded. A blend of the
+     * stored bytes would fail this in the middle, which is what it is here to catch.
+     */
+    @Test
+    fun `every warmth colour carries the same light`() {
+        val reference = relativeLuminance(SHADE_AMBER)
+        assertEquals("the ends were picked to match", reference, relativeLuminance(SHADE_RED), reference * 0.02f)
+        for (warmthColor in 0..100) {
+            assertEquals(
+                "warmth colour $warmthColor",
+                reference.toDouble(),
+                relativeLuminance(warmthTint(warmthColor)).toDouble(),
+                reference * 0.02,
+            )
+        }
+    }
+
+    /** Redder all the way along: the green share never rises, and the tint never picks up blue. */
+    @Test
+    fun `the warmth colour only ever gets redder`() {
+        var previous = Float.MAX_VALUE
+        for (warmthColor in 0..100) {
+            val tint = warmthTint(warmthColor)
+            val red = tint shr 16 and 0xFF
+            val green = tint shr 8 and 0xFF
+            val share = green.toFloat() / red
+            assertTrue("warmth colour $warmthColor turned greener", share <= previous)
+            assertEquals("warmth colour $warmthColor carries blue", 0, tint and 0xFF)
+            assertEquals("warmth colour $warmthColor is not opaque", 0xFF, tint ushr 24)
+            previous = share
+        }
     }
 
     /**

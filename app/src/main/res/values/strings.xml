@@ -88,8 +88,12 @@
 
     <!-- The warmth slider. "Warmth" per CONTEXT.md: not "night mode" — that is the app's own dark
          theme — and not any wording about filtering or cutting blue light, which an overlay cannot
-         do. It adds amber over an already-dark screen. -->
+         do. It adds a tint, somewhere between amber and deep red, over an already-dark screen. -->
     <string name="dim_warmth_label">Warmth</string>
+    <!-- The bar under Warmth: which tint, from amber at one end to deep red at the other. "Colour"
+         in the sense of hue only. How strong the tint is belongs to the Warmth bar, and this one has
+         no number beside it. Short: it sits in a column beside a slider on a phone held upright. -->
+    <string name="dim_warmth_color_label">Colour</string>
 
     <!-- The compact controls (docs/phase-3.md §2, §10). The floating window shows the same sliders
          and nothing else, so this is its one way to the rest of the app — without it the dialog is a
@@ -110,6 +114,26 @@
     <string name="settings_controls">Controls</string>
     <string name="settings_launcher_compact">Open the small controls from the icon</string>
     <string name="settings_launcher_compact_hint">Tapping Gloam opens just the sliders instead of the whole app. The notification always opens the small controls.</string>
+
+    <!-- The lock screen (docs/night-reading-research.md §4). The keyguard hides every overlay
+         window, and the shade's backlight override goes with it, so waking the phone at night is the
+         brightest moment of the session and nothing Gloam draws can change that. The first sentence
+         says whose behaviour it is, so it does not read as a Gloam defect; the second is the only
+         help there is. "Brightness", not "backlight": it is the user's own setting, in Android's
+         word. Glare, never sleep - no health claims. -->
+    <string name="settings_lock_screen">Lock screen</string>
+    <string name="settings_lock_screen_body">Gloam cannot dim the lock screen: Android shows it at your phone\'s own brightness. Keep that brightness low at night, so the lock screen is not the brightest thing in a dark room.</string>
+
+    <!-- Flicker (docs/night-reading-research.md §2). Filmed on the development phone: below
+         somewhere between 126 and 64 nits the panel dims by PWM, and the backlight floor is far inside
+         that. The only lever an app has is to leave the backlight alone, which costs darkness, so the
+         body says it as a trade-off rather than a fix. The phone's own anti-flicker setting is
+         mentioned, never promised: it is hidden on the development phone, so how it behaves with a
+         lowered backlight is untested. No numbers, because the switch point differs between panels.
+         Tiring, not eye strain - no health claims. %1$s is dim_backlight_label, quoted as the toggle's
+         name so it cannot drift from it. -->
+    <string name="settings_flicker">Flicker</string>
+    <string name="settings_flicker_body">At low brightness, many screens flicker too fast to see, and some people find that tiring. If you do, turn off “%1$s” and keep your phone\'s own brightness higher. The screen won\'t get as dark, but it won\'t flicker. Some phones also have an anti-flicker or DC dimming option in their display settings.</string>
 
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>

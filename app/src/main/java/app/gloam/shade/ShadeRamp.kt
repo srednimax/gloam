@@ -1,6 +1,7 @@
 package app.gloam.shade
 
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * What the user asked for. Read from DataStore and combined into one value.
@@ -10,9 +11,10 @@ import kotlin.math.pow
  * whole triple, so a caller cannot pass the dim level where the warmth was meant.
  *
  * @param dimLevel 0–100, the one value the product is about (CONTEXT.md: **dim level**).
- * @param warmth 0–100, how far the shade is tinted amber (CONTEXT.md: **warmth**). A separate
+ * @param warmth 0–100, how strongly the shade is tinted (CONTEXT.md: **warmth**). A separate
  *   control from the dim level, but not an independent one: [shadeValuesFor] scales it by the
- *   headroom the dim level leaves.
+ *   headroom the dim level leaves. Which tint, amber to deep red, is the warmth colour's, and it is
+ *   not in this triple because it moves the hue and never the light — see [warmthTint].
  * @param lowerBacklight whether Gloam may take the **backlight** down before it draws the shade.
  */
 data class DimSettings(
@@ -30,7 +32,7 @@ data class DimSettings(
  *   `null` cannot be accidentally arithmetic'd into a ramp the way `-1f` can. It becomes the
  *   sentinel at the one place that talks to `LayoutParams`.
  * @param shadeAlpha the black child's alpha, `0f … MAX_SHADE_ALPHA`.
- * @param warmthAlpha the amber child's alpha, `0f … MAX_WARMTH_ALPHA`.
+ * @param warmthAlpha the tint child's alpha, `0f … MAX_WARMTH_ALPHA`.
  */
 data class ShadeValues(
     val backlight: Float?,
@@ -45,8 +47,26 @@ data class ShadeValues(
  * 1.0 is a black rectangle with every way out of it behind it: the notification shade, the app, the
  * Stop action. The cap is the difference between a very dark screen and a phone the user believes is
  * broken. A constant rather than a preference on purpose — it is a safety floor, not a taste.
+ *
+ * **It is an alpha, not a share of the light.** Under the platform's [WINDOW_ALPHA_CLAMP] a white page
+ * keeps 0.24 of its stored value at the cap, which is ≈ 4.7% of its light ([shadeTransmission]).
  */
 const val MAX_SHADE_ALPHA = 0.95f
+
+/**
+ * The alpha the platform lets the shade's *window* carry: `maximum_obscuring_opacity_for_touch`,
+ * Android 12's cap on an overlay that lets touches pass through (ADR-0010's fourth amendment). The
+ * window manager writes it into the window's own alpha, so the black child at `a` covers the page by
+ * `WINDOW_ALPHA_CLAMP × a` — a number this app never sets and cannot raise without catching touches.
+ *
+ * **Android's default, read rather than chosen**: unset on the development phone and on the API-33
+ * emulator, so both sit at the framework's 0.8 (`phase-3.md` R1, R13). It is readable at runtime
+ * (`InputManager.getMaximumObscuringOpacityForTouch`) and deliberately not read, because only the
+ * ramp's *shape* depends on it. On a device where somebody has moved the global, the slider's steps
+ * are uneven, and the child still stops at [MAX_SHADE_ALPHA] exactly as it did before this constant
+ * existed.
+ */
+const val WINDOW_ALPHA_CLAMP = 0.8f
 
 /**
  * The lowest window brightness override Gloam will ask for. **Never `0f`**, which is
@@ -79,10 +99,10 @@ const val MAX_SHADE_ALPHA = 0.95f
 const val MIN_BACKLIGHT = 6.83661E-4f
 
 /**
- * The most amber the warmth child may ever carry.
+ * The most tint the warmth child may ever carry.
  *
  * It is half of the pair that keeps the composite legible — see [shadeValuesFor]'s two invariants —
- * and it is what caps the amber's own luminance at `0.10`, which is why the shade's colour cannot
+ * and it is what caps the tint's own luminance at `0.10`, which is why the shade's colour cannot
  * come from `MaterialTheme`.
  */
 const val MAX_WARMTH_ALPHA = 0.5f
@@ -93,7 +113,9 @@ const val MAX_WARMTH_ALPHA = 0.5f
  *
  * The binding constraint is `(1 - WARMTH_EASE_FROM) × (1 - MAX_WARMTH_ALPHA) ≥ 1 - MAX_SHADE_ALPHA`,
  * which caps this at `0.90`. `0.88f` leaves margin — `0.06` against a `0.05` bound — and puts the
- * onset at dim level ≈ 90 with the backlight toggle on and ≈ 71 with it off.
+ * onset at dim level ≈ 96 with the backlight toggle on at full brightness and ≈ 86 with it off. (It was
+ * ≈ 91 and ≈ 71 until ADR-0010's seventh amendment: the alpha now climbs later along the slider, so
+ * warmth yields over fewer points.)
  *
  * **The ease is defined over the shade alpha rather than over the dim level**, because the invariant
  * it protects is stated over the shade alpha. Easing over the dim level instead would mean re-proving
@@ -102,8 +124,9 @@ const val MAX_WARMTH_ALPHA = 0.5f
 const val WARMTH_EASE_FROM = 0.88f
 
 /**
- * The amber the warmth child is painted with, ARGB — and **deliberately not a `MaterialTheme`
- * colour**, the one exception to the house rule that every colour comes from the palette.
+ * The amber end of the warmth colour's path ([warmthTint]), ARGB — and **deliberately not a
+ * `MaterialTheme` colour**, the one exception to the house rule that every colour comes from the
+ * palette. Until ADR-0010's sixth amendment it was the only colour the warmth child could be.
  *
  * Three things separate it from every other colour in the app: the shade is not a surface but a
  * physical quantity chosen for its effect on light; it must not change when the user switches the
@@ -121,6 +144,50 @@ const val WARMTH_EASE_FROM = 0.88f
  * `ShadeRampTest` holds both ends of it.
  */
 const val SHADE_AMBER = 0xFF7A3B00.toInt()
+
+/**
+ * The deep-red end of the warmth colour's path, ARGB: pure red at **the same relative luminance as
+ * [SHADE_AMBER]** (`0.0727` against `0.0727`), which is what picked `9E` out of its neighbours.
+ *
+ * Red at the far end because it is the light the eye's night vision is least sensitive to, which is
+ * the one case where going past orange buys something for a reader in a dark room. Equal luminance
+ * because of what [warmthTint] does with the pair.
+ */
+const val SHADE_RED = 0xFF9E0000.toInt()
+
+/**
+ * The colour the warmth child is painted with at a warmth colour of 0–100 (CONTEXT.md: **warmth
+ * colour**): [SHADE_AMBER] at 0, [SHADE_RED] at 100.
+ *
+ * **The bar moves the hue and never the light the tint adds.** The two ends are blended in *linear*
+ * light rather than in the stored bytes, and relative luminance is a weighted sum of linear channels,
+ * so it is linear along the blend. Two ends of equal luminance make it constant across the whole bar —
+ * `0.0719 … 0.0734` after rounding to bytes — and the veil invariant cannot depend on where the handle
+ * sits. What the bar trades is how natural the screen looks against how much green light gets
+ * through. Black text on a white page under full warmth and no dim keeps **6.0 : 1** at the amber end,
+ * **5.8** in the middle and **5.3** at the red end, with 34%, 30% and 21% of the page's green light
+ * left. The blue left is 21% everywhere, because neither end carries any blue: blue is set by the
+ * warmth, not by its colour.
+ *
+ * A blend of the stored bytes would dip in the middle instead, because the transfer function is
+ * convex. That is still inside the bound, but it would make the middle of the bar darker and duller than
+ * either end, and nothing about the middle asks for that.
+ *
+ * The middle, `#8D2900`, is where [app.gloam.data.DEFAULT_WARMTH_COLOR] puts a first run: about the
+ * hue of a 1000 K light.
+ */
+fun warmthTint(warmthColor: Int): Int {
+    val t = warmthColor.coerceIn(0, 100) / 100f
+
+    // Kotlin note: a function declared inside a function is a closure over `t`, the same as a nested
+    // `function` in JS. It exists so each channel's blend is written once, not three times.
+    fun channel(shift: Int): Int {
+        val from = linearise((SHADE_AMBER shr shift and 0xFF) / 255f)
+        val to = linearise((SHADE_RED shr shift and 0xFF) / 255f)
+        return (encode(from + (to - from) * t) * 255f).roundToInt().coerceIn(0, 255)
+    }
+    return (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+}
 
 /**
  * WCAG relative luminance of an ARGB colour, alpha ignored: how much light the colour itself
@@ -142,6 +209,25 @@ fun relativeLuminance(color: Int): Float {
 private fun linearise(channel: Float): Float =
     if (channel <= 0.03928f) channel / 12.92f else ((channel + 0.055f) / 1.055f).pow(2.4f)
 
+/** [linearise] run forwards: linear light back to the gamma-encoded value a byte stores. */
+private fun encode(light: Float): Float =
+    if (light <= 0.0030402f) light * 12.92f else 1.055f * light.pow(1f / 2.4f) - 0.055f
+
+/**
+ * The share of a white page's light that still reaches the eye through the black child at
+ * [shadeAlpha]: the model this ramp is stated in, and the one [shadeValuesFor] runs backwards.
+ *
+ * Two steps, and **both belong to the platform rather than to this code**. The window is clamped to
+ * [WINDOW_ALPHA_CLAMP], so the page keeps `1 - clamp × alpha` of each stored value. And the compositor
+ * blends those stored, gamma-encoded values rather than light, so what the panel emits is that value
+ * [linearise]d — roughly its 2.2th power. At the cap that is ≈ 0.047 of the light, where
+ * `1 - MAX_SHADE_ALPHA` would read 0.05 and `1 - clamp × MAX_SHADE_ALPHA` 0.24.
+ *
+ * Stated for a white page, the brightest thing the shade covers. Near black the sRGB curve turns
+ * straight, so dark content keeps a larger share — of very little light.
+ */
+fun shadeTransmission(shadeAlpha: Float): Float = linearise(1f - WINDOW_ALPHA_CLAMP * shadeAlpha)
+
 /**
  * One dim level, one ramp, in a fixed order (ADR-0010): spend the **backlight** first, then draw the
  * **shade** over what is left, then tint it.
@@ -156,9 +242,9 @@ private fun linearise(channel: Float): Float =
  * So the ramp is stated once, over the quantity that matters, and the breakpoint falls out of it:
  *
  * ```
- * ratio = backlightTop / MIN_BACKLIGHT      // 1.0 when there is no backlight to spend
- * span  = 1 / (1 - MAX_SHADE_ALPHA)         // 20 — what the shade alone can take
- * light = (ratio * span) ^ -t               // fraction of the top's light still reaching the eye
+ * ratio = backlightTop / MIN_BACKLIGHT                // 1.0 when there is no backlight to spend
+ * span  = 1 / shadeTransmission(MAX_SHADE_ALPHA)      // ≈ 21.3 — what the shade alone can take
+ * light = (ratio * span) ^ -t                         // share of the top's light still reaching the eye
  * ```
  *
  * **Total light falls at a constant ratio per point from 0 to 100, and the backlight is spent
@@ -169,8 +255,8 @@ private fun linearise(channel: Float): Float =
  *
  * Geometric rather than linear because perception of brightness is roughly logarithmic: equal slider
  * travel should buy an equal *ratio* of light, not an equal subtraction of it. Half-way through the
- * shade's stretch a linear ramp still transmits 52% of the content and a geometric one 22%, which is
- * the difference between a slider whose useful range is its last few points and one whose whole
+ * shade's stretch a ramp linear in alpha still passes 34% of the light and a geometric one 22%, which
+ * is the difference between a slider whose useful range is its last few points and one whose whole
  * length does something.
  *
  * Four things this shape gets for free that a fixed breakpoint had to assert: there is no dead zone
@@ -188,9 +274,10 @@ private fun linearise(channel: Float): Float =
  * **Measured with the old `0.01f` floor, it was small enough to leave alone.** Over the whole slider
  * the shortfall in perceptual travel was under 4% at either end of the user's own brightness range.
  * The backlight stretch delivered 94% of the ratio it promised at maximum and 80% for a user already
- * at their system minimum, and the shade half is exactly geometric because alpha genuinely
- * multiplies. The correction would cost a fifth constant whose value (`498.3` and `1.66`) is **this
- * panel's and is not readable from an app**: a device-specific number carried for every device.
+ * at their system minimum. (This paragraph used to add that the shade half was exactly geometric
+ * because alpha genuinely multiplies. It was not — see the next section.) The correction would cost a
+ * constant whose value (`498.3` and `1.66`) is **this panel's and is not readable from an app**: a
+ * device-specific number carried for every device.
  *
  * **Since [MIN_BACKLIGHT] moved to the floor, the distortion is no longer small.** It bites in the
  * float's bottom decade, where the 1.66-nit offset is most of the light, and the ramp now ends inside
@@ -198,6 +285,29 @@ private fun linearise(channel: Float): Float =
  * stretch of the backlight half darkens the screen more slowly per point than the rest of the slider.
  * That is feel, not safety: monotonicity and continuity still hold. It is left alone until someone
  * notices, and the same panel-specific constant would still be the price of fixing it.
+ *
+ * ## The shade's alpha is derived from the light, not equal to the light it removes
+ *
+ * **Until ADR-0010's seventh amendment this ramp set `shadeAlpha = 1 - light`**, on the belief that
+ * an alpha takes away that share of the light. On this platform it does not, for the two reasons in
+ * [shadeTransmission]: the window alpha clamp, and blending in stored values rather than in light.
+ * Neither is a choice this code made, and the ramp now runs that model backwards: the light the shade
+ * must leave, then the stored value that emits it ([encode]), then the child alpha that becomes that
+ * coverage once the window is clamped.
+ *
+ * **Read off the phone, without a light meter**, in three steps. `screencap` reads the shade at dim 100
+ * as 0.2393 of the page's stored value (`phase-3.md` R3), where blending in light would have read
+ * 0.53. `dumpsys SurfaceFlinger` lists the shade as `CLIENT` composition in 10 reads of 12 — the same
+ * GPU renderer `screencap` uses — so those values are what the panel receives; the other two were
+ * `DEVICE`, where the hardware composer is held to the same pixels (2026-09-13). And the display runs
+ * in `ColorMode::SRGB`, which is the curve [linearise] undoes. The
+ * last step is the display standard rather than a photon count; any exponent from 2.0 to 2.4 leaves
+ * every conclusion here standing.
+ *
+ * **What the old expression cost.** With the toggle off, dim 60 passed 9% of the light where 16% was
+ * meant, and the last forty points only halved it, so most of the slider's darkening happened in its
+ * first half. Dim 100 does not move, because the cap does not: ≈ 4.7% of the light, ≈ 0.09 nits at
+ * the floor.
  *
  * ## What it deliberately does not promise
  *
@@ -209,12 +319,14 @@ private fun linearise(channel: Float): Float =
  *
  * ```
  * (1 - shadeAlpha) * (1 - warmthAlpha)  ≥  1 - MAX_SHADE_ALPHA
- * MAX_WARMTH_ALPHA * relativeLuminance(amber)  ≤  1 - MAX_SHADE_ALPHA
+ * MAX_WARMTH_ALPHA * relativeLuminance(tint)  ≤  1 - MAX_SHADE_ALPHA   // every warmthTint(0..100)
  * ```
  *
  * The first says the composite may never take more signal than the black child alone was allowed to
- * take: two layers each inside its own cap still multiply, and black at `0.95` under amber at `0.5`
- * leaves 2.5% of the content — half of what was ever allowed. The second says the amber may never
+ * take: two layers each inside its own cap still multiply, and black at `0.95` under the tint at `0.5`
+ * leaves 2.5% of the content's stored values — half of what was ever allowed. Both are stated over
+ * alphas, which is where the layers multiply, so deriving the alpha from light moved neither of them.
+ * The second says the tint may never
  * *add* more light than the black child was allowed to leave, because source-over lays veiling light
  * on top of the content and the first invariant cannot see that term at all.
  *
@@ -247,7 +359,7 @@ fun shadeValuesFor(
             ?.takeIf { settings.lowerBacklight && it >= minBacklight && it <= 1f }
 
     val ratio = if (top == null) 1f else top / minBacklight
-    val span = 1f / (1f - MAX_SHADE_ALPHA)
+    val span = 1f / shadeTransmission(MAX_SHADE_ALPHA)
     val light = (ratio * span).pow(-t)
 
     // Dim level 0 is the one special case, and it is one line: the override is *released* rather
@@ -255,7 +367,11 @@ fun shadeValuesFor(
     // what that means physically — the shade is transparent, the backlight is the user's own, and
     // their brightness slider works again. Everything else falls out of the expression above.
     val backlight = if (top == null || settings.dimLevel <= 0) null else maxOf(top * light, minBacklight)
-    val shadeAlpha = (1f - minOf(1f, light * ratio)).coerceIn(0f, MAX_SHADE_ALPHA)
+
+    // The light left for the shade to take, then [shadeTransmission] run backwards. At dim 100 this
+    // lands on `MAX_SHADE_ALPHA` by construction, give or take a float's last bit, which the clamp eats.
+    val shadeLight = minOf(1f, light * ratio)
+    val shadeAlpha = ((1f - encode(shadeLight)) / WINDOW_ALPHA_CLAMP).coerceIn(0f, MAX_SHADE_ALPHA)
 
     // Something has to give at the very top, and it cannot be the dim level — that is the one value
     // the product is about. So the applied warmth is the user's warmth scaled by the headroom the
