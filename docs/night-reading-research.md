@@ -40,6 +40,25 @@ Do this first, before changing the ramp.
 - If Gloam's backlight floor sits inside the PWM range, add a line to the **lower backlight**
   toggle's description saying that turning it off avoids low-brightness flicker. Those are new
   strings, so they go through the translation gate.
+- **Measured, 2026-09-14.** Filmed with a second phone (Xiaomi 14T Pro, Pro video mode, 1/8000 s and
+  1/4000 s, dark room) while debug Settings → Developer → *Run sweep* ran. Slow motion was not needed:
+  1920 Hz is far above any video frame rate, and a short shutter shows PWM as rolling-shutter stripes.
+  The `override:` line is readable in the frames, so each step is certain. Both videos agree:
+
+  | Override | Panel (R1 fit) | Stripes |
+  |---|---|---|
+  | 1.0 → 0.25 | 500 → 126 nits | none |
+  | 0.125 → 0.0001 | 64 nits → floor | **yes** |
+  | `MIN_BACKLIGHT` 6.84e-4 | 2.0 nits | **yes** |
+  | released, at the user's own 10% | ≈50 nits | **yes** |
+
+  **The panel switches to PWM somewhere between 126 and 64 nits.** The sweep has no step in between.
+  The backlight floor is deep inside the PWM range, and so is an ordinary low system brightness.
+- **So the line suggested above would be wrong.** Turning the toggle off avoids flicker only if the
+  user's own brightness stays above that range. The shade alone divides light by ≈21.3 at dim 100, so
+  a flicker-free page can get no darker than about 3–6 nits, against ≈0.09 nits with the backlight
+  lowered. Any copy has to present it as a trade-off, without numbers, since the switch point differs
+  between panels. That decision is still open.
 
 ## 3. Default warmth colour
 
