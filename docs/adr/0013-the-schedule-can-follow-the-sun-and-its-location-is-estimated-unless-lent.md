@@ -65,12 +65,17 @@ night by night, not season by season:
 | Source | Used when | Needs |
 | --- | --- | --- |
 | **Lent location** | One is stored, **and** it was read in the time zone the phone is in now | The user's grant, once |
-| **Estimated location** | Otherwise: the principal location of the phone's time zone, from IANA's `zone1970.tab` plus its `backward` aliases | Nothing |
+| **Estimated location** | Otherwise: the principal location of the phone's time zone, from IANA's `zone.tab`, then `zone1970.tab`, then tzdata's links for old names | Nothing |
 | The fixed pair | Neither exists | Nothing |
 
-A script generates the estimate table from tzdata, which is public domain. The table is committed and
-regenerated when tzdata adds zones. A zone missing from it falls back to the fixed pair; it never
-fails.
+A script (`scripts/gen_zone_locations.py`) generates the estimate table from tzdata, which is public
+domain. The table is committed and regenerated when tzdata adds zones. A zone missing from it falls
+back to the fixed pair; it never fails.
+
+**`zone.tab` comes first, not `zone1970.tab`**, which was found while building the table. Since 2022,
+tzdata has merged zones that agree after 1970 into links. `zone1970.tab` lists only the zone that
+survived a merge, so from it alone `Europe/Oslo` would be `Europe/Berlin`, and an Oslo phone would get a
+summer sunset more than an hour early. `zone.tab` still records Oslo at Oslo.
 
 **6. The ask is `ACCESS_COARSE_LOCATION` and nothing more.** Never fine location, never background.
 

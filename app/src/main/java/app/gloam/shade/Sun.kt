@@ -4,6 +4,15 @@ import java.time.LocalDate
 import kotlin.math.roundToLong
 
 /**
+ * A place on the earth in degrees, north and east positive. It is either a lent location or an
+ * estimated one (CONTEXT.md: **location**), and the sun doesn't care which.
+ */
+data class Coordinates(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+/**
  * Sunrise and sunset on one day at one place, as epoch millis. Either is `null` when the sun does not
  * do that on that day, which is the polar case ADR-0013 falls back to the fixed times for.
  *
