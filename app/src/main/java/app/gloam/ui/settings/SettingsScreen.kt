@@ -85,6 +85,18 @@ fun SettingsScreen(
                 modifier = Modifier.padding(horizontal = Spacing.base),
             )
 
+            // Advice again, and for the same reason: flicker is the panel's way of dimming at low
+            // brightness, and no API lets an app change it (docs/night-reading-research.md §2). The
+            // toggle's label is passed in rather than repeated in the body, so renaming it renames it
+            // here too.
+            SectionHeader(stringResource(R.string.settings_flicker))
+            Text(
+                text = stringResource(R.string.settings_flicker_body, stringResource(R.string.dim_backlight_label)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.base),
+            )
+
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
 

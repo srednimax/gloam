@@ -58,7 +58,13 @@ Do this first, before changing the ramp.
   user's own brightness stays above that range. The shade alone divides light by ≈21.3 at dim 100, so
   a flicker-free page can get no darker than about 3–6 nits, against ≈0.09 nits with the backlight
   lowered. Any copy has to present it as a trade-off, without numbers, since the switch point differs
-  between panels. That decision is still open.
+  between panels.
+- **Copy done, 2026-09-14.** A *Flicker* section in Settings, next to *Lock screen*
+  (`settings_flicker`, `settings_flicker_body`), in English and Polish. It states the trade-off and
+  mentions a phone's own anti-flicker or DC dimming setting without promising anything. The
+  development phone has none: its device features say `support_dc_backlight` and
+  `support_low_flicker_backlight` are `false`, and `hide_flicker_backlight` is `true`. So how that
+  setting behaves with a lowered backlight is untested.
 
 ## 3. Default warmth colour
 
