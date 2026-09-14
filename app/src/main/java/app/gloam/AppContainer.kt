@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import app.gloam.data.AppPreferences
+import app.gloam.data.LENT_LOCATION_STORE
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -17,6 +18,16 @@ import kotlinx.coroutines.CoroutineScope
  * over the same file throws, so this must stay the only one.
  */
 internal val Context.preferencesStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
+
+/**
+ * The lent location, **in a file of its own so Auto Backup can leave it out** (ADR-0013 §8).
+ *
+ * A second file rather than three more keys above, because backup rules exclude files, not keys.
+ * `res/xml/data_extraction_rules.xml` names this file by its path on disk, and `BackupRulesTest`
+ * holds the two names together. A rename that broke the pair would put the user's location in their
+ * Google backup, and nothing on screen would show it.
+ */
+internal val Context.lentLocationStore: DataStore<Preferences> by preferencesDataStore(name = LENT_LOCATION_STORE)
 
 /**
  * Manual dependency injection — deliberately not Hilt.
