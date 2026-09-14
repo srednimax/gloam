@@ -26,6 +26,7 @@ import app.gloam.shade.stopShade
 import app.gloam.theme.AppTheme
 import app.gloam.ui.dim.CompactControls
 import app.gloam.ui.dim.DimViewModel
+import app.gloam.work.refreshLentLocation
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -228,6 +229,17 @@ class ControlsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (!isFinishing) forwardIfUnusable()
+    }
+
+    /**
+     * Re-reads a lent location, `MainActivity.onStart`'s rule. It matters more here, because the
+     * launcher icon lands on this window by default, so for most users this is what opening Gloam
+     * means. `lifecycleScope` cancels a read still in flight when this dialog closes, which keeps
+     * the read to while Gloam is in front (ADR-0013 §7).
+     */
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch { refreshLentLocation((application as MainApplication).preferences) }
     }
 
     /**

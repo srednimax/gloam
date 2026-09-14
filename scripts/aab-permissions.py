@@ -71,7 +71,7 @@ PRIM_BOOLEAN = 8
 PRIM_INT_DEC = 6
 PRIM_INT_HEX = 7
 
-# Every <uses-permission> the release artifact is allowed to carry. Five are
+# Every <uses-permission> the release artifact is allowed to carry. Six are
 # declared in app/src/main/AndroidManifest.xml; the last one arrives merged from
 # AndroidX, which is the whole reason this reads the artifact rather than that
 # file. WAKE_LOCK and ACCESS_NETWORK_STATE were here too, both WorkManager's,
@@ -94,6 +94,10 @@ EXPECTED = {
     # Ours since Phase 2's reboot restore, and written in the manifest rather
     # than inherited: WorkManager used to merge it, and WorkManager is gone.
     "android.permission.RECEIVE_BOOT_COMPLETED": "ours — shade/BootReceiver.kt",
+    # Sunset to sunrise (ADR-0013 §6): approximate location, asked from the schedule
+    # screen, read only while Gloam is in front, kept on the phone and out of backup.
+    # Its arrival is a listing and privacy-policy change as well as a build one.
+    "android.permission.ACCESS_COARSE_LOCATION": "ours — work/LentLocation.kt, the schedule's sunset",
     # AndroidX defines and uses this itself, signature-level. The prefix is the
     # applicationId, which differs between the debug and release builds, so it is
     # matched by suffix rather than spelled out.
@@ -115,6 +119,11 @@ FORBIDDEN = {
     # line of our source.
     "android.permission.INTERNET": "Gloam has no network. A merged one makes the privacy policy wrong",
     "android.permission.CAMERA": "nothing here is near a camera; a merged one would change the listing",
+    # ADR-0013 asks for approximate location and nothing more. Fine location would add
+    # a Precise toggle to the dialog and stricter Play review; background location
+    # would mean a receiver reads a position, which the ADR rules out.
+    "android.permission.ACCESS_FINE_LOCATION": "ADR-0013 lends approximate location only",
+    "android.permission.ACCESS_BACKGROUND_LOCATION": "ADR-0013 reads location only while Gloam is in front",
 }
 
 # Every <uses-feature> the artifact is allowed to carry, with the required= value

@@ -11,6 +11,7 @@ import app.gloam.data.AppPreferences
 import app.gloam.data.DEFAULT_SCHEDULE_OFF_MINUTES
 import app.gloam.data.DEFAULT_SCHEDULE_ON_MINUTES
 import app.gloam.shade.Schedule
+import app.gloam.shade.ScheduleKind
 import app.gloam.shade.timeOf
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +52,14 @@ class ScheduleViewModel(
 
     fun setEnabled(enabled: Boolean) {
         viewModelScope.launch { preferences.setScheduleEnabled(enabled) }
+    }
+
+    /**
+     * Fixed times or sunset to sunrise. Only the kind is written: the fixed pair stays as it was,
+     * because switching back restores it and the sun falls back to it (ADR-0013 §1).
+     */
+    fun setKind(kind: ScheduleKind) {
+        viewModelScope.launch { preferences.setScheduleKind(kind) }
     }
 
     /**

@@ -133,7 +133,7 @@ fun Schedule.nextOn(
     zone: ZoneId,
 ): Long? =
     when {
-        kind == ScheduleKind.SunsetToSunrise -> nextNightStart(now, zone)
+        kind == ScheduleKind.SunsetToSunrise -> nextNight(now, zone)?.start
         !isActive -> null
         else -> nextOccurrence(onAt, now, zone)
     }
@@ -221,11 +221,30 @@ private const val DAYS_WALKED = 3
  * instants once, through [atLocal], and from then on are treated the same way. So the fixed kind's
  * autumn quirk, where the window is still open by the clock after its end has passed, cannot happen
  * here: a night is open exactly while `start <= now < end`.
+ *
+ * @param followsSun `false` for a night that fell back to the fixed pair, which the screen says.
  */
-private data class Night(
+data class Night(
     val start: Long,
     val end: Long,
+    val followsSun: Boolean,
 )
+
+/**
+ * The night a sunset-to-sunrise schedule is in at [now], or the next one to open. This is for the
+ * screen to show, and nothing computes a deadline from it.
+ *
+ * It answers whatever [Schedule.enabled] and [Schedule.kind] are, so the screen can show tonight's
+ * sunset on a schedule that is still off or still on fixed times. `null` only when no night opens
+ * within a year.
+ */
+fun Schedule.tonight(
+    now: Long,
+    zone: ZoneId,
+): Night? {
+    val asSun = copy(enabled = true, kind = ScheduleKind.SunsetToSunrise)
+    return asSun.nightAround(now, zone) ?: asSun.nextNight(now, zone)
+}
 
 /** The night that contains [now], or `null` outside every night, and for a disabled schedule. */
 private fun Schedule.nightAround(
@@ -251,16 +270,16 @@ private fun Schedule.nightAround(
  * within two days. Only an empty fixed pair at a latitude with polar night leaves dates without one, and
  * that can last for months. A year covers every season, and no night in a year means none will ever open.
  */
-private fun Schedule.nextNightStart(
+private fun Schedule.nextNight(
     now: Long,
     zone: ZoneId,
-): Long? {
+): Night? {
     if (!enabled) return null
     val place = locationIn(zone)?.coordinates
     var day = now.localDateIn(zone).minusDays(1)
     repeat(NIGHTS_WALKED) {
         val night = nightOn(day, zone, place)
-        if (night != null && night.start > now) return night.start
+        if (night != null && night.start > now) return night
         day = day.plusDays(1)
     }
     return null
@@ -298,7 +317,7 @@ private fun Schedule.nightOn(
     val previousEnd = unclippedNightOn(day.minusDays(1), zone, place)?.end ?: Long.MIN_VALUE
     val start = maxOf(own.start, day.startIn(zone), minOf(previousEnd, day.plusDays(1).startIn(zone)))
     val end = minOf(own.end, day.plusDays(2).startIn(zone))
-    return if (start < end) Night(start, end) else null
+    return if (start < end) own.copy(start = start, end = end) else null
 }
 
 /** The sun's night for [day] if the sun gives one, otherwise the fixed pair's. */
@@ -323,7 +342,7 @@ private fun sunNightOn(
     val sunsDay = sunsDayFor(day, place.longitude, zone)
     val set = sunset(sunsDay, place) ?: return null
     val rise = sunrise(sunsDay.plusDays(1), place) ?: return null
-    return if (rise > set) Night(set, rise) else null
+    return if (rise > set) Night(set, rise, followsSun = true) else null
 }
 
 /** The fixed pair on [day] as instants, or `null` for an empty pair. */
@@ -333,7 +352,7 @@ private fun Schedule.fixedNightOn(
 ): Night? {
     if (onAt == offAt) return null
     val closes = if (onAt > offAt) day.plusDays(1) else day
-    return Night(day.atLocal(onAt, zone), closes.atLocal(offAt, zone))
+    return Night(day.atLocal(onAt, zone), closes.atLocal(offAt, zone), followsSun = false)
 }
 
 /**

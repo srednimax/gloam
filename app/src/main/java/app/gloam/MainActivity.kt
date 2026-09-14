@@ -12,7 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import app.gloam.theme.AppTheme
+import app.gloam.work.refreshLentLocation
+import kotlinx.coroutines.launch
 
 /**
  * AppCompatActivity rather than ComponentActivity, and for one reason only: it is where
@@ -84,5 +87,21 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * **A lent location is re-read whenever Gloam comes to the front while the grant stands**
+     * (ADR-0013 §7). `refreshLentLocation` holds the rules, including never during an open window.
+     *
+     * `onStart` rather than `onResume`: the permission dialog pauses and resumes this Activity without
+     * stopping it, so `onResume` would read again every time a dialog closed. The screen that asked
+     * reads once itself after a grant.
+     *
+     * Kotlin note: `lifecycleScope` is cancelled in `onDestroy`, and cancelling the coroutine cancels
+     * the platform's location request with it.
+     */
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch { refreshLentLocation((application as MainApplication).preferences) }
     }
 }

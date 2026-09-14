@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import app.gloam.R
 import app.gloam.shade.AutoOff
 import app.gloam.shade.Schedule
+import app.gloam.shade.ScheduleKind
 import app.gloam.shade.warmthTint
 import app.gloam.theme.Spacing
 import app.gloam.ui.common.SwitchRow
@@ -663,6 +664,14 @@ internal fun rememberScheduleSummary(
     when {
         schedule.enabled && atRisk ->
             ScheduleSummary(title = null, text = stringResource(R.string.dim_schedule_at_risk))
+        // The kind rather than tonight's two times (ADR-0013's consequences). Sunset moves every day,
+        // so times here would be a different line each evening for a setting that has not changed, and
+        // the person who forgot recognises "Sunset to sunrise" faster than "19:04 to 06:21".
+        schedule.enabled && schedule.kind == ScheduleKind.SunsetToSunrise ->
+            ScheduleSummary(
+                title = stringResource(R.string.dim_schedule_row),
+                text = stringResource(R.string.schedule_kind_sun),
+            )
         schedule.enabled ->
             ScheduleSummary(
                 title = stringResource(R.string.dim_schedule_row),
