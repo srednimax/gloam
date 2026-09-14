@@ -48,11 +48,22 @@ fun sunTimes(
     day: LocalDate,
     latitude: Double,
     longitude: Double,
-): SunTimes =
-    SunTimes(
-        rise = sunEvent(day, latitude, longitude, rising = true),
-        set = sunEvent(day, latitude, longitude, rising = false),
-    )
+): SunTimes {
+    val place = Coordinates(latitude, longitude)
+    return SunTimes(rise = sunrise(day, place), set = sunset(day, place))
+}
+
+/** [sunTimes]'s rise alone. The schedule needs one event from each of two days, so it asks for one. */
+fun sunrise(
+    day: LocalDate,
+    place: Coordinates,
+): Long? = sunEvent(day, place.latitude, place.longitude, rising = true)
+
+/** [sunTimes]'s set alone. */
+fun sunset(
+    day: LocalDate,
+    place: Coordinates,
+): Long? = sunEvent(day, place.latitude, place.longitude, rising = false)
 
 /**
  * One event, found by evaluating the sun's position at a guess and moving the guess to the answer.
