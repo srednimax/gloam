@@ -32,17 +32,27 @@ permanent there. An ML Kit dependency shipped
 `android:screenOrientation="portrait"` on an invisible delegate activity; `tools:remove` takes it back out, and nothing in this app's source
 would show if a dependency bump quietly put one back. The merged *text* manifest
 is no help either — it keeps XML comments, so a grep there hits our own
-explanation of the removal. So every `screenOrientation` reaching the compiled
-manifest fails here: this app locks no screen, and a library that wants to lock
-one is a decision to make rather than a default to inherit.
+explanation of the removal.
+
+**This app locks exactly one screen, so the check names it rather than counting.**
+`MainActivity` is portrait by the product owner's call of 2026-09-13 — the
+AndroidManifest comment carries why — and a gate that still said "no orientation
+anywhere" would fail every release from that day on, which is how a gate stops
+being read. What is worth failing is a lock nobody here decided on: a component
+that is not ours, a value that is not the one we chose, or ours gone missing.
+EXPECTED_ORIENTATION below turns all three into a comparison, for the same reason
+EXPECTED does it for permissions — a library that wants to lock a screen is a
+decision to make rather than a default to inherit, and a decision this app did
+make is one the artifact has to keep showing.
 
 `strings | grep` cannot do this job: it cannot tell a <uses-permission> from an
 android:permission guard on a service, and this artifact carries three of the
 latter (BIND_JOB_SERVICE, and DUMP twice) that are not requests at all. So the
 protobuf gets walked properly.
 
-Exits non-zero if the artifact's <uses-permission> set differs from EXPECTED, or
-if it declares a <uses-feature> not accounted for in EXPECTED_FEATURES.
+Exits non-zero if the artifact's <uses-permission> set differs from EXPECTED, if
+it declares a <uses-feature> not accounted for in EXPECTED_FEATURES, or if the
+screen locks it carries are not exactly EXPECTED_ORIENTATION.
 """
 
 import sys
@@ -137,6 +147,25 @@ FORBIDDEN = {
 # and set it to False here (`android:required="false"`) unless it genuinely is
 # required.
 EXPECTED_FEATURES: dict[str, bool] = {}
+
+# Every android:screenOrientation the release artifact is allowed to carry, and
+# the value it is allowed to carry it at. Exactly one, and it is ours: a lock
+# here has to be present *and* match, because both directions are findings. A
+# component that is not in this map locked the screen without anyone deciding to
+# — the ML Kit case in the docstring — and one in the map that the artifact does
+# not carry means a product decision was undone by an edit nobody read.
+EXPECTED_ORIENTATION = {
+    "app.gloam.MainActivity": ("portrait", "ours — the full app, the product owner's call of 2026-09-13"),
+}
+
+# Locks the *release* artifact never sees, because the activity that carries them
+# is in app/src/debug/ — allowed when this runs against a debug bundle, and never
+# required, so the release artifact missing them is not a finding. Keyed by the
+# Kotlin namespace rather than the applicationId: the debug build suffixes the
+# latter and leaves class names alone.
+DEBUG_ONLY_ORIENTATION = {
+    "app.gloam.ui.settings.ReadingTestActivity": ("portrait", "debug-only — the timed reading test"),
+}
 
 
 def read_varint(buf, i):
@@ -251,8 +280,9 @@ def required_attribute(attrs, attrs_raw):
 def orientation_attribute(attrs, attrs_raw):
     """What android:screenOrientation this element asks for, or None when absent.
 
-    Presence is the whole finding — every value here is a failure — so an attribute
-    that cannot be read still returns something rather than None.
+    The *value* is the finding now that one lock is expected, so an attribute that
+    cannot be read still returns something rather than None: unreadable has to fail
+    the comparison below, and None would read as "this element declares none".
     """
     if "screenOrientation" not in attrs:
         return None
@@ -273,6 +303,11 @@ def matches(permission, allowed):
 
 
 def main():
+    # Built here rather than beside the two maps so that they stay the only place a
+    # lock is written down: what is expected, plus what a debug bundle is allowed to
+    # add, is what may appear.
+    allowed_orientation = {**EXPECTED_ORIENTATION, **DEBUG_ONLY_ORIENTATION}
+
     path = sys.argv[1] if len(sys.argv) > 1 else "app/build/outputs/bundle/release/app-release.aab"
     try:
         with zipfile.ZipFile(path) as bundle:
@@ -321,6 +356,14 @@ def main():
     for component, changes in handled:
         print(f"  ·   configChanges {changes}  — {component.rsplit('.', 1)[-1]} handles these itself")
 
+    # Context too, and the one line here that says a deliberate decision is still in
+    # the artifact: an expected lock prints rather than staying invisible until the
+    # day it goes missing.
+    for component, value in sorted(oriented):
+        expected = allowed_orientation.get(component)
+        note = expected[1] if expected and expected[0] == value else "NOT EXPECTED — see below"
+        print(f"  ·   screenOrientation {value}  — {component.rsplit('.', 1)[-1]}, {note}")
+
     # An omitted android:required reads as true to the platform, and the print says
     # so rather than showing a blank — the silent default is the dangerous one.
     for feature, required in sorted(features):
@@ -334,6 +377,10 @@ def main():
     unexpected_features = [
         (f, r) for f, r in features if f not in EXPECTED_FEATURES or EXPECTED_FEATURES[f] != (r in (True, None))
     ]
+    unexpected_orientation = [
+        (c, v) for c, v in oriented if c not in allowed_orientation or allowed_orientation[c][0] != v
+    ]
+    absent_orientation = [(c, v) for c, (v, _) in EXPECTED_ORIENTATION.items() if (c, v) not in oriented]
 
     problems = []
     if unexpected:
@@ -364,13 +411,23 @@ def main():
             "then add it to EXPECTED_FEATURES."
         )
 
-    if oriented:
+    if unexpected_orientation:
         problems.append(
-            "android:screenOrientation survives into the artifact:\n"
-            + "\n".join(f"  {c} — {v}" for c, v in sorted(oriented))
-            + "\nThis app locks no screen. A dependency's own manifest is the usual\n"
-            "source; take it back out with tools:remove rather than tools:replace with a\n"
-            "value, which lint's DiscouragedApi flags without reading it."
+            "android:screenOrientation nobody here decided on:\n"
+            + "\n".join(f"  {c} — {v}" for c, v in sorted(unexpected_orientation))
+            + "\nThis app locks one screen — MainActivity, portrait — and that is the whole of\n"
+            "EXPECTED_ORIENTATION. A dependency's own manifest is the usual source of another;\n"
+            "take it back out with tools:remove rather than tools:replace with a value, which\n"
+            "lint's DiscouragedApi flags without reading it. If the lock is ours and meant,\n"
+            "add it above with the reason — that is a decision, not a line to make green."
+        )
+    if absent_orientation:
+        problems.append(
+            "EXPECTED screenOrientation missing from the artifact:\n"
+            + "\n".join(f"  {c} — {v}" for c, v in sorted(absent_orientation))
+            + "\nThe lock is a product decision, not a default. Gone from the artifact means an\n"
+            "edit undid it, or a manifest merge dropped it — either way a screen that was meant\n"
+            "to stay put now turns. Remove it here too if that is now the decision."
         )
 
     if problems:
@@ -381,7 +438,8 @@ def main():
         f"\n{len(requested)} permissions, all accounted for; "
         f"none of the {len(FORBIDDEN)} forbidden ones present; "
         f"{len(features)} <uses-feature> declared; "
-        f"no screenOrientation on any of the {len(activities)} activities"
+        f"{len(oriented)} of the {len(activities)} activities lock their orientation, "
+        f"every one of them expected"
     )
     return 0
 
