@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/srednimax/gloam/compare/v0.7.0...v0.7.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* teach the artifact gate that this app locks one screen on purpose ([8da47be](https://github.com/srednimax/gloam/commit/8da47be1877f62a04e80eb5b33e1ca5761484284))
+
 ## [0.7.0](https://github.com/srednimax/gloam/compare/v0.6.0...v0.7.0) (2026-09-16)
 
 
