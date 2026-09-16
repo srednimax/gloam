@@ -341,3 +341,50 @@ multiplies"* and that the perceived rate could not kink. Neither was true.
 - **The clamp becomes a constant, `WINDOW_ALPHA_CLAMP`**, read rather than chosen. It shapes the ramp
   and does not bound it: on a device where somebody has moved the global, the steps are uneven and the
   child still stops at `MAX_SHADE_ALPHA`.
+
+Amendment, 2026-09-16 (eighth). **The warmth colour's default was tested and holds at 50, on a
+reading that says the colour does not change reading speed at all.** Nothing in the decision, the
+ramp or either invariant moves. What changes is the standing of one number: `DEFAULT_WARMTH_COLOR` is
+no longer a recommendation derived from the sixth amendment's table, it is a recommendation the table
+supports and a measurement declines to contradict.
+
+**Why it was tested.** The night-reading review
+([`night-reading-research.md`](../night-reading-research.md) §3) read the mesopic literature as saying
+deep red looks 17–28% darker than amber at equal luminance and that red text is the first to slow
+reading, and proposed moving the default from 50 towards 25. The sixth amendment's table is
+photometric — contrast and spectrum on the composite — and photometry cannot answer whether a page is
+slower to read. So the move was made conditional on a reading, and a timed test went into the debug
+build to take one.
+
+**What was run.** Three sessions of `ui/settings/ReadingTest.kt` on the Xiaomi, 2026-09-13, -15 and
+-16: a white page with black 12sp text under the real shade at dim 90 and warmth 100, one seven-word
+sentence per trial judged true or false, colours 0/25/50/100 in sixteen mirrored blocks, 96 trials a
+session, 288 in all. Response time is the geometric mean of correct trials at `rt_ms ≥ 300`, ratio
+against colour 50, 95% bootstrap interval resampled within each night.
+
+| Warmth colour | Accuracy | Geomean RT | Ratio vs 50 (95% CI) |
+| --- | --- | --- | --- |
+| 0 | 97% | 2932 ms | 0.946 (0.839–1.066) |
+| 25 | 93% | 3112 ms | 1.004 (0.887–1.132) |
+| 50 (default) | 97% | 3100 ms | 1.000 |
+| 100 | 99% | 3220 ms | 1.039 (0.925–1.163) |
+
+**The answer is a null, and it is worth more than the change it withheld.** Every interval crosses
+1.0, accuracy is at ceiling everywhere, and the rule set before the first session — move to 25 only if
+25 is clearly faster — landed on 1.004. The individual nights disagree in opposite directions: night 1
+had deep red 22% slower, night 2 had amber 23% faster, night 3 had amber slowest and deep red fastest.
+Two "significant" nights pointing opposite ways and a third pointing neither way is what a colour with
+no real effect looks like at 96 trials split four ways. 288 trials resolve a colour-vs-50 contrast of
+about 11%, so what this rules out is a reading cost that large; the literature's 17–28% darkness gap is
+not appearing as one over a white page.
+
+**What it means for the bar.** The sixth amendment's trade — green light against a little contrast —
+is unchanged and is still the whole argument for where the default sits. What the test removes is a
+reason to move it: there is no reading penalty at the red end to steer users away from, and no reading
+gain at the amber end to steer them towards. **The colour bar is a matter of taste, and the default is
+the middle because the photometry likes the middle.** A reading-speed claim for any point on it would
+now be contradicted by our own data, so the UI makes none — the bar is labelled *Colour* and says
+nothing else.
+
+Rows and per-night summaries live outside the repo, in `~/gloam-data/reading-test/`; the public record
+is this amendment and §3 of the research note.
