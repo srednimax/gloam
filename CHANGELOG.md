@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.0](https://github.com/srednimax/gloam/compare/v0.6.0...v0.7.0) (2026-09-16)
+
+
+### Features
+
+* dim the backlight down to the panel's floor ([c4944f5](https://github.com/srednimax/gloam/commit/c4944f5e049edfaed175ee61c8868233d892d536))
+* give warmth a colour, from amber to deep red ([5f8d6d6](https://github.com/srednimax/gloam/commit/5f8d6d652fadcfcb5265d6af37805a6caeffba27))
+* let the schedule follow the sun, from sunset to sunrise ([e6c75b5](https://github.com/srednimax/gloam/commit/e6c75b592f44dc4f2bd5bb75a9a4fff2b442d5da))
+* remove the Material You toggle ([0d347c0](https://github.com/srednimax/gloam/commit/0d347c043fc0d5e536bf0b5c0e2c2009c61d964d))
+* say in Settings how to avoid low-brightness flicker ([8ac998d](https://github.com/srednimax/gloam/commit/8ac998d89f1a4cddba41f491935eae75282d9545))
+* say in Settings that the lock screen is not dimmed ([d70631d](https://github.com/srednimax/gloam/commit/d70631d8fafb83eb5b48badf3ee872109bdff9d3))
+
+
+### Bug Fixes
+
+* close the compact controls only once the panel has drawn ([4890e65](https://github.com/srednimax/gloam/commit/4890e6599f6f8601769bced8b6adeedd20cf4cab))
+* derive the shade alpha from the light it should leave ([d437f07](https://github.com/srednimax/gloam/commit/d437f07c6422e0912a665a95d06c6bbff1e192a0))
+* dim the strip above the navigation bar ([e34ef2f](https://github.com/srednimax/gloam/commit/e34ef2f683b37df211ac2ebcc3995995f76012a0))
+* keep one edge bar on screen, the one opened last ([ce2c5c2](https://github.com/srednimax/gloam/commit/ce2c5c2b8a688c5c01f7f9b5536d8dbf55f1e41b))
+* keep the dim through a rotation with Gloam's own screen in front ([8241af2](https://github.com/srednimax/gloam/commit/8241af26e0c0d950915d6b01d0505aa88a2522cc))
+* keep the full app in portrait ([d08e101](https://github.com/srednimax/gloam/commit/d08e1019d5e8210cb23c83eb501d1a90b2fea5e6))
+* offer Start when HyperOS killed the shade ([b969f88](https://github.com/srednimax/gloam/commit/b969f88211fb4e35982bb8db1e2cb6c4bfb16e7c))
+* put both edge bars on the same pixels ([e265795](https://github.com/srednimax/gloam/commit/e265795b765b1a63a40b88bb34e607f6cca759ac))
+* **test:** wait for the panel's relayout before reading its width ([ab3f391](https://github.com/srednimax/gloam/commit/ab3f3918d2fece06d7013b8e0703c73bcbf03280))
+
 ## [0.6.0](https://github.com/srednimax/gloam/compare/v0.5.0...v0.6.0) (2026-09-08)
 
 
