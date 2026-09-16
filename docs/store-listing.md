@@ -341,7 +341,14 @@ Poprawka: przy uśpionym telefonie zasłona mogła zostać nawet minutę dłuże
 Gloam ma też własną ikonę.
 ```
 
-### 0.7.0 — it goes further down, and the warmth has a colour
+### 0.7.1 — it goes further down, and the warmth has a colour
+
+**Written for 0.7.0 and renamed, because 0.7.0 never reached Play.** It was tagged and released on
+GitHub, and then `publish-play.yml` stopped at `aab-permissions.py`: the gate still asserted that
+this app locks no screen, which stopped being true when MainActivity went portrait on 2026-09-13.
+Nothing was uploaded — the verify step runs before the upload — so no reader has seen this text under
+the old number, and moving the heading is the whole of the change. The bodies stand unchanged
+because what shipped is unchanged; 0.1.0, tagged and never uploaded, is the earlier precedent.
 
 Three things a reader can act on, in the order they will notice them: the floor moved, warmth grew a
 second control, and the schedule can be handed to the sun instead of a clock. **The rest of the

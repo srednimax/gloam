@@ -158,10 +158,13 @@ no-arg constructor just isn't there, and the framework that wanted it carries on
 without it. It reads the classes to check **out of the manifest** — every
 `<meta-data>` whose value marks one — rather than from a list that would go stale,
 and looks each up in the dex. `aab-permissions.py` does the other half of the
-same job: it asserts no `android:screenOrientation` survives into the artifact, so
-a dependency bump cannot quietly re-lock the screen. (A library AAR pinning its own
-delegate activity to portrait is a real Play policy finding, and it is invisible in
-your own source.)
+same job: it asserts the only `android:screenOrientation` in the artifact is the one
+this app decided on — `MainActivity`, portrait, since 2026-09-13 — so a dependency
+bump cannot quietly lock another screen, and an edit cannot quietly unlock that one.
+(A library AAR pinning its own delegate activity to portrait is a real Play policy
+finding, and it is invisible in your own source.) It was a blanket ban until 0.7.0,
+which is how 0.7.0 failed to publish: the app had grown a deliberate lock and the
+gate was still asserting the app had none.
 
 Don't reach for `aapt2 dump xmltree` here. An AAB stores its manifest as
 **protobuf**, not the binary XML aapt2 reads, so it prints nothing and exits `0` —
