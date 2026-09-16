@@ -352,12 +352,16 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 - [x] **Read the shade's transmission in light, not in stored values.** Done 2026-09-13, from the
       phone alone, and the ramp now derives the shade alpha from light. The readings and what moved
       are in ADR-0010's seventh amendment.
-- [ ] **A reading the night-reading research still owes** ([`night-reading-research.md`](night-reading-research.md)):
-      a timed reading test before `DEFAULT_WARMTH_COLOR` moves from 50 towards 25 (§3). **§2 is
-      done** (2026-09-14): the panel is PWM from somewhere between 126 and 64 nits downwards, so the
-      floor flickers, and turning the toggle off helps only at a brightness that leaves the page at
-      3–6 nits. Settings now has a *Flicker* section that says so. **§3's test is built** (debug Settings → *Reading test*), and what it still
-      needs is a few nights of runs in a dark room.
+- [x] **The readings the night-reading research owed** ([`night-reading-research.md`](night-reading-research.md)),
+      both taken. **§2** (2026-09-14): the panel is PWM from somewhere between 126 and 64 nits
+      downwards, so the floor flickers, and turning the toggle off helps only at a brightness that
+      leaves the page at 3–6 nits. Settings now has a *Flicker* section that says so. **§3**
+      (2026-09-16): three nights of the debug *Reading test*, 288 trials pooled, put every colour
+      within noise of 50 — ratios against 50 of 0.95 (amber), 1.00 (25) and 1.04 (deep red), every
+      95% interval crossing 1.0, against a resolution of about 11%. The pre-set rule wanted 25
+      clearly faster and got 1.004, so `DEFAULT_WARMTH_COLOR` **stays at 50**, and ADR-0010's eighth
+      amendment records the run — the colour bar is taste, not speed. Rows and per-night summaries
+      are in `~/gloam-data/reading-test/`, outside the repo.
 - [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
       inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
       What stood behind the old default was an argument rather than a reading — that a first launcher

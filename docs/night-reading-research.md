@@ -74,7 +74,7 @@ Optional, and only after a test.
   the first to slow reading. Red's gain for night vision is small over a light page.
 - Consider `DEFAULT_WARMTH_COLOR` 50 → about 25 in `data/AppPreferences.kt`, but only after an
   objective check. For example, a timed reading test on the phone at dim 90, at colour 0, 50 and 100.
-- If it changes, add a note to ADR-0010's sixth amendment.
+- If it changes, add a note to ADR-0010's sixth amendment. *(It did not; the eighth amendment records why.)*
 - **The test is built, 2026-09-13**: debug build, Settings → Developer → *Reading test (warmth
   colour)*. It puts a white page with one short sentence under the real shade (dim 90, warmth 100,
   lowered backlight), and you tap True or False. It compares colours 0, 25, 50 and 100 in 16 blocks
@@ -84,6 +84,36 @@ Optional, and only after a test.
   ```bash
   adb shell run-as io.github.srednimax.gloam.debug cat files/reading-test.csv
   ```
+
+- **Result, three nights pooled, 2026-09-16: no colour is distinguishable from 50, so the default
+  stays.** 288 trials (3 x 96) on the Xiaomi at dim 90, warmth 100, 12sp, English, lowered backlight,
+  same room each night. Accuracy is at ceiling everywhere; response time is the geometric mean of
+  correct trials at `rt_ms >= 300`, ratio against colour 50 with a 95% bootstrap interval resampled
+  within each night:
+
+  | Colour | Accuracy | Geomean RT | Ratio vs 50 (95% CI) |
+  | --- | ---: | ---: | ---: |
+  | 0 (amber) | 97% | 2932 ms | 0.946 (0.839-1.066) |
+  | 25 | 93% | 3112 ms | 1.004 (0.887-1.132) |
+  | 50 (default) | 97% | 3100 ms | 1.000 |
+  | 100 (deep red) | 99% | 3220 ms | 1.039 (0.925-1.163) |
+
+  Every interval crosses 1.0, and the rule set before the test — move to 25 only if 25 is clearly
+  faster — lands on 1.004. **`DEFAULT_WARMTH_COLOR` stays at 50.** ADR-0010's **eighth amendment**
+  records the run and what it settles, and the constant's own KDoc says the photometry is now the
+  whole argument for 50 because reading speed had no opinion.
+
+  The nights contradict each other, which is the substance of the result rather than an excuse for it.
+  Night 1 had deep red 22% slower; night 2 had amber 23% faster; night 3 had amber slowest and deep red
+  fastest, all three intervals straddling 1.0. Two "significant" effects in opposite directions and
+  then neither is what a colour with no real effect looks like at 96 trials split four ways. What 288
+  trials can resolve on a colour-vs-50 contrast is about **11%** in reading time, so the literature's
+  17-28% apparent-darkness gap between amber and deep red is not appearing as a reading cost over a
+  white page at this size. A fourth night of the same shape would add about 8% resolution and is not
+  worth running; the colour bar stays a matter of taste.
+
+  Rows and per-night summaries are outside the repo, in `~/gloam-data/reading-test/`
+  (`reading-test-2026-09-16.csv` is the phone's whole file, all three nights).
 
 ## 4. One line of copy for the lock screen
 

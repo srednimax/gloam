@@ -505,6 +505,13 @@ const val DEFAULT_DIM_LEVEL = 40
  * page's green against 34% at full warmth), and text contrast stays 5.8 : 1 against 6.0. The deep-red
  * end is still one drag away for a fully dark room, where red spares night vision. The numbers are
  * `warmthTint`'s, and ADR-0010's sixth amendment has the reasoning.
+ *
+ * **The photometry is the whole argument, because reading speed was measured and had no opinion.**
+ * The night-reading review proposed 25 on the grounds that deep red looks darker and red text reads
+ * slower; three nights of the debug reading test, 288 trials over colours 0/25/50/100, put every
+ * colour within noise of this one (ratios 0.95, 1.00 and 1.04, all intervals crossing 1.0, accuracy at
+ * ceiling throughout). So this stays 50, and moving it would need a reason of a different kind —
+ * spectrum, taste or a tester — rather than a faster page. ADR-0010's eighth amendment has the run.
  */
 const val DEFAULT_WARMTH_COLOR = 50
 
