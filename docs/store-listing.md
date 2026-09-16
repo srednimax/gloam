@@ -340,3 +340,44 @@ Poprawka: przy uśpionym telefonie zasłona mogła zostać nawet minutę dłuże
 
 Gloam ma też własną ikonę.
 ```
+
+### 0.7.0 — it goes further down, and the warmth has a colour
+
+Three things a reader can act on, in the order they will notice them: the floor moved, warmth grew a
+second control, and the schedule can be handed to the sun instead of a clock. **The rest of the
+release is deliberately not here.** The two Settings explanations — why very low brightness can
+flicker on some panels, and that the lock screen is outside what any app may dim — are read on the
+screen that raises them, and a note that repeats them out of context reads as a warning about a
+feature nobody has met yet. The Material You toggle's removal is not named for the same reason
+palette A was not: the colours it chose between are no longer a choice, and nothing the reader does
+changes because of it.
+
+**Two fixes are named and the edge-bar ones are not.** The bright strip above the navigation bar and
+the dim dropping on rotation were both visible to anyone who met them, so a user who did should learn
+it was the app rather than their phone. The panel hand-off and the two-bars-at-once fixes were seams
+between windows that opened and closed in the same gesture; naming them would describe a defect more
+precisely than the reader ever saw it.
+
+**English** — 482/500:
+
+```
+Gloam now takes the backlight down to your screen's own floor before the shade goes over it, so the darkest setting is darker than it was.
+
+Warmth has a colour: a second bar runs from amber to deep red, so you choose the tint as well as how much of it.
+
+The schedule can follow the sun — sunset to sunrise, moving with the season, with no clock to reset.
+
+Fixed: the strip above the navigation bar is dimmed with everything else, and the dim no longer drops when you turn the phone.
+```
+
+**Polish** — 498/500:
+
+```
+Gloam obniża teraz podświetlenie do minimum ekranu, zanim nałoży na nie zasłonę — najciemniejsze ustawienie jest ciemniejsze niż dotąd.
+
+Ciepło barwy ma teraz odcień: drugi pasek prowadzi od bursztynu do głębokiej czerwieni — wybierasz nie tylko siłę, ale i barwę.
+
+Harmonogram może podążać za słońcem — od zachodu do wschodu, wraz z porą roku, bez ustawiania zegara.
+
+Poprawka: pas nad paskiem nawigacji jest przyciemniany razem z resztą ekranu, a przyciemnienie nie znika przy obracaniu telefonu.
+```
