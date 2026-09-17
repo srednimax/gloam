@@ -28,6 +28,13 @@ enum class AppLanguage(
 ) {
     ENGLISH("en", R.string.settings_language_english),
     POLISH("pl", R.string.settings_language_polish),
+    CZECH("cs", R.string.settings_language_czech),
+    GERMAN("de", R.string.settings_language_german),
+    SPANISH("es", R.string.settings_language_spanish),
+    FRENCH("fr", R.string.settings_language_french),
+    ITALIAN("it", R.string.settings_language_italian),
+    PORTUGUESE_BR("pt-BR", R.string.settings_language_portuguese_br),
+    UKRAINIAN("uk", R.string.settings_language_ukrainian),
 }
 
 /**
@@ -43,9 +50,18 @@ enum class AppLanguage(
 fun currentAppLanguage(): AppLanguage? {
     val locales = AppCompatDelegate.getApplicationLocales()
     val language = locales[0]?.language ?: return null
-    // Matched on the language subtag alone: the platform may hand back a region-qualified locale
-    // ("en-GB") for a list that only ever names a language ("en").
-    return AppLanguage.entries.firstOrNull { it.tag.equals(language, ignoreCase = true) }
+    // Matched on the **language subtag of both sides**, and two different things push that way. The
+    // platform may hand back a region-qualified locale ("en-GB") for an entry that names only a
+    // language ("en") — and `pt-BR` is the opposite case, an entry naming a region for a locale
+    // `Locale.getLanguage()` reports as plain "pt". Comparing whole tags misses both, and the
+    // symptom is identical either way: a chip the user just tapped that never looks selected.
+    //
+    // Sound only because no two entries share a language subtag, which `AppLanguageTest` asserts
+    // rather than trusts — the day a second Portuguese or a second Spanish is offered, this match
+    // becomes ambiguous instead of merely wrong, and a failing test is how that gets noticed.
+    return AppLanguage.entries.firstOrNull {
+        it.tag.substringBefore('-').equals(language, ignoreCase = true)
+    }
 }
 
 /**

@@ -14,8 +14,21 @@
 
     **Adding a locale here is the whole opt-in.** Do it when the translation is ready, not before:
     an entry with no strings behind it offers the user a language the app cannot speak.
+
+    **Seven of these nine ship without a native speaker having read them** — every entry below except
+    `en` and `pl`. That is a decision rather than an omission, and what stands in for the read-through
+    is an audit of the copy that makes safety claims plus the report row under the picker:
+    [ADR-0014](../../../../../docs/adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md).
+    A tenth language takes the same path.
 -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="en" />
     <locale android:name="pl" />
+    <locale android:name="cs" />
+    <locale android:name="de" />
+    <locale android:name="es" />
+    <locale android:name="fr" />
+    <locale android:name="it" />
+    <locale android:name="pt-BR" />
+    <locale android:name="uk" />
 </locale-config>

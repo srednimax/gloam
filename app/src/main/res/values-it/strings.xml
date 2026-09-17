@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Italian. Translated from **English only** — never from another translation, which compounds every
+    interpretation the first translator made.
+
+    Register: informal *tu*, sentence case, and the app speaks of itself in the third person as
+    *Gloam* rather than as "noi". *Tu* rather than *Lei* because Android's own Italian UI uses it.
+
+    Two vocabulary decisions worth confirming (ADR-0014 names them as the kind a native read-through
+    would have settled):
+
+    - **shade → `velo`.** The veil Gloam draws over the screen. Not `tapparella` or `tenda`, which
+      are the literal window blinds, and never `filtro`, which CONTEXT.md rules out entirely.
+    - **warmth → `calore`.** Never `temperatura del colore`: an overlay adds a colour on top and does
+      not change the temperature of the light.
+
+    `luminosità` is reserved for Android's own value. Gloam's own number is the *livello di
+    oscuramento* and it counts the other way, which is the distinction CONTEXT.md exists to protect.
+-->
+<resources>
+    <string name="tab_dim">Oscura</string>
+    <string name="tab_settings">Impostazioni</string>
+
+    <string name="action_back">Indietro</string>
+
+    <string name="dim_title">Oscura</string>
+    <string name="dim_level_label">Livello di oscuramento</string>
+    <string name="dim_level_caption">della luce è coperto. Trascina la colonna in basso per lasciare meno luce.</string>
+    <string name="dim_column_floor">MINIMO</string>
+    <string name="dim_start">Inizia a oscurare</string>
+    <string name="dim_stop">Smetti di oscurare</string>
+    <string name="dim_permission_title">Gloam ha bisogno del permesso di disegnare sopra le altre app</string>
+    <string name="dim_permission_body">Il velo è uno strato sopra ciò che si trova sullo schermo, quindi Android chiede questo permesso in modo esplicito. Gloam non legge nulla sulle app che stanno sotto. Quando inizierai a oscurare, chiederà anche di mostrare una notifica: è da quella notifica che Gloam si ferma da qualunque punto.</string>
+    <string name="dim_permission_grant">Apri le impostazioni</string>
+
+    <string name="dim_notification_warning_title">Fuori da Gloam non c\'è un pulsante Ferma</string>
+    <string name="dim_notification_warning_body">Gloam può oscurare lo schermo ma non mostrare una notifica, quindi l\'unico modo di fermare l\'oscuramento è questa schermata.</string>
+    <string name="dim_notification_warning_channel_body">La notifica di Gloam è disattivata, quindi l\'unico modo di fermare l\'oscuramento è questa schermata.</string>
+    <string name="dim_notification_warning_ask">Consenti le notifiche</string>
+    <string name="dim_notification_warning_settings">Apri le impostazioni delle notifiche</string>
+
+    <string name="dim_backlight_label">Abbassa anche la luminosità dello schermo</string>
+    <string name="dim_backlight_hint">Il tuo cursore della luminosità è in pausa mentre Gloam oscura.</string>
+    <string name="dim_backlight_unavailable">Questo telefono non riporta la propria luminosità in un modo che Gloam possa usare, quindi Gloam oscura soltanto disegnando sopra lo schermo.</string>
+
+    <string name="dim_auto_off_label">Spegnersi da sé</string>
+    <string name="dim_auto_off_hint">Gloam toglie il velo da sé dopo questo tempo, così uno schermo oscurato e dimenticato non è ancora scuro domani.</string>
+    <string name="dim_auto_off_at">Si spegne alle %1$s</string>
+
+    <string name="compact_auto_off_never">Mai</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 ora</string>
+    <string name="compact_auto_off_2h">2 ore</string>
+    <string name="compact_auto_off_4h">4 ore</string>
+
+    <string name="dim_warmth_label">Calore</string>
+    <string name="dim_warmth_color_label">Colore</string>
+
+    <string name="controls_open_app">Apri Gloam</string>
+    <string name="panel_close">Chiudi i comandi</string>
+
+    <string name="settings_appearance">Aspetto</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+    <string name="settings_controls">Comandi</string>
+    <string name="settings_launcher_compact">Apri i comandi piccoli dall\'icona</string>
+    <string name="settings_launcher_compact_hint">Toccare Gloam apre solo i cursori invece dell\'app intera. La notifica apre sempre i comandi piccoli.</string>
+    <string name="settings_lock_screen">Schermata di blocco</string>
+    <string name="settings_lock_screen_body">Gloam non può oscurare la schermata di blocco: Android la mostra con la luminosità del tuo telefono. Tieni bassa quella luminosità di notte, così la schermata di blocco non è la cosa più luminosa in una stanza buia.</string>
+    <string name="settings_flicker">Sfarfallio</string>
+    <string name="settings_flicker_body">A bassa luminosità molti schermi sfarfallano troppo in fretta perché si veda, e alcune persone lo trovano affaticante. Se succede anche a te, disattiva «%1$s» e tieni più alta la luminosità del telefono. Lo schermo non diventerà così scuro, ma non sfarfallerà. Alcuni telefoni hanno anche un\'opzione anti-sfarfallio o di attenuazione DC nelle impostazioni dello schermo.</string>
+
+    <string name="settings_language">Lingua</string>
+    <string name="settings_language_system">Sistema</string>
+    <string name="settings_language_report">Qualcosa si legge male?</string>
+    <string name="settings_language_report_hint">Scrivimi se una parola non va nella tua lingua. Apre la tua app di posta, con la lingua che stai leggendo già indicata.</string>
+    <string name="settings_restart">Dopo un riavvio</string>
+    <string name="settings_restart_body">Gloam rimette il velo quando il telefono si riavvia. Questo telefono lascia partire un\'app all\'avvio solo se l\'avvio automatico è attivo per essa, e Gloam non ha modo di controllare se lo è: quindi, se il velo non torna, questa è l\'impostazione da guardare.</string>
+    <string name="settings_restart_open">Apri le impostazioni di avvio automatico</string>
+
+    <string name="settings_about">Informazioni</string>
+    <string name="settings_support">Aiuto e commenti</string>
+    <string name="settings_licences">Licenze open source</string>
+
+    <string name="support_title">Aiuto e commenti</string>
+    <string name="support_report">Segnala un problema</string>
+    <string name="support_report_hint">Apre la tua app di posta con quello che Gloam sa già del tuo telefono, già inserito.</string>
+    <string name="support_feature">Proponi una funzione</string>
+    <string name="support_feature_hint">Ogni funzione di Gloam è gratuita e lo resterà, quindi l\'unica domanda è se ci sta bene.</string>
+    <string name="support_body_bug">Cosa è successo e cosa ti aspettavi invece:</string>
+    <string name="support_body_feature">Cosa vorresti che Gloam facesse?</string>
+    <string name="support_body_language">Quale parola si legge male, e su quale schermata?</string>
+    <string name="support_no_mail_app">Su questo telefono non c\'è un\'app di posta da aprire.</string>
+    <string name="support_rate">Valuta Gloam su Google Play</string>
+    <string name="support_rate_hint">Apre la pagina di Gloam su Google Play. Valutare è facoltativo e non sblocca nulla, perché in Gloam non c\'è nulla di bloccato.</string>
+    <string name="support_no_play">Su questo telefono non c\'è né Google Play né un browser da aprire.</string>
+
+    <string name="licence_text_missing">Il testo di questa licenza non è incluso nell\'app.</string>
+
+    <string name="schedule_title">Programmazione</string>
+    <string name="schedule_enable">Oscura secondo una programmazione</string>
+    <string name="schedule_enable_hint">Gloam mette e toglie il velo da sé, ogni notte.</string>
+    <string name="schedule_kind_fixed">Orari fissi</string>
+    <string name="schedule_kind_sun">Dal tramonto all\'alba</string>
+    <string name="schedule_sun_tonight">Stanotte: tramonto %1$s, alba %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Stanotte qui il sole non tramonta né sorge, quindi valgono gli orari qui sotto.</string>
+    <string name="schedule_sun_fallback_note">Nelle notti in cui qui il sole non tramonta né sorge, il velo segue questi orari.</string>
+    <string name="schedule_location_estimated">Il tramonto è stimato dal tuo fuso orario.</string>
+    <string name="schedule_location_lent">Il tramonto è calcolato per la posizione approssimativa di questo telefono.</string>
+    <string name="schedule_location_none">Il tuo fuso orario non indica una posizione, quindi ogni notte valgono gli orari qui sotto.</string>
+    <string name="schedule_location_ask">Usa la posizione di questo telefono</string>
+    <string name="schedule_location_ask_hint">Per un tramonto più preciso. Gloam chiede solo la posizione approssimativa e la tiene su questo telefono.</string>
+    <string name="schedule_location_settings">Consenti la posizione nelle impostazioni</string>
+    <string name="schedule_on_at">Si accende</string>
+    <string name="schedule_off_at">Si spegne</string>
+    <string name="schedule_overnight">Per tutta la notte — il velo viene tolto la mattina dopo.</string>
+    <string name="schedule_same_time">Scegli due orari diversi. Un intervallo che inizia e finisce nello stesso istante non si apre mai.</string>
+    <string name="schedule_short_window">Questo intervallo è molto breve. Android può avviare Gloam con qualche minuto di ritardo, quindi un intervallo così breve può essere mancato del tutto.</string>
+
+    <string name="schedule_battery_title">L\'ottimizzazione della batteria è attiva per Gloam</string>
+    <string name="schedule_battery_body_delegated">Android non lascia che Gloam si avvii da sé all\'ora che hai scelto. Il velo arriva comunque la prossima volta che apri Gloam durante l\'intervallo. Disattiva l\'ottimizzazione della batteria per Gloam perché si avvii da sé.</string>
+    <string name="schedule_battery_action">Impostazioni della batteria</string>
+    <string name="schedule_rom_note">Questo telefono può anche impedire alle app di avviarsi in background. Se il velo non si mette da sé, arriverà comunque quando apri Gloam — e Dopo un riavvio, nelle Impostazioni, è il posto dove puoi cambiarlo.</string>
+
+    <string name="dim_schedule_row">Programmazione</string>
+    <string name="dim_schedule_window">dalle %1$s alle %2$s</string>
+    <string name="dim_schedule_off">Disattivata</string>
+    <string name="dim_schedule_at_risk">Programmazione — potrebbe non avviarsi da sé</string>
+
+    <string name="channel_shade_name">Oscuramento</string>
+    <string name="channel_shade_description">Mostrata mentre lo schermo è oscurato, così il velo può essere tolto da qualunque punto.</string>
+    <string name="shade_notification_title">Schermo oscurato</string>
+    <string name="shade_notification_stop">Ferma</string>
+    <string name="shade_notification_until">Fino alle %1$s</string>
+    <string name="shade_notification_text_backlight">Il tuo cursore della luminosità è in pausa mentre Gloam oscura</string>
+
+</resources>

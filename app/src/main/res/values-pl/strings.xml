@@ -63,6 +63,8 @@
 
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Systemowy</string>
+    <string name="settings_language_report">Coś brzmi nie tak?</string>
+    <string name="settings_language_report_hint">Napisz, jeśli jakieś słowo jest nie tak w twoim języku. Otwiera aplikację pocztową z już wpisanym językiem, w którym czytasz.</string>
     <string name="settings_restart">Po ponownym uruchomieniu</string>
     <string name="settings_restart_body">Gloam przywraca zasłonę po ponownym uruchomieniu telefonu. Ten telefon pozwala aplikacji działać po starcie tylko wtedy, gdy ma włączony autostart, a Gloam nie ma jak sprawdzić, czy jest włączony — więc jeśli zasłona nie wróci, to jest ustawienie, któremu warto się przyjrzeć.</string>
     <string name="settings_restart_open">Otwórz ustawienia autostartu</string>
@@ -78,6 +80,7 @@
     <string name="support_feature_hint">Każda funkcja w Gloam jest darmowa i zawsze taka pozostanie, więc jedyne pytanie brzmi, czy pasuje do aplikacji.</string>
     <string name="support_body_bug">Co się stało i co powinno się stać zamiast tego:</string>
     <string name="support_body_feature">Co Gloam mógłby robić?</string>
+    <string name="support_body_language">Które słowo jest nie tak i na którym ekranie?</string>
     <string name="support_no_mail_app">Na tym telefonie nie ma aplikacji pocztowej do otwarcia.</string>
     <string name="support_rate">Oceń Gloam w Google Play</string>
     <string name="support_rate_hint">Otwiera stronę Gloam w Google Play. Ocena jest dobrowolna i niczego nie odblokowuje, bo w Gloam nic nie jest zablokowane.</string>

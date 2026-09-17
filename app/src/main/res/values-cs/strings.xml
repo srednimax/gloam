@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Czech. Translated from **English only** — never from another translation, which compounds every
+    interpretation the first translator made.
+
+    Register: informal *ty*, sentence case, and the app speaks of itself in the third person as
+    *Gloam* rather than as "we" — the same three choices Polish made, held across every string here.
+
+    Two vocabulary decisions worth confirming before anything else (ADR-0014 names them as the kind a
+    native read-through would have settled):
+
+    - **shade → `závoj`.** A veil over the screen, not `roleta` or `žaluzie`, which are the literal
+      window blinds and read as furniture. It has to take verbs for being drawn and taken down, and
+      `závoj` does: *rozprostře*, *sundá*.
+    - **warmth → `teplo barvy`.** Never `teplota barvy`: CONTEXT.md rules out "colour temperature"
+      because an overlay adds a colour on top and does not change the temperature of the light.
+
+    Gloam declines as an ordinary masculine noun here — *Gloamu*, *Gloamem* — which is what a Czech
+    sentence needs and is not a translation of the name.
+-->
+<resources>
+    <string name="tab_dim">Ztmavení</string>
+    <string name="tab_settings">Nastavení</string>
+
+    <string name="action_back">Zpět</string>
+
+    <string name="dim_title">Ztmavení</string>
+    <string name="dim_level_label">Úroveň ztmavení</string>
+    <string name="dim_level_caption">světla je zakryto. Stáhni sloupec dolů, ať je světla méně.</string>
+    <string name="dim_column_floor">MINIMUM</string>
+    <string name="dim_start">Začít ztmavovat</string>
+    <string name="dim_stop">Přestat ztmavovat</string>
+    <string name="dim_permission_title">Gloam potřebuje oprávnění kreslit přes ostatní aplikace</string>
+    <string name="dim_permission_body">Závoj je vrstva nad tím, co je právě na obrazovce, takže Android o toto oprávnění žádá výslovně. Gloam si o aplikacích pod ním nic nezjišťuje. Až začneš ztmavovat, požádá ještě o zobrazení oznámení — tím oznámením se Gloam zastaví odkudkoli.</string>
+    <string name="dim_permission_grant">Otevřít nastavení</string>
+
+    <string name="dim_notification_warning_title">Mimo Gloam není tlačítko Zastavit</string>
+    <string name="dim_notification_warning_body">Gloam smí ztmavovat obrazovku, ale nesmí zobrazovat oznámení, takže ztmavení lze zastavit jedině z této obrazovky.</string>
+    <string name="dim_notification_warning_channel_body">Oznámení Gloamu je vypnuté, takže ztmavení lze zastavit jedině z této obrazovky.</string>
+    <string name="dim_notification_warning_ask">Povolit oznámení</string>
+    <string name="dim_notification_warning_settings">Otevřít nastavení oznámení</string>
+
+    <string name="dim_backlight_label">Snižovat také jasnost obrazovky</string>
+    <string name="dim_backlight_hint">Posuvník jasnosti je pozastavený, dokud Gloam ztmavuje.</string>
+    <string name="dim_backlight_unavailable">Tento telefon svou jasnost nehlásí způsobem, který by Gloam mohl použít, takže Gloam ztmavuje jen kreslením přes obrazovku.</string>
+
+    <string name="dim_auto_off_label">Samočinné vypnutí</string>
+    <string name="dim_auto_off_hint">Gloam po této době závoj sám sundá, aby ztmavená a zapomenutá obrazovka nebyla tmavá i zítra.</string>
+    <string name="dim_auto_off_at">Vypne se v %1$s</string>
+
+    <string name="compact_auto_off_never">Nikdy</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 hod</string>
+    <string name="compact_auto_off_2h">2 hod</string>
+    <string name="compact_auto_off_4h">4 hod</string>
+
+    <string name="dim_warmth_label">Teplo barvy</string>
+    <string name="dim_warmth_color_label">Odstín</string>
+
+    <string name="controls_open_app">Otevřít Gloam</string>
+    <string name="panel_close">Zavřít ovládání</string>
+
+    <string name="settings_appearance">Vzhled</string>
+    <string name="settings_theme_system">Systémový</string>
+    <string name="settings_theme_light">Světlý</string>
+    <string name="settings_theme_dark">Tmavý</string>
+    <string name="settings_controls">Ovládání</string>
+    <string name="settings_launcher_compact">Otevírat z ikony malé ovládání</string>
+    <string name="settings_launcher_compact_hint">Klepnutí na Gloam otevře jen posuvníky místo celé aplikace. Oznámení otevírá malé ovládání vždy.</string>
+    <string name="settings_lock_screen">Obrazovka uzamčení</string>
+    <string name="settings_lock_screen_body">Gloam nemůže ztmavit obrazovku uzamčení: Android ji zobrazuje v jasnosti nastavené v telefonu. Nech tuto jasnost na noc nízkou, aby obrazovka uzamčení nebyla v temné místnosti tím nejsvětlejším.</string>
+    <string name="settings_flicker">Blikání</string>
+    <string name="settings_flicker_body">Při nízké jasnosti mnoho obrazovek bliká příliš rychle, než aby to šlo vidět, a některé lidi to unavuje. Pokud patříš mezi ně, vypni „%1$s“ a vlastní jasnost telefonu nech vyšší. Obrazovka pak nebude tak tmavá, ale nebude blikat. Některé telefony mají v nastavení displeje také volbu proti blikání nebo stmívání DC.</string>
+
+    <string name="settings_language">Jazyk</string>
+    <string name="settings_language_system">Systémový</string>
+    <string name="settings_language_report">Čte se něco špatně?</string>
+    <string name="settings_language_report_hint">Napiš mi, jestli některé slovo ve tvém jazyce nevypadá správně. Otevře e-mailovou aplikaci s už vyplněným jazykem, ve kterém čteš.</string>
+    <string name="settings_restart">Po restartu</string>
+    <string name="settings_restart_body">Gloam po restartu telefonu závoj vrátí. Tento telefon nechá aplikaci běžet po spuštění jen tehdy, když má zapnuté automatické spouštění, a Gloam nemá jak zjistit, jestli zapnuté je — takže pokud se závoj nevrátí, tohle je nastavení, na které se podívat.</string>
+    <string name="settings_restart_open">Otevřít nastavení automatického spouštění</string>
+
+    <string name="settings_about">O aplikaci</string>
+    <string name="settings_support">Pomoc a zpětná vazba</string>
+    <string name="settings_licences">Licence open source</string>
+
+    <string name="support_title">Pomoc a zpětná vazba</string>
+    <string name="support_report">Nahlásit problém</string>
+    <string name="support_report_hint">Otevře e-mailovou aplikaci s už vyplněným tím, co Gloam o tvém telefonu ví.</string>
+    <string name="support_feature">Navrhnout funkci</string>
+    <string name="support_feature_hint">Každá funkce v Gloamu je zdarma a vždy zůstane, takže jediná otázka je, jestli do aplikace patří.</string>
+    <string name="support_body_bug">Co se stalo a co se mělo stát místo toho:</string>
+    <string name="support_body_feature">Co by měl Gloam umět?</string>
+    <string name="support_body_language">Které slovo se čte špatně a na které obrazovce?</string>
+    <string name="support_no_mail_app">V tomto telefonu není e-mailová aplikace, kterou by šlo otevřít.</string>
+    <string name="support_rate">Ohodnotit Gloam na Google Play</string>
+    <string name="support_rate_hint">Otevře stránku Gloamu na Google Play. Hodnocení je dobrovolné a nic neodemyká, protože v Gloamu nic zamčené není.</string>
+    <string name="support_no_play">V tomto telefonu není Google Play ani prohlížeč, který by šlo otevřít.</string>
+
+    <string name="licence_text_missing">Text této licence není součástí aplikace.</string>
+
+    <string name="schedule_title">Plán</string>
+    <string name="schedule_enable">Ztmavovat podle plánu</string>
+    <string name="schedule_enable_hint">Gloam každou noc závoj sám rozprostře a sám sundá.</string>
+    <string name="schedule_kind_fixed">Pevné časy</string>
+    <string name="schedule_kind_sun">Od západu do východu slunce</string>
+    <string name="schedule_sun_tonight">Dnes v noci: západ slunce %1$s, východ %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Slunce tu dnes v noci nezapadá ani nevychází, takže se použijí časy níže.</string>
+    <string name="schedule_sun_fallback_note">V noci, kdy tu slunce nezapadá ani nevychází, se závoj řídí těmito časy.</string>
+    <string name="schedule_location_estimated">Západ slunce je odhadnutý z tvého časového pásma.</string>
+    <string name="schedule_location_lent">Západ slunce se počítá pro přibližnou polohu tohoto telefonu.</string>
+    <string name="schedule_location_none">Tvé časové pásmo neurčuje polohu, takže se každou noc použijí časy níže.</string>
+    <string name="schedule_location_ask">Použít polohu tohoto telefonu</string>
+    <string name="schedule_location_ask_hint">Pro přesnější západ slunce. Gloam žádá jen o přibližnou polohu a nechává si ji v tomto telefonu.</string>
+    <string name="schedule_location_settings">Povolit polohu v nastavení</string>
+    <string name="schedule_on_at">Zapne se</string>
+    <string name="schedule_off_at">Vypne se</string>
+    <string name="schedule_overnight">Přes noc — závoj zmizí druhý den ráno.</string>
+    <string name="schedule_same_time">Vyber dva různé časy. Okno, které začíná a končí ve stejnou chvíli, se nikdy neotevře.</string>
+    <string name="schedule_short_window">Toto okno je velmi krátké. Android může Gloam spustit o několik minut později, takže tak krátké okno může celé vynechat.</string>
+
+    <string name="schedule_battery_title">Optimalizace baterie je pro Gloam zapnutá</string>
+    <string name="schedule_battery_body_delegated">Android nedovolí Gloamu spustit se sám ve vybraném čase. Závoj se přesto objeví, až Gloam příště otevřeš v průběhu okna. Vypni pro Gloam optimalizaci baterie, aby se spouštěl sám.</string>
+    <string name="schedule_battery_action">Nastavení baterie</string>
+    <string name="schedule_rom_note">Tento telefon může také aplikacím zakázat spouštění na pozadí. Pokud se závoj nespustí sám, objeví se i tak po otevření Gloamu — a Po restartu v Nastavení je místo, kde se to dá změnit.</string>
+
+    <string name="dim_schedule_row">Plán</string>
+    <string name="dim_schedule_window">%1$s až %2$s</string>
+    <string name="dim_schedule_off">Vypnuto</string>
+    <string name="dim_schedule_at_risk">Plán — nemusí se spustit sám</string>
+
+    <string name="channel_shade_name">Ztmavení</string>
+    <string name="channel_shade_description">Zobrazuje se, když je obrazovka ztmavená, aby šlo závoj vypnout odkudkoli.</string>
+    <string name="shade_notification_title">Obrazovka ztmavená</string>
+    <string name="shade_notification_stop">Zastavit</string>
+    <string name="shade_notification_until">Do %1$s</string>
+    <string name="shade_notification_text_backlight">Posuvník jasnosti nic nemění, dokud Gloam ztmavuje</string>
+
+</resources>

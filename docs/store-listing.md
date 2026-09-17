@@ -12,12 +12,20 @@ Three scripts read this file, so its headings are load-bearing:
 | `scripts/notes-gate.py` | the newest `### x.y.z` heading, refusing a merge where it does not match `versionName` |
 | `scripts/play-metadata.py` | the whole thing, generating the `fastlane/metadata/` tree the publish workflow uploads |
 
+> **Nine locales, and four of them have under five characters of headroom.** German, Spanish, French
+> and Brazilian Portuguese all land between 3995 and 3999 of Play's 4000, against 406 spare in
+> English. **An English sentence added to the full description is therefore a cut in four other
+> languages**, and the cut has to come from a restatement or an enumeration — never from the
+> touch-through paragraph, the backlight-floor limits or the closing health line, which are the three
+> things this copy exists to be honest about. The counts in the headings are computed, not estimated;
+> they are the only warning before the Console refuses a paste.
+
 > **The gate exists because of a real failure.** A release shipped to production carrying the
 > *previous* version's release notes: `versionName` had been bumped and the notes had not, nothing
 > compared the two, and Play does not allow release notes to be edited on a live release. The
 > correction had to wait for the next upload. Renaming a heading is cheaper.
 
-## Fields shared across both locales
+## Fields shared across every locale
 
 | Field | Value |
 | --- | --- |
@@ -39,8 +47,8 @@ refuses a paste.
 
 **The app name is not translated, in any locale.** It is a coined word rather than a description, so
 there is nothing to translate; `app_name` in `values/strings.xml` carries `translatable="false"` for
-the same reason and `values-pl` does not override it. Both listings below therefore read `Gloam`, and
-that is deliberate — not a Polish field somebody forgot.
+the same reason and no `values-<locale>` overrides it. All nine listings below therefore read
+`Gloam`, and that is deliberate — not a field somebody forgot.
 
 ```
 Gloam
@@ -204,6 +212,503 @@ UPRAWNIENIA
 Kod źródłowy jest publicznie dostępny: github.com/srednimax/gloam
 ```
 
+## Czech
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. *Ztmavovač* for the closing health line, not *stmívač*, which is the wall dimmer for lights. The imperative in the short description is second-person singular, matching the register.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 64/80
+
+```
+Ztmav obrazovku pod nejnižší jasnost Androidu, pro čtení ve tmě.
+```
+
+### Full description — 3573/4000
+
+```
+Posuvník jasnosti v Androidu se zastaví na určitém minimu. Ve většině telefonů je toto minimum stále příliš jasné, než aby se dalo číst v opravdu temné místnosti. Gloam je ten rozsah pod ním.
+
+JAK TO FUNGUJE
+
+Gloam sníží podsvícení na nejnižší úroveň, kterou telefon dovolí, a pak přes obrazovku rozprostře závoj, aby došel zbytek cesty. Jeden ovladač hýbe oběma polovinami, od nepatrného ztmavení až k téměř úplné tmě.
+
+CO TO UMÍ
+
+- Ztmavení pod minimum. Jeden posuvník, hluboko pod tím, co systém dovolí nastavit.
+- Teplo barvy. Druhý ovladač obrazovku zabarví a barevná lišta vybere odstín, od jantarové po tmavě červenou.
+- Ovládání tam, kde právě jsi. Klepni na oznámení a nad tím, co čteš, se otevře malý panel. Leží nad závojem, takže zůstává čitelný i při plném ztmavení. Ikona aplikace otevře kompaktní verzi téhož ovládání.
+- Plán. Dvě hodiny na hodinách, nebo od západu do východu slunce, posouvající se s ročním obdobím. Západ slunce je odhadnutý z časového pásma, nebo z přibližné polohy, pokud ji povolíš.
+- Samočinné vypnutí. Závoj spuštěný rukou po zvolené době sám zmizí, takže ráno neodemkneš telefon, na kterém nic nepřečteš. Nastav Nikdy, pokud má zůstat. Plánovaný závoj zmizí na konci svého okna.
+- Zpátky po restartu. Závoj, který byl zapnutý při vypnutí telefonu, se po startu vrátí.
+- Funguje nad vším. Nad ostatními aplikacemi, nad domovskou obrazovkou, nad prohlížečem, nad čtečkou.
+
+VŠECHNY FUNKCE JSOU ZDARMA
+
+Žádné reklamy. Žádný účet. Žádná registrace. Žádný server. Žádné předplatné, žádná prémiová verze, nic za platební bránou. Neexistuje placená verze, kterou by bylo třeba udržovat, takže funkce se buď dostane ke všem, nebo se nevydá vůbec.
+
+VŮBEC ŽÁDNÁ SÍŤ
+
+Gloam nežádá o oprávnění k internetu, takže nemůže nic odeslat ani omylem. Nastavení si drží v telefonu. Přibližná poloha se přečte jen tehdy, když o to plán požádáš, zůstává v telefonu zaokrouhlená na asi 11 km a do záloh se nedostane.
+
+CO NEDOKÁŽE
+
+Gloam nedokáže přinutit obrazovku vyzařovat méně světla, než je minimum jejího podsvícení. Nedokáže to žádná nainstalovaná aplikace. To minimum patří ovladači displeje. Gloam k němu podsvícení stáhne a před něj postaví tmavou vrstvu. Výsledek se čte jako mnohem temnější, ale panel stále svítí.
+
+Systémové dialogy oprávnění, některé chráněné obrazovky a obrazovka uzamčení se záměrně kreslí nad vrstvou každé aplikace, takže se zobrazí v jasnosti telefonu. Tím Android chrání uživatele před aplikacemi, jako je tato.
+
+Závoj nikdy nebere dotyky. Každý dotyk projde přímo na to, co je pod ním, a dokud je závoj zapnutý, je tu vždy oznámení, které vede k ovládání a k jeho tlačítku Zastavit. Vrstva nad všemi ostatními aplikacemi nesmí být něco, za čím se dá uvíznout.
+
+Některé telefony ji zastaví. Agresivní správci baterie, zvlášť ten od Xiaomi, službu sami ukončí. Pokud závoj zmizí bez tvého zásahu, je to nastavení baterie v telefonu, a ne Gloam.
+
+Gloam je ztmavovač. Netvrdí nic o tvých očích, tvém spánku ani tvém zdraví.
+
+OPRÁVNĚNÍ
+
+- Zobrazování přes ostatní aplikace. To je celý mechanismus. Závoj je právě takové okno.
+- Oznámení. Trvalé oznámení je cesta k ovládání a k vypnutí závoje, a na Androidu 13 a novějším se neobjeví, dokud je nepovolíš.
+- Služba v popředí. Drží závoj na obrazovce, když používáš jiné aplikace.
+- Spuštění po startu. Vrátí závoj, který byl zapnutý, a po restartu znovu nastaví plán.
+- Přibližná poloha, nepovinně. Jen pro režim od západu do východu slunce, jen pokud ji povolíš, nikdy přesná a nikdy na pozadí.
+
+Zdrojový kód je k dispozici, vývoj probíhá otevřeně: github.com/srednimax/gloam
+```
+
+## German
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. **The tightest of the seven.** `Abdunklungsstufe` and `Hintergrundbeleuchtung` are long and unavoidable — they are CONTEXT.md's concepts — so the savings were taken in the sentences around them rather than in the vocabulary.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 63/80
+
+```
+Bildschirm dunkler als Androids Minimum – zum Lesen im Dunkeln.
+```
+
+### Full description — 3996/4000
+
+```
+Androids Helligkeitsregler endet an einem Minimum. Auf den meisten Telefonen ist dieses Minimum noch zu hell, um in einem richtig dunklen Zimmer zu lesen. Gloam ist der Bereich darunter.
+
+WIE ES FUNKTIONIERT
+
+Gloam senkt die Hintergrundbeleuchtung auf die niedrigste Stufe, die dein Telefon zulässt, und legt dann eine Schicht über den Bildschirm für den restlichen Weg. Ein Regler bewegt beide Hälften, von kaum abgedunkelt bis nahezu dunkel.
+
+WAS DU BEKOMMST
+
+- Abdunkeln unter das Minimum. Ein Regler, weit unter dem, was das System einstellen lässt.
+- Wärme. Ein zweiter Regler tönt den Bildschirm, und eine Farbleiste wählt den Ton, von Amber bis Dunkelrot.
+- Bedienung dort, wo du bist. Tippe auf die Benachrichtigung: über dem, was du liest, öffnet sich ein kleines Feld. Es liegt über der Schicht und bleibt auch bei voller Abdunklung lesbar. Das App-Symbol öffnet eine kompakte Fassung derselben Bedienelemente.
+- Ein Zeitplan. Zwei Uhrzeiten, oder von Sonnenuntergang bis Sonnenaufgang, mit der Jahreszeit wandernd. Der Sonnenuntergang wird aus deiner Zeitzone geschätzt, oder aus deinem ungefähren Standort, wenn du ihn erlaubst.
+- Von selbst aus. Eine von Hand gestartete Schicht endet nach einer Zeit, die du wählst, damit du morgens kein unlesbares Telefon entsperrst. Stelle Nie ein, wenn sie bleiben soll. Eine geplante Schicht endet am Ende ihres Zeitraums.
+- Zurück nach einem Neustart. Eine Schicht, die beim Ausschalten an war, kommt wieder.
+- Wirkt über allem: andere Apps, Startbildschirm, Browser, Lese-App.
+
+JEDE FUNKTION IST KOSTENLOS
+
+Keine Werbung, kein Konto, keine Anmeldung, kein Server, kein Abo, keine Premium-Fassung, nichts hinter einer Bezahlschranke. Es gibt keine bezahlte Fassung, die am Leben gehalten werden müsste — eine Funktion erscheint für alle oder gar nicht.
+
+ÜBERHAUPT KEIN NETZ
+
+Gloam fragt die Internetberechtigung nicht an und kann daher nicht einmal versehentlich nach Hause telefonieren. Die Einstellungen bleiben auf dem Telefon. Dein ungefährer Standort wird nur gelesen, wenn du ihn für den Zeitplan anforderst, bleibt auf etwa 11 km gerundet und wird aus Sicherungen herausgehalten.
+
+WAS ES NICHT KANN
+
+Gloam bringt den Bildschirm nicht dazu, weniger Licht abzugeben als das Minimum seiner Hintergrundbeleuchtung. Keine App kann das. Dieses Minimum gehört dem Display-Treiber. Gloam holt die Hintergrundbeleuchtung dorthin und stellt eine dunkle Schicht davor. Das Ergebnis liest sich weit dunkler, aber das Panel leuchtet weiterhin.
+
+System-Berechtigungsdialoge, manche geschützten Bildschirme und der Sperrbildschirm werden absichtlich über jeder App-Schicht gezeichnet und erscheinen mit der Helligkeit deines Telefons. Damit schützt Android dich vor Apps wie dieser.
+
+Die Schicht nimmt niemals deine Berührungen: jede geht direkt an das, was darunter liegt. Solange sie an ist, gibt es immer eine Benachrichtigung, die zu den Bedienelementen und ihrer Stopp-Schaltfläche führt. Eine Schicht über allem darf keine Falle sein.
+
+Manche Telefone stoppen sie. Aggressive Akku-Verwalter, besonders die von Xiaomi, beenden den Dienst von selbst. Wenn die Schicht ohne dein Zutun verschwindet, liegt das an den Akku-Einstellungen des Telefons, nicht an Gloam.
+
+Gloam ist ein Dimmer. Es erhebt keine Behauptung über deine Augen, deinen Schlaf oder deine Gesundheit.
+
+BERECHTIGUNGEN
+
+- Über anderen Apps anzeigen. Das ist der ganze Mechanismus. Die Schicht ist genau dieses Fenster.
+- Benachrichtigungen. Die laufende Benachrichtigung ist der Weg zu den Bedienelementen und zum Ausschalten, und ab Android 13 erscheint sie erst, wenn du sie erlaubst.
+- Dienst im Vordergrund. Hält die Schicht auf dem Bildschirm, während du andere Apps nutzt.
+- Beim Start ausführen. Legt eine Schicht, die an war, wieder an und setzt den Zeitplan neu.
+- Ungefährer Standort, optional. Nur für Sonnenuntergang bis Sonnenaufgang, nur wenn du es erlaubst, niemals genau und niemals im Hintergrund.
+
+Quelltext verfügbar, offen entwickelt: github.com/srednimax/gloam
+```
+
+## Spanish
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. *Atenuar* throughout, and *brillo* reserved for Android's own value: the two mechanisms that both read as "brightness" stay apart here exactly as they do in the app.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 73/80
+
+```
+Atenúa la pantalla por debajo del mínimo de Android, para leer a oscuras.
+```
+
+### Full description — 3995/4000
+
+```
+El control de brillo de Android se detiene en un mínimo. En la mayoría de los teléfonos sigue siendo demasiado luminoso para leer en una habitación realmente oscura. Gloam es el margen que queda por debajo.
+
+CÓMO FUNCIONA
+
+Gloam baja la retroiluminación al nivel más bajo que permite tu teléfono y después dibuja una capa sobre la pantalla para recorrer el resto del camino. Un solo control mueve las dos mitades, desde apenas atenuado hasta casi a oscuras.
+
+QUÉ INCLUYE
+
+- Atenuar por debajo del mínimo. Un control, muy por debajo de lo que el sistema deja ajustar.
+- Calidez. Un segundo control tiñe la pantalla, y una barra de color elige el tono, del ámbar al rojo profundo.
+- Los controles donde estás. Toca la notificación y se abre un panel pequeño sobre lo que estés leyendo. Queda por encima de la capa, así que sigue siendo legible con la atenuación al máximo. El icono de la aplicación abre una versión compacta de los mismos controles.
+- Un horario. Dos horas del reloj, o del atardecer al amanecer, moviéndose con la estación. El atardecer se estima a partir de tu zona horaria, o de tu ubicación aproximada si la permites.
+- Apagado automático. Una capa que pones a mano se retira al cabo del tiempo que elijas, para que nunca desbloquees por la mañana un teléfono que no puedes leer. Ponlo en Nunca si prefieres que se quede. Una capa programada se retira al final de su intervalo.
+- De vuelta tras reiniciar. Una capa que estaba puesta cuando el teléfono se apagó vuelve al arrancar.
+- Funciona sobre todo: otras aplicaciones, la pantalla de inicio, tu navegador, tu lector.
+
+TODAS LAS FUNCIONES SON GRATUITAS
+
+Sin anuncios. Sin cuenta. Sin registro. Sin servidor. Sin suscripción, sin versión premium y sin nada detrás de un muro de pago. No hay una versión pagada que mantener, así que una función llega a todo el mundo o no llega.
+
+NINGUNA RED, EN ABSOLUTO
+
+Gloam no solicita el permiso de internet, así que no puede comunicarse con nadie ni por accidente. Guarda sus ajustes en tu teléfono. Tu ubicación aproximada se lee solo si se la pides para el horario, se queda en el teléfono redondeada a unos 11 km y se deja fuera de las copias de seguridad.
+
+QUÉ NO PUEDE HACER
+
+Gloam no consigue que la pantalla emita menos luz que el mínimo de su retroiluminación. Ninguna aplicación puede. Ese mínimo pertenece al controlador de la pantalla. Gloam lleva la retroiluminación hasta él y pone una capa oscura delante. El resultado se lee mucho más atenuado, pero el panel sigue encendido.
+
+Los diálogos de permisos del sistema, algunas pantallas protegidas y la pantalla de bloqueo se dibujan por encima de la capa de cualquier aplicación a propósito, así que aparecen con el brillo de tu propio teléfono. Es Android protegiéndote de aplicaciones como esta.
+
+La capa nunca se queda con tus toques. Cada toque pasa directamente a lo que hay debajo, y mientras está puesta siempre hay una notificación que lleva a los controles y a su botón Detener. Una capa dibujada sobre todo lo demás no puede dejar a nadie atrapado.
+
+Algunos teléfonos la detienen. Los gestores de batería agresivos, sobre todo el de Xiaomi, cierran el servicio por su cuenta. Si la capa desaparece sin que hagas nada, son los ajustes de batería de tu teléfono y no Gloam.
+
+Gloam es un atenuador. No afirma nada sobre tus ojos, tu sueño ni tu salud.
+
+PERMISOS
+
+- Mostrar sobre otras aplicaciones. Es el mecanismo completo. La capa es esa ventana.
+- Notificaciones. La notificación permanente es como llegas a los controles y apagas la capa, y en Android 13 y posteriores no aparece hasta que la permites.
+- Servicio en primer plano. Mantiene la capa en pantalla mientras usas otras aplicaciones.
+- Ejecutar al inicio. Vuelve a poner una capa que estaba puesta y fija de nuevo el horario después de reiniciar.
+- Ubicación aproximada, opcional. Solo para el atardecer y el amanecer, solo si la permites, nunca precisa y nunca en segundo plano.
+
+Código disponible, desarrollado en abierto: github.com/srednimax/gloam
+```
+
+## French
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. `vous` here as in the app strings (`translator-brief.md` §3). *Variateur* for the closing health line — the ordinary word for a dimmer, and not *gradateur*, which is stage lighting.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 71/80
+
+```
+Assombrissez l'écran sous le minimum d'Android, pour lire dans le noir.
+```
+
+### Full description — 3999/4000
+
+```
+Le curseur de luminosité d'Android s'arrête à un minimum. Sur la plupart des téléphones, il est encore trop lumineux pour lire dans une pièce vraiment sombre. Gloam est la plage en dessous.
+
+COMMENT ÇA MARCHE
+
+Gloam descend le rétroéclairage au plus bas que votre téléphone autorise, puis dessine un voile sur l'écran pour le reste du chemin. Une seule commande déplace les deux moitiés, de à peine assombri à presque noir.
+
+CE QUE VOUS OBTENEZ
+
+- Assombrir sous le minimum. Une commande, très en dessous de ce que le système autorise.
+- Chaleur. Une deuxième commande teinte l'écran ; une barre de couleur choisit la teinte, de l'ambre au rouge profond.
+- Les commandes là où vous êtes. Touchez la notification : un petit panneau s'ouvre au-dessus de ce que vous lisez, par-dessus le voile, et reste lisible à l'assombrissement maximal. L'icône de l'application ouvre une version compacte des mêmes commandes.
+- Une programmation. Deux heures fixes, ou du coucher au lever du soleil, au fil de la saison. Le coucher est estimé d'après votre fuseau horaire, ou d'après votre position approximative si vous l'autorisez.
+- Arrêt automatique. Un voile posé à la main se retire après la durée que vous choisissez, pour ne jamais déverrouiller au matin un téléphone illisible. Réglez sur Jamais s'il doit rester. Un voile programmé se retire à la fin de sa plage.
+- De retour après un redémarrage. Un voile actif à l'extinction revient au démarrage.
+- Fonctionne par-dessus tout : autres applications, écran d'accueil, navigateur, lecteur.
+
+TOUT EST GRATUIT
+
+Pas de publicité, pas de compte, pas d'inscription, pas de serveur, pas d'abonnement, pas de version premium, rien derrière un péage. Aucune version payante à maintenir : une fonctionnalité arrive pour tous, ou elle n'arrive pas.
+
+AUCUN RÉSEAU
+
+Gloam ne demande pas l'autorisation d'accès à Internet : il ne peut rien envoyer, même par accident. Ses réglages restent sur le téléphone. Votre position approximative n'est lue que si vous la demandez pour la programmation, reste sur l'appareil arrondie à environ 11 km, et est exclue des sauvegardes.
+
+CE QU'IL NE PEUT PAS
+
+Gloam ne fait pas émettre à l'écran moins de lumière que le minimum de son rétroéclairage. Aucune application ne le peut : ce minimum appartient au pilote de l'écran. Gloam y amène le rétroéclairage et place une couche sombre devant. Le résultat se lit bien plus sombre, mais la dalle reste allumée.
+
+Les dialogues d'autorisation du système, certains écrans protégés et l'écran de verrouillage se dessinent au-dessus de la couche de toute application, par conception : ils apparaissent à la luminosité propre de votre téléphone. C'est Android qui vous protège des applications comme celle-ci.
+
+Le voile ne prend jamais vos touchers : chacun passe directement à ce qui se trouve en dessous. Tant qu'il est actif, une notification mène toujours aux commandes et à leur bouton Arrêter. Une couche posée par-dessus tout ne doit jamais devenir un piège.
+
+Certains téléphones l'arrêtent. Les gestionnaires de batterie agressifs, ceux de Xiaomi en particulier, terminent le service d'eux-mêmes. Si le voile disparaît sans que vous y touchiez, ce sont les réglages de batterie du téléphone, pas Gloam.
+
+Gloam est un variateur. Il n'avance rien sur vos yeux, votre sommeil ou votre santé.
+
+AUTORISATIONS
+
+- Affichage par-dessus les autres applications. C'est tout le mécanisme. Le voile est cette fenêtre.
+- Notifications. La notification permanente mène aux commandes et à l'arrêt du voile ; à partir d'Android 13 elle n'apparaît qu'une fois autorisée.
+- Service de premier plan. Maintient le voile à l'écran quand vous utilisez d'autres applications.
+- Exécution au démarrage. Repose un voile actif et redéfinit la programmation après un redémarrage.
+- Position approximative, facultative. Uniquement pour le coucher et le lever du soleil, si vous l'autorisez, jamais précise et jamais en arrière-plan.
+
+Code source disponible, développé au grand jour : github.com/srednimax/gloam
+```
+
+## Italian
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. *Attenuatore* for the closing line. The velo/schermo pairing is held throughout, never *filtro*.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 66/80
+
+```
+Oscura lo schermo sotto il minimo di Android, per leggere al buio.
+```
+
+### Full description — 3972/4000
+
+```
+Il cursore della luminosità di Android si ferma a un minimo. Sulla maggior parte dei telefoni quel minimo è ancora troppo luminoso per leggere in una stanza davvero buia. Gloam è l'intervallo che sta sotto.
+
+COME FUNZIONA
+
+Gloam abbassa la retroilluminazione al livello più basso che il telefono consente, poi disegna un velo sopra lo schermo per fare il resto della strada. Un solo comando muove entrambe le metà, da appena oscurato a quasi buio.
+
+COSA OFFRE
+
+- Oscurare sotto il minimo. Un cursore, molto sotto ciò che il sistema permette di impostare.
+- Calore. Un secondo comando tinge lo schermo, e una barra di colore sceglie il tono, dall'ambra al rosso profondo.
+- I comandi dove sei. Tocca la notifica e sopra ciò che stai leggendo si apre un piccolo pannello. Sta sopra il velo, quindi resta leggibile anche al massimo oscuramento. L'icona dell'app apre una versione compatta degli stessi comandi.
+- Una programmazione. Due orari, oppure dal tramonto all'alba, che si spostano con la stagione. Il tramonto è stimato dal tuo fuso orario, o dalla tua posizione approssimativa se la consenti.
+- Spegnimento automatico. Un velo messo a mano viene tolto dopo un tempo che scegli tu, così non sbloccherai mai al mattino un telefono che non riesci a leggere. Imposta Mai se preferisci che resti. Un velo programmato viene tolto alla fine del suo intervallo.
+- Di nuovo dopo un riavvio. Un velo attivo allo spegnimento del telefono torna all'avvio.
+- Funziona sopra tutto: altre app, schermata principale, browser, lettore.
+
+OGNI FUNZIONE È GRATUITA
+
+Nessuna pubblicità. Nessun account. Nessuna registrazione. Nessun server. Nessun abbonamento, nessuna versione premium, niente dietro un pagamento. Non esiste una versione a pagamento da mantenere in vita, quindi una funzione arriva a tutti o non arriva.
+
+NESSUNA RETE, PROPRIO NESSUNA
+
+Gloam non richiede il permesso di accesso a internet, quindi non può comunicare con nessuno nemmeno per sbaglio. Tiene le sue impostazioni sul telefono. La tua posizione approssimativa viene letta solo se la chiedi per la programmazione, resta sul telefono arrotondata a circa 11 km ed è esclusa dai backup.
+
+COSA NON PUÒ FARE
+
+Gloam non fa emettere allo schermo meno luce del minimo della sua retroilluminazione. Nessuna app installata può farlo. Quel minimo appartiene al driver del display. Gloam vi porta la retroilluminazione e mette davanti uno strato scuro. Il risultato si legge molto più scuro, ma il pannello è comunque acceso.
+
+Le finestre di dialogo dei permessi di sistema, alcune schermate protette e la schermata di blocco vengono disegnate sopra lo strato di qualsiasi app per scelta progettuale, quindi appaiono con la luminosità del telefono. È Android che ti protegge da app come questa.
+
+Il velo non prende mai i tuoi tocchi. Ogni tocco passa direttamente a ciò che sta sotto, e finché è attivo c'è sempre una notifica che porta ai comandi e al loro pulsante Ferma. Uno strato disegnato sopra tutto il resto non deve intrappolare nessuno.
+
+Alcuni telefoni lo fermano. I gestori di batteria aggressivi, quello di Xiaomi in particolare, chiudono il servizio da soli. Se il velo scompare senza che tu abbia toccato nulla, sono le impostazioni della batteria del telefono e non Gloam.
+
+Gloam è un attenuatore. Non afferma nulla sui tuoi occhi, sul tuo sonno o sulla tua salute.
+
+AUTORIZZAZIONI
+
+- Visualizzazione sopra le altre app. È tutto il meccanismo. Il velo è quella finestra.
+- Notifiche. La notifica permanente è il modo per raggiungere i comandi e spegnere il velo, e da Android 13 in poi non appare finché non la consenti.
+- Servizio in primo piano. Tiene il velo sullo schermo mentre usi altre app.
+- Esecuzione all'avvio. Rimette un velo che era attivo e reimposta la programmazione dopo un riavvio.
+- Posizione approssimativa, facoltativa. Solo per il tramonto e l'alba, solo se la consenti, mai precisa e mai in background.
+
+Codice disponibile, sviluppato alla luce del sole: github.com/srednimax/gloam
+```
+
+## Brazilian Portuguese
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. Brazilian vocabulary throughout — *tela*, *celular*, *aplicativo* — and `pt-BR` is the only listing locale in the set that carries a region.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 64/80
+
+```
+Escureça a tela abaixo do mínimo do Android, para ler no escuro.
+```
+
+### Full description — 3998/4000
+
+```
+O controle de brilho do Android para em um mínimo. Na maioria dos celulares ele ainda é claro demais para ler em um quarto de verdade escuro. O Gloam é a faixa que fica abaixo dele.
+
+COMO FUNCIONA
+
+O Gloam baixa a luz de fundo até o nível mais baixo que seu celular permite e depois desenha uma camada sobre a tela para percorrer o resto do caminho. Um único controle move as duas metades, de quase nada escurecido até quase totalmente escuro.
+
+O QUE VOCÊ RECEBE
+
+- Escurecer abaixo do mínimo. Um controle, bem abaixo do que o sistema deixa ajustar.
+- Calidez. Um segundo controle tinge a tela, e uma barra de cor escolhe o tom, do âmbar ao vermelho profundo.
+- Os controles onde você está. Toque na notificação e um painel pequeno abre sobre o que você estiver lendo. Ele fica acima da camada, então continua legível no escurecimento máximo. O ícone do aplicativo abre uma versão compacta dos mesmos controles.
+- Uma programação. Dois horários, ou do pôr do sol ao nascer do sol, acompanhando a estação. O pôr do sol é estimado pelo seu fuso horário, ou pela sua localização aproximada se você permitir.
+- Desligamento automático. Uma camada colocada à mão sai depois de um tempo que você escolhe, para que nunca desbloqueie de manhã um celular que não consegue ler. Escolha Nunca se preferir que ela fique. Uma camada programada sai no fim do seu intervalo.
+- De volta depois de reiniciar. Uma camada que estava ativa quando o celular desligou volta na inicialização.
+- Funciona sobre tudo: outros aplicativos, a tela inicial, o navegador, o leitor.
+
+TODOS OS RECURSOS SÃO GRATUITOS
+
+Sem anúncios. Sem conta. Sem cadastro. Sem servidor. Sem assinatura, sem versão premium e nada atrás de um paywall. Não existe versão paga para manter de pé, então um recurso chega para todos ou não chega.
+
+NENHUMA REDE, DE FORMA ALGUMA
+
+O Gloam não pede a permissão de internet, então não consegue se comunicar com ninguém nem por acidente. Ele guarda as configurações no seu celular. Sua localização aproximada é lida apenas se você pedir para a programação usá-la, fica no celular arredondada para cerca de 11 km e é deixada fora dos backups.
+
+O QUE ELE NÃO CONSEGUE FAZER
+
+O Gloam não faz a tela emitir menos luz do que o mínimo da sua luz de fundo. Nenhum aplicativo consegue. Esse mínimo pertence ao driver da tela. O Gloam leva a luz de fundo até ele e coloca uma camada escura na frente. O resultado se lê muito mais escuro, mas o painel continua aceso.
+
+As caixas de diálogo de permissão do sistema, algumas telas protegidas e a tela de bloqueio são desenhadas acima da camada de qualquer aplicativo por projeto, então aparecem com o brilho do seu próprio celular. É o Android protegendo você de aplicativos como este.
+
+A camada nunca fica com os seus toques. Cada toque passa direto para o que está embaixo, e enquanto ela está ativa há sempre uma notificação que leva aos controles e ao seu botão Parar. Uma camada desenhada sobre todo o resto não pode prender ninguém atrás dela.
+
+Alguns celulares a interrompem. Gerenciadores de bateria agressivos, o da Xiaomi especialmente, encerram o serviço por conta própria. Se a camada desaparecer sem você tocar em nada, são as configurações de bateria do seu celular e não o Gloam.
+
+O Gloam é um escurecedor. Ele não afirma nada sobre seus olhos, seu sono ou sua saúde.
+
+PERMISSÕES
+
+- Exibir sobre outros aplicativos. É o mecanismo inteiro. A camada é essa janela.
+- Notificações. A notificação permanente é como você alcança os controles e desliga a camada, e no Android 13 ou mais recente ela só aparece depois que você permite.
+- Serviço em primeiro plano. Mantém a camada na tela enquanto você usa outros aplicativos.
+- Executar na inicialização. Recoloca uma camada que estava ativa e define de novo a programação depois de reiniciar.
+- Localização aproximada, opcional. Apenas para o pôr do sol e o nascer do sol, apenas se você permitir, nunca precisa e nunca em segundo plano.
+
+Código disponível, desenvolvido abertamente: github.com/srednimax/gloam
+```
+
+## Ukrainian
+
+**Written 2026-09-17 in Phase 6**, from the English above, per
+[`translator-brief.md`](translator-brief.md) — and **without a native speaker's read-through**, which
+is [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)'s decision rather
+than an omission. Translated from the English, **not from the Polish**, for the reason `values-uk/strings.xml` gives: the two are close enough to pull false friends through unnoticed.
+
+### App name — 5/30
+
+Untranslated on purpose — see the English section above.
+
+```
+Gloam
+```
+
+### Short description — 73/80
+
+```
+Затемни екран нижче мінімальної яскравості Android, щоб читати в темряві.
+```
+
+### Full description — 3922/4000
+
+```
+Повзунок яскравості Android зупиняється на певному мінімумі. У більшості телефонів цей мінімум усе ще надто світлий, щоб читати в справді темній кімнаті. Gloam — це діапазон під ним.
+
+ЯК ЦЕ ПРАЦЮЄ
+
+Gloam знижує підсвітку до найнижчого рівня, який дозволяє телефон, а потім натягує на екран запону, щоб пройти решту шляху. Один регулятор рухає обидві половини — від майже непомітного затемнення до майже повної темряви.
+
+ЩО ТИ ОТРИМУЄШ
+
+- Затемнення нижче мінімуму. Один повзунок, значно нижче того, що дозволяє виставити система.
+- Теплота. Другий регулятор забарвлює екран, а смужка кольору вибирає відтінок — від бурштинового до темно-червоного.
+- Керування там, де ти є. Торкнись повідомлення, і над тим, що ти читаєш, відкриється невелика панель. Вона лежить над запоною, тому залишається читною навіть за повного затемнення. Піктограма застосунку відкриває компактну версію того самого керування.
+- Розклад. Дві години на годиннику або від заходу до сходу сонця, що зсувається разом із порою року. Захід сонця оцінюється за часовим поясом або за приблизним розташуванням, якщо ти його дозволиш.
+- Самовимкнення. Запона, натягнута рукою, зникає через вибраний тобою час, щоб ти ніколи не розблокував зранку телефон, на якому нічого не видно. Постав Ніколи, якщо хочеш, щоб вона лишалася. Запона за розкладом зникає в кінці свого вікна.
+- Повертається після перезавантаження. Запона, яка була ввімкнена, коли телефон вимикався, повертається після запуску.
+- Працює над усім. Над іншими застосунками, над головним екраном, над браузером, над читалкою.
+
+КОЖНА ФУНКЦІЯ БЕЗКОШТОВНА
+
+Жодної реклами. Жодного облікового запису. Жодної реєстрації. Жодного сервера. Жодної підписки, жодної преміум-версії і нічого за платною стіною. Немає платної версії, яку треба було б утримувати, тож функція або дістається всім, або не виходить зовсім.
+
+ЖОДНОЇ МЕРЕЖІ ВЗАГАЛІ
+
+Gloam не запитує дозволу на інтернет, тому не може нічого надіслати навіть випадково. Свої налаштування він тримає в телефоні. Приблизне розташування читається лише тоді, коли ти попросиш розклад ним скористатися, залишається в телефоні округленим приблизно до 11 км і не потрапляє в резервні копії.
+
+ЧОГО ВІН НЕ МОЖЕ
+
+Gloam не змусить екран випромінювати менше світла, ніж мінімум його підсвітки. Цього не може жоден встановлений застосунок. Той мінімум належить драйверу дисплея. Gloam зводить підсвітку до нього і ставить перед ним темний шар. Результат читається значно темнішим, але панель усе одно світить.
+
+Системні діалоги дозволів, деякі захищені екрани та екран блокування намалюються над шаром будь-якого застосунку — так задумано, тому вони з'являються з яскравістю самого телефону. Це Android захищає тебе від застосунків, як оцей.
+
+Запона ніколи не забирає твої дотики. Кожен дотик проходить прямо до того, що під нею, і поки вона ввімкнена, завжди є повідомлення, яке веде до керування та його кнопки Зупинити. Шар, намальований над усіма іншими застосунками, має бути таким, за яким неможливо застрягнути.
+
+Деякі телефони його зупиняють. Агресивні менеджери акумулятора, особливо від Xiaomi, самі завершують службу. Якщо запона зникає без твого втручання — це налаштування акумулятора в телефоні, а не Gloam.
+
+Gloam — це затемнювач. Він нічого не стверджує про твої очі, твій сон чи твоє здоров'я.
+
+ДОЗВОЛИ
+
+- Показ поверх інших застосунків. Це весь механізм. Запона — саме таке вікно.
+- Повідомлення. Постійне повідомлення — це шлях до керування і до вимкнення запони, а на Android 13 і новіших воно не з'явиться, доки ти його не дозволиш.
+- Служба на передньому плані. Тримає запону на екрані, поки ти користуєшся іншими застосунками.
+- Запуск під час завантаження. Повертає запону, яка була ввімкнена, і знову налаштовує розклад після перезавантаження.
+- Приблизне розташування, необов'язково. Лише для заходу та сходу сонця, лише якщо ти дозволиш, ніколи не точне і ніколи у фоні.
+
+Код доступний, розробка відкрита: github.com/srednimax/gloam
+```
+
 ## Release notes (Play's "What's new", 500 chars per locale)
 
 **Don't paste these by hand.** The Console takes all languages in one textarea, tagged by locale,
@@ -235,7 +740,7 @@ default.
 The first release.
 ```
 
-**Polish** — 18/500:
+**Polish** — 17/500:
 
 ```
 Pierwsze wydanie.
@@ -480,4 +985,60 @@ Fixed: moving to a new phone no longer brings the dimming with it. Gloam used to
 W Pomocy i opiniach jest nowy wiersz, który otwiera stronę Gloam w Google Play, jeśli chcesz ocenić aplikację. Ocena jest dobrowolna i niczego nie odblokowuje, bo w Gloam nic nie jest zablokowane.
 
 Poprawka: przeniesienie się na nowy telefon nie włącza już przyciemniania. Gloam odczytywał ze starego telefonu ustawienie „przyciemnianie włączone” i sam zasłaniał ekran nowego telefonu, i to na starym poziomie.
+```
+
+**Czech** — 381/500:
+
+```
+V Pomoci a zpětné vazbě je nový řádek, který otevře stránku Gloamu na Google Play, pokud ho chceš ohodnotit. Hodnocení je dobrovolné a nic neodemyká, protože v Gloamu nic zamčené není.
+
+Opraveno: přechod na nový telefon už s sebou nepřinese ztmavení. Gloam dřív přečetl ze starého telefonu nastavení „ztmavení je zapnuté“ a sám rozprostřel závoj na novém, a to v úrovni ze starého.
+```
+
+**German** — 437/500:
+
+```
+Hilfe und Rückmeldung hat eine neue Zeile, die die Seite von Gloam bei Google Play öffnet, falls du es bewerten möchtest. Eine Bewertung ist freiwillig und schaltet nichts frei, weil in Gloam nichts gesperrt ist.
+
+Behoben: Der Umzug auf ein neues Telefon nimmt die Abdunklung nicht mehr mit. Gloam las „Abdunkeln ist an“ aus den Einstellungen des alten Telefons und legte die Schicht auf dem neuen von selbst an, mit der Stufe des alten.
+```
+
+**Spanish** — 405/500:
+
+```
+Ayuda y comentarios tiene una fila nueva que abre la página de Gloam en Google Play, por si quieres valorarlo. Valorar es opcional y no desbloquea nada, porque en Gloam no hay nada bloqueado.
+
+Corregido: cambiar de teléfono ya no se lleva la atenuación consigo. Gloam leía «la atenuación está activada» en los ajustes del teléfono antiguo y ponía la capa en el nuevo por sí solo, con el nivel del antiguo.
+```
+
+**French** — 426/500:
+
+```
+Aide et commentaires comporte une nouvelle ligne qui ouvre la page de Gloam sur Google Play, si vous souhaitez le noter. Noter est facultatif et ne débloque rien, puisque rien n'est verrouillé dans Gloam.
+
+Corrigé : changer de téléphone n'emporte plus l'assombrissement. Gloam lisait « l'assombrissement est activé » dans les paramètres de l'ancien téléphone et posait le voile sur le nouveau tout seul, au niveau de l'ancien.
+```
+
+**Italian** — 397/500:
+
+```
+Aiuto e commenti ha una nuova riga che apre la pagina di Gloam su Google Play, se vuoi valutarlo. Valutare è facoltativo e non sblocca nulla, perché in Gloam non c'è nulla di bloccato.
+
+Corretto: passare a un telefono nuovo non porta più con sé l'oscuramento. Gloam leggeva «l'oscuramento è attivo» dalle impostazioni del vecchio telefono e metteva il velo sul nuovo da sé, al livello del vecchio.
+```
+
+**Brazilian Portuguese** — 391/500:
+
+```
+Ajuda e comentários tem uma nova linha que abre a página do Gloam no Google Play, se você quiser avaliá-lo. Avaliar é opcional e não desbloqueia nada, porque nada no Gloam está bloqueado.
+
+Corrigido: mudar de celular não leva mais o escurecimento com você. O Gloam lia “o escurecimento está ligado” nas configurações do celular antigo e colocava a camada no novo sozinho, no nível do antigo.
+```
+
+**Ukrainian** — 379/500:
+
+```
+У Довідці та відгуках є новий рядок, який відкриває сторінку Gloam у Google Play, якщо ти хочеш його оцінити. Оцінювання добровільне і нічого не відкриває, бо в Gloam ніщо не закрите.
+
+Виправлено: перехід на новий телефон більше не переносить затемнення. Gloam читав зі старого телефону налаштування «затемнення увімкнене» і сам натягував запону на новому, ще й на рівні старого.
 ```

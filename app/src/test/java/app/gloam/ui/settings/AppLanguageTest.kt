@@ -39,6 +39,26 @@ class AppLanguageTest {
     }
 
     @Test
+    fun `no two languages share a language subtag`() {
+        // What `currentAppLanguage()` leans on. It matches the platform's locale against the
+        // **language subtag** of each entry rather than the whole tag, because the platform reports
+        // `pt-BR` as plain "pt" and may report `en` as "en-GB" — whole-tag comparison misses both,
+        // and the symptom is a chip the user just tapped that never looks selected.
+        //
+        // That match is sound only while the subtags are unique. A second Portuguese or a second
+        // Spanish would make it ambiguous rather than merely wrong: two entries would answer to the
+        // same locale and `firstOrNull` would silently pick whichever is declared first. The fix
+        // then is to match on the full tag with a subtag fallback — not to delete this test.
+        val subtags = AppLanguage.entries.map { it.tag.substringBefore('-') }
+        assertEquals(
+            "two languages share a language subtag, which makes currentAppLanguage() ambiguous: " +
+                subtags.groupBy { it }.filterValues { it.size > 1 }.keys,
+            subtags.size,
+            subtags.toSet().size,
+        )
+    }
+
+    @Test
     fun `english is the base language and is always offered`() {
         // ADR-0004: English is the fallback for every unmatched locale, so it is the one entry that
         // cannot be removed without changing what an unlisted language falls back to.
