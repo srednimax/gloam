@@ -68,3 +68,27 @@ database to checkpoint, so the custom AppBackupAgent is removed and the platform
 Backup covers the preferences file; and with no media there is nothing for a manual export to carry.
 The reasoning above is kept intact rather than rewritten, because it is still correct for the app it
 was written about, and it is what comes back if a Gloam feature ever calls for it.
+
+Amendment, 2026-09-17 (Phase 5, R4): what Auto Backup actually does with the preferences file, read
+off a device rather than asserted. Through `LocalTransport`, `pm clear` and `bmgr restore`, the file
+came back byte for byte, and `lent_location.preferences_pb` stayed behind — ADR-0013 §8's exclusion
+works. Neither the restore nor the first launch raised anything.
+
+**What the reading changed is `shade_running`.** It is *live state* that travels in a file of
+settings, and `phase-5.md` §9 predicted it would be refused "twice over": no overlay permission, and
+a deadline that passed while the phone was off. Only the first refusal held. With auto-off at
+*Never* there is no deadline to pass, so once the user grants the overlay on the new phone, the next
+reboot or app update put the shade up at the old phone's dim level — measured, with no notification,
+because nothing had asked for that permission yet. On HyperOS it is sooner than that: the ROM queues
+`BOOT_COMPLETED` for an app in the stopped state and delivers it at the first launch.
+
+So the intent now carries **`shade_began_at`**, written in `beginShade`'s transaction beside
+`shade_running` and the deadline, and `BootReceiver` refuses an intent that is older than this
+install's `firstInstallTime` — a value the platform never backs up. `RestoredIntentTest` holds the
+comparison, including the two cases a phone cannot stage: an absent stamp, and the boundary
+millisecond. An absent stamp is refused, so anybody updating with the shade up loses it once.
+
+**The rule this leaves standing is still the one in `CLAUDE.md`**: the stored intent is what the user
+asked for, and it is judged at the read. This is one more refusal in the place the other two already
+live, not a manifest attribute and not a second store — `data_extraction_rules.xml` excludes files,
+and every setting shares one.

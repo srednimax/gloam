@@ -3,6 +3,7 @@ package app.gloam.shade
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import app.gloam.MainApplication
 import app.gloam.work.armScheduleAlarm
@@ -55,6 +56,14 @@ private const val TAG = "GloamBoot"
  *   23:00 with a two-hour deadline puts a shade back at 09:00 the next morning that the user had
  *   already asked to end. `endShadeAt()` clears both keys together, so the next launch
  *   reads a clean state rather than a stale one.
+ * - **An intent this install did not write is not this phone's intent.** Auto Backup restores the
+ *   preferences file onto a new device with `shade_running` in it, so the shade can be *on* on a
+ *   phone the user has never dimmed. Measured in Phase 5's R4: the restore itself raises nothing,
+ *   and neither does the first launch, but the next reboot or Play update reaches this receiver and
+ *   used to put the shade up — at the old phone's dim level, and with no notification, because
+ *   nothing had asked for the permission yet. The deadline check above does not catch it: with
+ *   auto-off at *Never* there is no deadline. So the intent carries `shade_began_at`, and
+ *   [startedThisInstall] compares it with `firstInstallTime`, which the platform never backs up.
  * - **No overlay permission means no window.** The service guards `addShadeWindow` on
  *   `canDrawShade()`, so starting anyway would not crash — it would post a *Screen dimmed*
  *   notification over an undimmed screen, and quiet and wrong is worse than not starting.
@@ -122,6 +131,13 @@ private suspend fun MainApplication.restoreShade(action: String) {
     when {
         !intent.running -> Log.i(TAG, "$action: the shade was not running, nothing to put back")
 
+        !startedThisInstall(intent.beganAtMillis, firstInstallMillis()) -> {
+            // `Reaped` for the same reason the passed deadline uses it: nobody decided anything
+            // here, so a window open right now has not been spent by this.
+            preferences.endShadeAt(ShadeEnd.Reaped)
+            Log.i(TAG, "$action: the running intent came from another install; cleared")
+        }
+
         isDue(System.currentTimeMillis(), intent.offAtMillis) -> {
             // `Reaped`, which is the one ending that leaves the schedule's marker alone: nobody
             // decided anything here, so a window open right now has not been spent by this.
@@ -149,3 +165,36 @@ private suspend fun MainApplication.restoreShade(action: String) {
     // and it runs on this path too — the process that is running this receiver started to do it.
     armScheduleAlarm(preferences.schedule.first())
 }
+
+/**
+ * Whether a stored *running* intent was written by **this** install of the app.
+ *
+ * `firstInstallTime` is the platform's own record of when this package first appeared on this
+ * device. Auto Backup never carries it, and an app update never changes it, which is what makes it
+ * the right side of this comparison: a restored intent was written on the old phone, necessarily
+ * before this install existed, while every intent written here is later than it.
+ *
+ * `null` is refused. It means either a restore from a build older than `shade_began_at` or an
+ * install of ours that predates the key, and the safe answer is the same for both: do not dim a
+ * screen on the strength of a value nobody can date. The cost is one shade not coming back, once,
+ * for whoever is updating with the shade up.
+ */
+internal fun startedThisInstall(
+    beganAtMillis: Long?,
+    firstInstallMillis: Long,
+): Boolean = beganAtMillis != null && beganAtMillis >= firstInstallMillis
+
+/**
+ * When this package was first installed on this device, from the platform rather than from us.
+ *
+ * `PackageInfoFlags.of(0)` rather than the `Int` overload, which is deprecated from API 33 — the
+ * minimum this app ships to (ADR-0008), so there is no older branch to keep.
+ *
+ * A failure here would mean the package manager cannot find the app that is asking, which is not a
+ * state this code can be running in. It answers [Long.MAX_VALUE] anyway, because that is the value
+ * that refuses every intent rather than honouring one it cannot date.
+ */
+private fun Context.firstInstallMillis(): Long =
+    runCatching {
+        packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0)).firstInstallTime
+    }.getOrDefault(Long.MAX_VALUE)

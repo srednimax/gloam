@@ -36,10 +36,16 @@ import kotlin.math.roundToInt
  *   service without the user changing their mind; this is the value that survives that.
  * @param offAtMillis the instant the shade next comes down, or `null` for no deadline. Storage's `0`
  *   is collapsed to `null` here, at the one boundary that knows the sentinel.
+ * @param beganAtMillis when the shade was last started, or `null` if no write of ours has said.
+ *   **It exists to tell this install's intent from another phone's.** Auto Backup restores this
+ *   file onto a new device, so `running = true` can arrive from a phone the user has moved off —
+ *   and `BootReceiver` compares this against the install's own `firstInstallTime`, which is never
+ *   backed up (Phase 5, R4).
  */
 data class ShadeIntent(
     val running: Boolean,
     val offAtMillis: Long?,
+    val beganAtMillis: Long?,
 )
 
 /** Which colour scheme applies, regardless of what the phone is set to. */
@@ -94,6 +100,13 @@ class AppPreferences(
         val WARMTH_COLOR = intPreferencesKey("warmth_color")
         val AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
         val OFF_AT_MILLIS = longPreferencesKey("off_at_millis")
+
+        /**
+         * When the shade was started. Absent rather than `0` when unknown, which is what an install
+         * predating this key and a restore from another phone both look like — and both are
+         * refused.
+         */
+        val SHADE_BEGAN_AT = longPreferencesKey("shade_began_at")
         val LAUNCHER_COMPACT = booleanPreferencesKey("launcher_compact")
         val SCHEDULE_ENABLED = booleanPreferencesKey("schedule_enabled")
         val SCHEDULE_ON_MINUTES = intPreferencesKey("schedule_on_minutes")
@@ -157,6 +170,7 @@ class AppPreferences(
             ShadeIntent(
                 running = prefs[Keys.SHADE_RUNNING] ?: false,
                 offAtMillis = deadlineOrNull(prefs[Keys.OFF_AT_MILLIS] ?: NO_DEADLINE),
+                beganAtMillis = prefs[Keys.SHADE_BEGAN_AT],
             )
         }
 
@@ -385,12 +399,22 @@ class AppPreferences(
      * taps a different auto-off chip. Writing the same `true` back costs nothing and keeps the
      * invariant, which is why that case did not need a third method.
      *
+     * **The third key is the clock, and it is written here rather than passed in.** Every caller
+     * would hand it the same `System.currentTimeMillis()`, and one of them is a `ViewModel`, which
+     * has no `Context` to read an install time with. What the value is *for* lives in
+     * [ShadeIntent.beganAtMillis].
+     *
      * @param offAtMillis `null` for no deadline, stored as [NO_DEADLINE].
+     * @param beganAtMillis overridable for tests; every caller in the app takes the default.
      */
-    suspend fun beginShade(offAtMillis: Long?) {
+    suspend fun beginShade(
+        offAtMillis: Long?,
+        beganAtMillis: Long = System.currentTimeMillis(),
+    ) {
         store.edit {
             it[Keys.SHADE_RUNNING] = true
             it[Keys.OFF_AT_MILLIS] = offAtMillis ?: NO_DEADLINE
+            it[Keys.SHADE_BEGAN_AT] = beganAtMillis
         }
     }
 
@@ -414,6 +438,8 @@ class AppPreferences(
         store.edit {
             it[Keys.SHADE_RUNNING] = false
             it[Keys.OFF_AT_MILLIS] = NO_DEADLINE
+            // Removed rather than zeroed: absent is what "no start of ours" means everywhere else.
+            it.remove(Keys.SHADE_BEGAN_AT)
             if (honouredAt != null) it[Keys.SCHEDULE_HONOURED_AT] = honouredAt
         }
     }

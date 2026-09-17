@@ -511,7 +511,7 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       still only in the Console rather than in `play-app-content.md` — the IARC category, the
       advertising-ID date, the `specialUse` wording — and each is a ⚠ there to copy at the next
       re-declaration. That is record-keeping, not a blocker.
-- [ ] **A restore is a claim nobody has read off a device.** ADR-0005's amendment says platform Auto
+- [x] **A restore is a claim nobody has read off a device.** ADR-0005's amendment says platform Auto
       Backup covers the preferences file; `shade_running` and `off_at_millis` are live state rather
       than settings and travel with it. §9. **A `data_extraction_rules.xml` cannot fix that** -
       backup exclusions are file-granular and all thirteen keys share one DataStore blob, so the only
@@ -521,7 +521,10 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       update put the restored shade up, because `BootReceiver`'s only refusal for a restored
       intent is the overlay grant. With auto-off at *Never* there is no deadline to refuse on, and
       the notification permission had been reset, so the shade came up with no Stop button in the
-      drawer. That calls for §9's `fix:`: one more refusal in `BootReceiver`.
+      drawer. **Fixed the same day**, which is what closes this box: the intent carries
+      `shade_began_at`, and `BootReceiver` refuses one older than this install's `firstInstallTime`,
+      which Auto Backup never carries. `RestoredIntentTest` holds the comparison, both branches were
+      read back on the phone, and ADR-0005 has the second amendment.
 - [x] **The shade-down screenshot closes as a refusal**, not as an open box: a capture cannot show
       the backlight half at all, so the one image whose job is to show the product understates it.
       §8 carries the argument, which needs no device; R5 is a capture taken for 2b's benefit while
