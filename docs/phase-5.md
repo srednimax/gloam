@@ -1155,6 +1155,15 @@ close — see* **Done when** *.)*
   overlay at first launch, and the first reboot or Play update after that raises a shade they never
   started on that phone. Nothing has asked for the notification permission by then, so it may come
   up without one. This is the case §9 set aside a `fix:` for: one more refusal at the read.
+  **And on this ROM it does not even wait for a reboot.** HyperOS queues `BOOT_COMPLETED` for an app
+  in the stopped state and delivers it at the next launch: with autostart on, planting an intent and
+  opening the app logged `BOOT_COMPLETED: shade restored` and put the window up. The first restore
+  reading missed this only because `pm clear` had turned autostart off.
+  **The fix is in, and both halves were read back on the phone** (2026-09-17): `shade_began_at` in
+  `beginShade`'s transaction, and a refusal in `BootReceiver` for an intent older than
+  `firstInstallTime`. With the app's own stamp the log says *shade restored* and the shade comes
+  back; with a stamp patched to a day before the install it says *the running intent came from
+  another install; cleared*, no window appears, and `shade_running` is `false` afterwards.
 - **R5** — the shade-down capture. **Read 2026-09-17: the shade is in the capture, and the backlight
   half is not.** The capture was of Gloam's own dim screen at dim 72, shade off and then on. Every
   brightness band fell by the same ×0.929 (the medians of four bands ran from 0.928 to 0.931),
