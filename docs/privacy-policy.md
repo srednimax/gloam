@@ -117,6 +117,10 @@ be":
 3. **Google Play.** Installing and updating an app is a transaction between your phone and Google,
    with its own privacy policy. The developer receives aggregate, anonymous statistics from Play —
    install counts, crash rates, country-level breakdowns — and no information about individuals.
+   *Help and feedback* also has a row that opens Gloam's page on Google Play, in case you want to
+   rate it. The row opens Play, or your browser if the phone has no Play, and tells it nothing
+   about you. A rating or review you leave there is handled by Google under Google's policy, and
+   reaches the developer only through Google.
 
 ## Children
 

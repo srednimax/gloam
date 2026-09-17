@@ -23,6 +23,19 @@ import app.gloam.work.startActivitySafely
 private const val SUPPORT_ADDRESS = "gloam.dimmer@gmail.com"
 
 /**
+ * The id Play knows this app by — **a fact about the listing rather than about this build.**
+ *
+ * A literal rather than `BuildConfig.APPLICATION_ID`, because debug builds carry
+ * `applicationIdSuffix = ".debug"` so they install beside a Play copy, and Play has never heard of
+ * the suffixed id. Deriving it by stripping the suffix would work and would write the suffix down in
+ * two places.
+ */
+private const val PLAY_PACKAGE = "io.github.srednimax.gloam"
+
+/** The Play app itself, which is the only store this app is listed in. */
+private const val PLAY_STORE_APP = "com.android.vending"
+
+/**
  * The two things a user can send, as a lookup table.
  *
  * An enum rather than two `@StringRes` parameters on [sendSupportMail], because the subject and the
@@ -72,6 +85,26 @@ fun Context.sendSupportMail(request: SupportRequest): Boolean {
                 "&body=" + Uri.encode(supportMailBody(getString(request.prompt)))
         ).toUri()
     return startActivitySafely(Intent(Intent.ACTION_SENDTO, uri))
+}
+
+/**
+ * Open this app's Play listing: in the Play app if the phone has it, in a browser if not.
+ *
+ * **Not a third [SupportRequest].** That enum is what a *mail* is made of, and a rating is not mail.
+ *
+ * **An `https://` link pinned to the Play app, not `market://`.** That is a device finding (Phase 5,
+ * D): on HyperOS the `market` scheme is also claimed by Xiaomi's own store, so an unpinned
+ * `market://` tap opens the system chooser with that store listed first — and Gloam is not in it.
+ * `setPackage` is the platform's way of saying *this app and no other*; with it, the launch either
+ * opens Play or throws `ActivityNotFoundException` because Play is not installed. The `https` link
+ * is the same one either way, so the fallback is that link unpinned, which a browser answers.
+ *
+ * @return whether anything opened, the same contract as [sendSupportMail].
+ */
+fun Context.rateOnPlay(): Boolean {
+    val listing = "https://play.google.com/store/apps/details?id=$PLAY_PACKAGE".toUri()
+    val inPlay = Intent(Intent.ACTION_VIEW, listing).setPackage(PLAY_STORE_APP)
+    return startActivitySafely(inPlay) || startActivitySafely(Intent(Intent.ACTION_VIEW, listing))
 }
 
 /**
