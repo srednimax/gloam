@@ -419,10 +419,9 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
             the other app is gone, the tagline is Gloam's own line, and its three colours are
             *read out of* `theme/Color.kt`'s dark scheme at render time rather than pasted — so a
             regenerated palette reaches the listing art by re-running one script.
-      - [ ] **Polish short and full descriptions.** Deliberately deferred, English first. Note the
-            trap recorded in `store-listing.md`: `play-metadata.py` emits *zero-byte* pl-PL files
-            rather than skipping the locale, which is harmless by hand and not harmless once the
-            publish workflow runs.
+      - [ ] **Polish short and full descriptions.** Deliberately deferred, English first, and now
+            Phase 5 C's second commit. The trap that used to be noted here, blank pl-PL files sent
+            as values, was measured by R1 and fixed in C's first commit.
       - [x] Real screenshots off a real mark. Done 2026-09-05: the `[SCENES]` rewrite had already
             landed in Phase 2's checkpoint F, so this was the capture rather than the walk. Light set
             in `art/play-screenshots/`, both themes in `docs/screenshots/`.
@@ -487,12 +486,14 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       also stopped calling the app *open source*, which `README.md` says it is not.
       **D owes the policy one line**: the rate-on-Play row is a fourth hand-off, and it is described
       when it exists rather than before.
-- [ ] **`scripts/play-metadata.py` renders an untranslated locale as blank files, and Play rejects
-      them** — *"This app has no short description (promotional text) for language pl-PL"*, R1,
-      2026-09-17. One byte each, not absent: inert while a human pastes into the Console, a value Play is asked to store the
-      first time a promotion carries a listing. **The fix lands before the Polish copy is written**,
-      because afterwards there is no blank field left to see it with - and it makes blank and missing
-      the same thing, so the tidier document stops being the one that breaks a release. §4.
+- [x] **`scripts/play-metadata.py` no longer sends a blank locale to Play.** Fixed 2026-09-17 in C,
+      before any Polish copy, after R1 showed Play refusing the one-byte files. A blank field is now
+      omitted, and blank and missing are one rule: a **warning** on the notes-only path and a
+      **refusal** under `--strict`, which `publish-play-production.yml` passes only when
+      `update_listing` is on. Both paths were run against the real document, and against one with
+      the Polish section deleted. **Omission alone would not have been enough**, which §4 did not
+      know: supply 2.240.1 saves a listing for every locale *directory*, and `pl-PL/` always exists
+      for its changelog, so `--strict` is the actual guard on the listing path.
 - [ ] **The tip's exposure moved but did not shrink.** ADR-0009's amendment put the tip on the
       repository and the Pages site; the listing's Website field and the last line of its full
       description point at exactly those two pages. **No tip ships in Phase 5 on any surface it

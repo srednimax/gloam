@@ -482,6 +482,16 @@ every path, and nothing here should be read as relaxing it.
 That split is the whole design, and it is the same shape as every other gate here: loud where it is about
 to matter, quiet where it is not.
 
+⚠ **Correction, 2026-09-17, read from supply's source before writing the fix: omission is not
+enough, and `--strict` is the guard rather than a tidy extra.** The paragraph above says supply
+"leaves the rest of Play's listing untouched" when a file is absent. That is true of a locale Play
+already has. supply 2.240.1 fetches the listing for **every locale directory**, an empty one on a 404,
+sets whichever fields it has files for, and saves it regardless (`uploader.rb`, `upload_metadata`;
+`client.rb`, `listing_for_language`). `pl-PL/` always exists because its changelog lives there, so a
+Polish listing with its descriptions omitted still reaches Play as a new, empty listing, and is
+refused exactly as R1 was. The notes-only path is safe for a different reason: it passes
+`--skip_upload_metadata`, and supply never calls `upload_metadata` at all.
+
 ⚠ **The fix lands before the Polish copy, not after it.** Once the Polish is written the bug is
 invisible — there are no blank fields left to mis-render — and it comes back the day a third language is
 added, with nobody left who remembers why.
