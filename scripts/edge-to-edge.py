@@ -1259,6 +1259,23 @@ def open_url(url: str) -> None:
     # over a phone connection; the screenshot shows a half-drawn page if it was not.
     settle(4.0)
 
+    # **Scrolled into the body, and both reasons are about what a listing frame must not contain.**
+    # A browser parked at the top of an article shows its own chrome — on the first release smoke
+    # test that was an address bar, a home button and a tab counter reading *8*, which is somebody's
+    # personal browsing state in a public store listing. Chrome hides the toolbar once the page
+    # scrolls. The same scroll carries off Wikipedia's fundraising and campaign banners, which are
+    # dated the moment they are photographed ("Wiki Loves Monuments" in that run).
+    #
+    # Raw coordinates rather than [swipe_up], deliberately: that one reads a content box out of a
+    # uiautomator dump, and the foreground here is an arbitrary browser rather than a Compose screen
+    # this repo knows the shape of.
+    width, height = screen_size()
+    for _ in range(2):
+        shell(f"input swipe {width // 2} {int(height * 0.72)} {width // 2} {int(height * 0.28)} 300")
+        settle(0.5)
+    # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of it.
+    settle(1.2)
+
 
 def start_controls() -> None:
     """Open the compact controls the way the notification does.
