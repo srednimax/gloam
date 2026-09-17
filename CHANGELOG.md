@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/srednimax/gloam/compare/v0.7.1...v0.8.0) (2026-09-17)
+
+
+### Features
+
+* add a rate-on-Play row to Help and feedback ([5cd654d](https://github.com/srednimax/gloam/commit/5cd654d7cb79a3aca4472ea65a9c19803aa22148))
+* ship Gloam in seven more languages ([3705ae2](https://github.com/srednimax/gloam/commit/3705ae2cc15f2bc05e1cc4cc9d078ef70d2980fe))
+
+
+### Bug Fixes
+
+* refuse a shade intent restored from another phone ([c20bd8a](https://github.com/srednimax/gloam/commit/c20bd8ac65f3ba5b97b18f80c80abf61537b964d))
+* skip a locale with no description instead of publishing an empty one ([b6f44ea](https://github.com/srednimax/gloam/commit/b6f44ea7e8a679ecdc933114d887bb5b07b8d0ab))
+
 ## [0.7.1](https://github.com/srednimax/gloam/compare/v0.7.0...v0.7.1) (2026-09-16)
 
 
