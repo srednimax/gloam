@@ -46,10 +46,11 @@ those are, Gloam needs to know roughly where you are, and it has two ways to kno
 
 - **An estimate, which needs no permission.** Gloam takes the main city of your phone's time zone.
   This is what it uses unless you choose otherwise.
-- **Your phone's approximate location, if you allow it.** On the schedule screen, after choosing
-  *sunset to sunrise*, you can tap *Use this phone's location*. Android then asks whether to allow
-  **approximate** location. Gloam never asks for your precise location, and never for location in
-  the background.
+- **Your phone's approximate location, if you allow it.** When you choose *sunset to sunrise* on
+  the schedule screen, Android asks whether Gloam may have your **approximate** location. If you say
+  no, Gloam uses the estimate, and *Use this phone's location* on the same screen lets you change
+  your mind later. Gloam never asks for your precise location, and never for location in the
+  background.
 
 If you allow it:
 

@@ -516,10 +516,18 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       than settings and travel with it. §9. **A `data_extraction_rules.xml` cannot fix that** -
       backup exclusions are file-granular and all thirteen keys share one DataStore blob, so the only
       exclusion Android can express is *every setting*. The rule is enforced at the read instead.
-- [ ] **The shade-down screenshot closes as a refusal**, not as an open box: a capture cannot show
+      **Read 2026-09-17 (R4), and the read does not hold yet.** The restore itself raised nothing,
+      the lent location stayed behind, and the settings came back byte for byte. But the next app
+      update put the restored shade up, because `BootReceiver`'s only refusal for a restored
+      intent is the overlay grant. With auto-off at *Never* there is no deadline to refuse on, and
+      the notification permission had been reset, so the shade came up with no Stop button in the
+      drawer. That calls for §9's `fix:`: one more refusal in `BootReceiver`.
+- [x] **The shade-down screenshot closes as a refusal**, not as an open box: a capture cannot show
       the backlight half at all, so the one image whose job is to show the product understates it.
       §8 carries the argument, which needs no device; R5 is a capture taken for 2b's benefit while
-      the phone is already attached, not the thing the refusal rests on.
+      the phone is already attached, not the thing the refusal rests on. **Refused, and R5 was read
+      2026-09-17**: the shade is in the capture (×0.929 at dim 72), and the fall from 500 nits to
+      2 nits is not.
 
 - [x] **Write the privacy policy** and confirm GitHub Pages is serving `docs/`. Done 2026-08-30:
       `docs/privacy-policy.md` is written, and since PR #6 merged
