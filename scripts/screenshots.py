@@ -372,7 +372,14 @@ def main() -> int:
 
     if args.restore:
         e2e.restore_device()
-        set_locale(None)
+        # **Both installs, not the one `--build` happens to name.** `--restore` is "hand the phone
+        # back", and the person typing it is not thinking about which build the last run drove —
+        # they are finished. Clearing only the selected one is how a locale stays pinned on the
+        # other: measured on 2026-09-17, when a `--build release` run was restored without the flag
+        # and left `[en]` on the shipped install, reported as handed back.
+        for build in ("debug", "release"):
+            e2e.select_build(build)
+            set_locale(None)
         # No theme here: a separate invocation has no record of what the phone had, and writing a
         # guess is how this line used to leave a dark phone on a sunrise schedule. The run puts the
         # theme back itself — see [read_theme].
