@@ -30,9 +30,9 @@ planning.
 planned, and every count below that describes the app is stale.** ADR-0013 shipped in 0.7.0 and
 0.7.1, and it changed four things this file argues from:
 
-- **Fourteen keys in the main file, plus three in a second one** — `schedule_kind` and `warmth_color`
-  joined the main store, and `latitude_tenths`, `longitude_tenths` and `zone_id` live in
-  `lent_location`. Wherever this file says *thirteen keys*, read the source.
+- **Fifteen keys in the main file, plus three in a second one** — `schedule_kind` and `warmth_color`
+  joined the main store, `shade_began_at` joined it in E, and `latitude_tenths`, `longitude_tenths`
+  and `zone_id` live in `lent_location`.
 - **Six permissions, not five.** `ACCESS_COARSE_LOCATION` is the sixth, seven on the artifact with
   AndroidX's. §2's table is short by one more than it knew, and it is the one that matters most: **the
   live privacy policy did not mention location while 0.7.1 held the permission on the closed track.**
@@ -43,7 +43,10 @@ planned, and every count below that describes the app is stale.** ADR-0013 shipp
 - **0.7.0 and 0.7.1 are cut.** This phase's one `feat:` makes **0.8.0**, not 0.7.0 as §17 says.
 
 B was written against `AppPreferences.kt` and the 0.7.1 artifact rather than against this file, and F
-reconciles the sections themselves.
+reconciled the sections themselves on 2026-09-17: §§2, 9, 12, 14 and 17 now say fifteen keys, six
+permissions and 0.8.0. **The sentences the counts were holding up did not change**, which is the
+useful half of doing it — a rule about what shares one file does not care how many keys are in it,
+and the reason it was worth re-reading is that nothing said so until somebody checked.
 
 ---
 
@@ -93,8 +96,8 @@ costs the 14-day window rather than a day, because the window is other people's 
 ## What is in, and what is deliberately not
 
 **In:** a validate-only promotion taken as a gate; the privacy policy, `docs/index.md` **and the
-listing's own English full description** rewritten against the thirteen keys the app actually stores and
-the five permissions it actually declares; the Polish listing written and the script bug that would
+listing's own English full description** rewritten against the fifteen keys the app actually stores and
+the six permissions it actually declares; the Polish listing written and the script bug that would
 publish it as two one-byte strings fixed in front of it; the Support screen's rate-on-Play row;
 `docs/play-app-content.md`, which `DOD.md` says this phase owes; a restore read off a device rather than
 off an ADR; the release-shaped build walked on the phone; and the promotion itself.
@@ -113,7 +116,7 @@ off an ADR; the release-shaped build walked on the phone; and the promotion itse
 - **Ultra dark and the Quick Settings tile** — Phase 2b, which is unstarted and which §11 prices
   against this phase rather than ignoring.
 - **1.0.** `PLAN.md` rule 2: the app ships 0.x and nothing in this plan produces a 1.0. This phase cuts
-  **0.7.0** and the version is not a milestone.
+  **0.8.0** and the version is not a milestone.
 - **A third language.** `PLAN.md`: adding one is an opt-in that gets its own phase file on the day it
   happens.
 
@@ -167,7 +170,7 @@ faithfully against something no longer true.
 **D depends on nothing and could land first.** It is deliberately not first: it is the only checkpoint
 in this phase that changes the app, and putting it after A means the one thing that needs a release to
 reach anybody is not sitting in `main` while a gate is still open. It is also the phase's only `feat:`,
-so it is what makes this release 0.7.0 rather than a `docs:`-only version release-please would not cut.
+so it is what makes this release 0.8.0 rather than a `docs:`-only version release-please would not cut.
 
 **E is where a phase that looks like documentation gets its device time back.** Three of its readings
 are things no document can answer: whether R8 broke a feature nobody would notice breaking
@@ -276,7 +279,7 @@ of features and one deletion later, its central section reads:
 - **It says five and lists four.** That was already true on the day it was written.
 - **The fourth is `onboardingDone`, which Phase 2 deleted.** The policy describes a stored value that
   does not exist, which is the one kind of error that makes a reader doubt the rest of the document.
-- **The app stores thirteen keys**, and the eight the policy has never mentioned are the interesting
+- **The app stores fifteen keys**, and the eight the policy did not mention were the interesting
   ones: warmth, whether to lower the backlight, the auto-off choice, the deadline, what the launcher
   icon opens, and the three that make up the schedule plus the marker recording the night it last
   honoured.
@@ -293,9 +296,9 @@ memory:
 | `launcher_compact` | whether the icon opens the small controls or the whole app |
 | `schedule_enabled`, `schedule_on_minutes`, `schedule_off_minutes`, `schedule_honoured_at` | the nightly window, and the night it last acted on |
 
-**Write it as groups, not as thirteen bullets.** The policy's job is to let a reader see that nothing
+**Write it as groups, not as one bullet per key.** The policy's job is to let a reader see that nothing
 here is about *them* — no identifier, no history, no content of anything they looked at — and a
-thirteen-row list buries that under detail. Six lines, ending in the sentence that already does the
+fifteen-row list buries that under detail. Six lines, ending in the sentence that already does the
 work: *"None of it identifies you, and none of it leaves your phone by any route the app controls."*
 
 ### The permissions section is short by three, and one of them is a manifest entry a reviewer will find
@@ -741,7 +744,7 @@ not exist.** This plan said it was a `data_extraction_rules.xml` excluding `shad
 `off_at_millis` from `cloud-backup` and `device-transfer`. **No such file can be written.** Android's
 backup exclusions are **file-granular** — `domain="file"`, `sharedpref`, `database` — and have no notion
 of a key inside a file; and `AppContainer.kt` is `preferencesDataStore(name = "app_preferences")`, so all
-thirteen keys are one blob at `files/datastore/app_preferences.preferences_pb`. Excluding that path
+fifteen keys are one blob at `files/datastore/app_preferences.preferences_pb`. Excluding that path
 excludes **every setting**, which is the feature rather than the bug: the dim level, the warmth, the
 theme and the schedule are exactly what a user wants back on a new phone.
 
@@ -851,7 +854,7 @@ this section was originally able to make.
 
 **And no new file, which is the correction §9 carries.** This plan expected
 `res/xml/data_extraction_rules.xml` to appear if the restore misbehaved. It cannot: backup exclusions are
-file-granular and all thirteen keys share `files/datastore/app_preferences.preferences_pb`, so the only
+file-granular and all fifteen keys share `files/datastore/app_preferences.preferences_pb`, so the only
 exclusion Android can express here is *all of them*. The settings-versus-live-state rule is enforced at
 the read instead, where `BootReceiver` already enforces it.
 
@@ -887,12 +890,14 @@ to hold in mind for the whole of C.
   and named the repository and the Pages site as its home, without noticing that the listing's Website
   field and the full description's last line point at exactly those two pages. The amendment records the
   exposure, the decision (no tip on any surface this phase controls), and the two alternatives kept rather
-  than deleted — because this is a decision someone should re-take when the app is live, which is what the
+  than deleted. **Written 2026-09-17 in F.** It — because this is a decision someone should re-take when the app is live, which is what the
   second amendment already said and could not act on.
-- **`ADR-0005`** — a **second amendment**, from §9. Its first says the platform's default Auto Backup
+- **`ADR-0005`** — a **second amendment**, from §9. **Written 2026-09-17 with E's R4**, and R4 gave it
+  more to say than this expected: the restore itself is well behaved and the *next* reboot or update
+  was not, so the amendment carries the `shade_began_at` guard as well as the reading. Its first says the platform's default Auto Backup
   covers the preferences file; this one says what a restore actually *does*, read off a device, and
   records the settings-versus-live-state rule **together with the reason it cannot be enforced in a
-  manifest**: exclusions are file-granular, the thirteen keys are one file, and the rule therefore lives
+  manifest**: exclusions are file-granular, the fifteen keys are one file, and the rule therefore lives
   at the read. That second half is the part worth an amendment — the rule without it invites a
   `data_extraction_rules.xml` that would silently exclude every setting the user wanted back.
 - **`ADR-0010`, `ADR-0012`, `ADR-0003`** — **nothing**, checked rather than assumed. This phase adds no
@@ -911,7 +916,7 @@ to hold in mind for the whole of C.
   reason each could not be answered** (§10); the shade-down screenshot box closes as a refusal on the
   backlight argument (§8); the Polish descriptions box closes with C. Its *"seven checkpoints, A-G"* line
   becomes six, A-F. The **standing checks stay open forever** by construction, and the artifact check
-  gets this release's line: 0.7.0 adds a row to a screen and must still report the same six permissions.
+  gets this release's line: 0.8.0 adds a row to a screen and must still report the same six permissions.
 - **`README.md`** — *"Nothing is on Play yet"* becomes false in F; the tip paragraph stays exactly as it
   is, per §6.
 - **`docs/index.md`, `docs/privacy-policy.md`, `docs/store-listing.md`** — §§2, 3 and 4, and they are the
@@ -926,7 +931,7 @@ to hold in mind for the whole of C.
   takeable at all. A setup document that describes a state two grants old is the same failure as a privacy
   policy naming a deleted key.
 - **`CLAUDE.md`** — one line, and §9 is why: **what travels in a backup is now a rule someone can break by
-  adding a key**, because the thirteen keys share one file and the platform cannot exclude one of them. A
+  adding a key**, because the fifteen keys share one file and the platform cannot exclude one of them. A
   new preference is backed up whether or not anybody meant it to be, and the place that says so is the
   house rule about DataStore.
 
@@ -992,7 +997,15 @@ about R8; re-grant with `appops set --uid` and walk it again.
 
 ## 16. Tests
 
-**This phase adds none, and that is a claim rather than an omission.**
+⚠ **Correction, 2026-09-17: it added one, and the claim below is what made that worth recording.**
+E's R4 found a restored `shade_running` raising the shade on a phone nobody had dimmed, and the fix
+is a refusal at the read — so `RestoredIntentTest` stands in front of *the shade does not come up
+unbidden*, and `PLAN.md` rule 3's count is **five, not four**. The sentence that was wrong is the
+one below about this phase introducing no function that bounds a safety value: a refusal bounds one
+just as a ramp does. The rest of the section still holds, and the reason the test exists is that a
+reading went looking rather than that a rule required it.
+
+**This phase planned none, and that was a claim rather than an omission.**
 
 `PLAN.md` rule 3 promised four pure-function tests across the whole roadmap, standing in front of the
 properties `CLAUDE.md` calls load-bearing: **`ShadeRampTest`** (Phase 1), **`PanelWidthTest`** (Phase 3b),
@@ -1010,8 +1023,8 @@ What the existing gates cover here:
   `scripts/` takes. A unit test asserting that a Python function skips an empty string would be a test of
   the function; the thing worth knowing is whether the *workflow* refuses to publish an incomplete locale,
   and that is proven by running it.
-- **No test for the rate-on-Play row.** A Robolectric shadow asserting `startActivity` was called with a
-  `market://` URI is a test of the mock. Whether the Play app opens on the right listing is R8, on a
+- **No test for the rate-on-Play row**, and that one held. A Robolectric shadow asserting
+  `startActivity` was called with a `market://` URI is a test of the mock. Whether the Play app opens on the right listing is R8, on a
   phone, against a listing that exists.
 - **No instrumented test.** This phase adds no window, and `ShadeWindowTest` and `PanelWindowTest` exist
   because a window's *effective* flags live only inside the window manager.
@@ -1024,17 +1037,17 @@ Everything else here is device behaviour or Play behaviour and belongs in §15.
 
 Conventional Commits, and each leaves the app working. **`feat:` lines land in `CHANGELOG.md` through
 release-please and `docs:` / `fix:` / `chore:` do not**, which decides the types below rather than taste.
-**The phase ships one `feat:`, so it cuts 0.7.0** — the smallest `feat:` in the plan against the largest
+**The phase ships one `feat:`, so it cuts 0.8.0** — the smallest `feat:` in the plan against the largest
 volume of work, because everything else here is prose.
 
 | Checkpoint | Commits |
 | --- | --- |
 | **A** | No commit. The verdict is a reading, taken against the listing that already exists |
-| **B** | `docs: say what the app stores, what it asks for, and what it does` — the privacy policy rewritten against the thirteen keys and the five permissions and the support mail, `docs/index.md` **and the listing's English full description** caught up with the panel and the schedule, `README.md`'s Play line, `RELEASING.md`'s service-account line, and `docs/play-app-content.md` as a new file |
+| **B** | `docs: say what the app stores, what it asks for, and what it does` — the privacy policy rewritten against the keys and permissions the app really has and the support mail, `docs/index.md` **and the listing's English full description** caught up with the panel and the schedule, `README.md`'s Play line, `RELEASING.md`'s service-account line, and `docs/play-app-content.md` as a new file |
 | **C** | `fix: skip a locale with no description instead of publishing an empty one` — `play-metadata.py`'s omission, its warning, `--strict`, and the workflow passing it on the listing path only. Then `docs: write the Polish listing` — the short and full descriptions, and their character counts in the headings |
 | **D** | `feat: add a rate-on-Play row to Help and feedback` — the row, `rateOnPlay()` beside `sendSupportMail()`, the Play package constant, and the three strings in both locales |
 | **E** | The readings. Expected to be no commit, and the two that would produce one are named: a `fix:` adding a **guard at the read** if R4 finds a restore that raises the shade — never a `data_extraction_rules.xml`, §9 — and a `fix:` for whatever R2 finds that R8 broke |
-| **F** | `docs: ...` — §14's edits, ADR-0009's third amendment, ADR-0005's second, this file's readings block filled in, `PLAN.md`'s last two boxes and its rule-5 reconciliation, and the 0.7.0 release notes the notes gate wants. Then the release, and then the promotion |
+| **F** | `docs: ...` — §14's edits, ADR-0009's third amendment, ADR-0005's second, this file's readings block filled in, `PLAN.md`'s last two boxes and its rule-5 reconciliation, and the 0.8.0 release notes the notes gate wants. Then the release, and then the promotion |
 
 **The order that matters is the one inside C**, and it is the ramp precedent in a different medium: the
 script deciding how a blank field reaches Play lands *before* there is copy to hide the blank field, which
@@ -1193,7 +1206,7 @@ close — see* **Done when** *.)*
 ## Done when
 
 - **Every sentence in `docs/privacy-policy.md` is true of the shipped app**, checked against
-  `AppPreferences`' thirteen keys and the manifest's five permissions rather than against memory —
+  `AppPreferences`' fifteen keys and the manifest's six permissions rather than against memory —
   including the two the policy has never named, the two settings hand-offs that are not permissions at
   all, and the **third** thing that happens outside the app, which is the support mail and the six facts
   it composes.
@@ -1214,12 +1227,13 @@ close — see* **Done when** *.)*
   session to rediscover — and R5 is banked for 2b rather than credited with the decision.
 - A restore is a reading rather than a claim, ADR-0005 says what it does, and it says the part that is
   easy to get wrong: **the settings-versus-live-state rule cannot be enforced in a manifest**, because
-  exclusions are file-granular and the thirteen keys are one file. If R4 finds something, the fix is a
-  guard where the value is read.
+  exclusions are file-granular and the fifteen keys are one file. **R4 found something**, so the
+  guard exists where the value is read: `shade_began_at` against `firstInstallTime`, in the receiver
+  beside the two refusals that were already there.
 - The four rule-5 questions are each closed as **unanswered, on the shipped value, with the reason** — and
   `PLAN.md` says plainly that rule 5's prompted-answer channel retired without being opened, rather than
   leaving a reader to infer that twelve people were asked and said nothing.
-- `aab-permissions.py` reports the **same six permissions** on the 0.7.0 artifact as on 0.6.0, on the
+- `aab-permissions.py` reports the **same six permissions** on the 0.8.0 artifact as on 0.7.1, on the
   release that adds a row which opens another app.
 - The release-shaped build was walked feature by feature on the phone, on a grant re-read rather than
   assumed — and R3 is struck in writing, with the date its transition passed, rather than left as a dash

@@ -308,12 +308,17 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       reviews the application before the production track opens. Budget days for that, not minutes.
       `phase-5.md` §10 is the honest source for those answers — the rule-5 questions were never put
       to the testers, and the application should not imply they were.
-- [ ] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
+- [x] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
       it is the longest value that is still obviously not "the next day", which is the failure
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
       The twelve are the room. Recorded here rather than in `phase-2.md` so the question outlives
       the phase that raised it; the answer is a one-line change to `AutoOff.Default` or nothing.
-- [ ] **Put the two edges of an episode to the testers** (`PLAN.md` rule 5). *Raised by Phase 4's
+      **Closed 2026-09-17 as *shipped, unasked* (`phase-5.md` §10).** The channel was never opened:
+      no message, no date, no owner, so silence was never going to carry information. `Hours2` stands
+      and stops being provisional — a value lived with by one person rather than twelve, which is the
+      complaint, and not one an unsent message fixes. An answer can still arrive as ordinary mail and
+      change a default in an ordinary release.
+- [x] **Put the two edges of an episode to the testers** (`PLAN.md` rule 5). *Raised by Phase 4's
       section 3, and it is one question rather than two.* A shade the hand starts **inside** a window
       is bounded by the window's end, and a shade that **ends** inside one — Stop at 01:00, or a
       promised deadline expiring — spends that night, so opening the phone at 01:05 does not put the
@@ -321,6 +326,9 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       only shows up in somebody who lives with it for a week, which is what the twelve are.
       [ADR-0012](adr/0012-one-deadline-monotone-except-at-a-start.md) is the rule, and the answer is
       a one-line change to `nightSpentBy` or nothing.
+      **Closed 2026-09-17 as *shipped, unasked* (`phase-5.md` §10).** `nightSpentBy` is unchanged and
+      ADR-0012's rule stands as written. Both edges err toward light, which is the direction this app
+      errs in everywhere else.
 - [ ] **Ultra dark has a ceiling the platform holds, and 2b has to price it before it starts.**
       *Found by Phase 3's R13, 2026-09-03.* An app overlay that **passes touches** may not obscure
       more than `maximum_obscuring_opacity_for_touch` — unset on the phone and on the API-33
@@ -370,7 +378,7 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       clearly faster and got 1.004, so `DEFAULT_WARMTH_COLOR` **stays at 50**, and ADR-0010's eighth
       amendment records the run — the colour bar is taste, not speed. Rows and per-night summaries
       are in `~/gloam-data/reading-test/`, outside the repo.
-- [ ] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
+- [x] **Put the launcher preference's default to the testers** (`PLAN.md` rule 5). **The default
       inverted in Phase 4 D: the icon opens the compact controls, and the full app is the setting.**
       What stood behind the old default was an argument rather than a reading — that a first launcher
       tap landing on a dialog over another app is a bad first meeting with an app nobody has used yet
@@ -383,7 +391,12 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       that way would be wrong.** `escapeHatchLive()` is in the same guard, so a tester who declined
       notifications gets the full app from the icon for good, with nothing on screen saying why —
       they are not using the default at all. Only testers who granted notifications can answer this.
-- [ ] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
+      **Closed 2026-09-17 as *unanswerable as posed* (`phase-5.md` §10).** The warning above outlived
+      the question: `escapeHatchLive()` sits in the same guard, so a tester who declined notifications
+      never met the default at all, and there was no way to know which testers those were except by
+      asking. `launcherCompact` keeps its default. R9 had already removed the engineering objection;
+      what is left is second-week taste.
+- [x] **Put the brightness-slider question to the testers** (`PLAN.md` rule 5, the second of its two).
       Should the phone's own brightness slider mean *"give me more light"* while Gloam is dimming?
       Phase 3 ships the cheap half — the ongoing notification now says the slider is paused, on the one
       surface that can be read at maximum dim — and deliberately ships no `ContentObserver`.
@@ -394,6 +407,10 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       something the system never promised, on a screen that does not name the app responsible. That is
       a taste argued in a room with one person in it, which is what the twelve are for. The answer is a
       small, already-measured piece of work or nothing.
+      **Closed 2026-09-17 as *not built* (`phase-5.md` §10)**, and it loses least: nobody
+      spontaneously reports the absence of a feature they were never told about. R10's measurement is
+      what is kept, so the next person starts from *"this works, is it wanted"* rather than from
+      scratch.
 - [x] **Replace the placeholder mark.** Done 2026-09-05. The moon: a disc with a crescent bitten
       out of it, traced from `art/concept.png` into `art/mark.py` and both generators re-run.
       Provenance is recorded in `art/README.md` — an image model, the owner's own prompt — and the
@@ -468,14 +485,19 @@ door* on 2026-08-30: a closed test will not open without them, so they are sched
 
 **Phase 5 is being built and its detail is [`phase-5.md`](phase-5.md)** — six checkpoints, A-F.
 Read that file for the sequence; what follows is only what this file is for, the boxes.
-**A, the gate, was taken 2026-09-17 and came back as verdict 2**: Play rejects the one-byte Polish
-short description, so C's `fix:` is a blocker rather than hygiene. The readings block has the rest —
-*Manage store presence* is granted, the screenshots validate, and the promotion path works before
-production access exists. **B is written.** **A to E do not wait on the closed-test window; F's
-promotion does** — the window, then Play's production-access review (*Before the door*).
-⚠ **The sun schedule landed after `phase-5.md` was planned, and its counts are stale.** The app
-stores fourteen keys in one file plus three in a second, backup-excluded one, and declares **six**
-permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the source, not the plan.
+**A to E are done, all on 2026-09-17, and F is what is left.** A, the gate, came back as verdict 2:
+Play rejected the one-byte Polish short description, which made C's `fix:` a blocker rather than
+hygiene — and it also showed that *Manage store presence* is granted, that the screenshots validate,
+and that a promotion is accepted before production access exists. B rewrote the four documents. C
+fixed the metadata script and wrote the Polish listing. D shipped the rate-on-Play row, which makes
+this release **0.8.0**. E took the readings, and R4 found a fault the documents had asserted away —
+a restored *dimming is on* raising the shade on a phone nobody had dimmed — so the phase carries one
+`fix:` and `PLAN.md` rule 3's test count is five rather than four.
+**F is documents, then the release, then the promotion**, and only the promotion waits on the
+closed-test window and Play's production-access review (*Before the door*).
+**The counts in `phase-5.md` were stale and F reconciled them**: the app stores **fifteen** keys in
+one file, plus three in a second, backup-excluded one, and declares **six** permissions, seven on the
+artifact with AndroidX's. Read them off `AppPreferences.kt` and the manifest, never off a plan.
 
 - [x] **The privacy policy is true of 0.7.1.** Rewritten 2026-09-17 in B, against
       `AppPreferences.kt` and the 0.7.1 artifact rather than against the plan. It was worse than this
@@ -496,11 +518,13 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       the Polish section deleted. **Omission alone would not have been enough**, which §4 did not
       know: supply 2.240.1 saves a listing for every locale *directory*, and `pl-PL/` always exists
       for its changelog, so `--strict` is the actual guard on the listing path.
-- [ ] **The tip's exposure moved but did not shrink.** ADR-0009's amendment put the tip on the
+- [x] **The tip's exposure moved but did not shrink.** ADR-0009's amendment put the tip on the
       repository and the Pages site; the listing's Website field and the last line of its full
       description point at exactly those two pages. **No tip ships in Phase 5 on any surface it
       controls**, and ADR-0009 gets a third amendment saying why the second did not reach far
-      enough. §6.
+      enough. §6. **Written 2026-09-17**, with both alternatives kept rather than deleted, because
+      the choice is reversible and the time to re-take it is when there is an audience. `README.md`'s
+      sentence about a one-off tip stays: nothing to click is a statement about pricing.
 - [x] **`docs/play-app-content.md`** — written 2026-09-17 in B. Every answer, what it rests on and
       what would change it, and the Data safety answer re-reasoned for the location permission
       against Play's own definitions. **It corrects `phase-5.md` §§2 and 7**: Play's Data safety page
@@ -581,6 +605,11 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       lines of `AndroidManifest.xml` and not one permission — the five the source declares are
       the same five `v0.5.0` declared, and the sixth on the artifact is AndroidX's as before. A
       rewrite of that file is exactly the moment this check earns its standing place.
+      **0.8.0 owes this run, and R7 is where it happens** (`phase-5.md` §15). The source declares
+      **six** since `ACCESS_COARSE_LOCATION` arrived in 0.7.0, seven on the artifact with AndroidX's,
+      and this release adds a row to a screen and a preference key — so the number to expect is the
+      same six. A release whose only feature opens a URL in another app is exactly the one where
+      nobody would think to look.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
       **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
       2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the

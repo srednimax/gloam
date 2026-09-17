@@ -453,3 +453,31 @@ Harmonogram może podążać za słońcem — od zachodu do wschodu, wraz z por�
 
 Poprawka: pas nad paskiem nawigacji jest przyciemniany razem z resztą ekranu, a przyciemnienie nie znika przy obracaniu telefonu.
 ```
+
+### 0.8.0 — a way to say so, and one thing a new phone should not inherit
+
+**Two lines for a release with one feature in it.** The rate row is small and the reader can act on
+it; the restore fix is smaller in the diff and larger for anybody it would have happened to. The
+rest of the release is documents — the privacy policy rewritten against what the app actually stores,
+the Polish listing, `play-app-content.md` — and none of it is a release note, because nothing the
+reader does changes because of it.
+
+**The fix is named in the user's terms rather than ours.** *"A restored shade intent is refused
+unless this install wrote it"* is the mechanism (ADR-0005's second amendment); what the reader would
+have seen is a phone they had never dimmed going dark by itself, so that is what the note says.
+
+**English** — 387/500:
+
+```
+Help and feedback has a new row that opens Gloam's page on Google Play, if you would like to rate it. Rating is optional and unlocks nothing, because nothing in Gloam is locked.
+
+Fixed: moving to a new phone no longer brings the dimming with it. Gloam used to read "dimming is on" from the old phone's settings and put the shade up on the new one by itself, at the old phone's dim level.
+```
+
+**Polish** — 410/500:
+
+```
+W Pomocy i opiniach jest nowy wiersz, który otwiera stronę Gloam w Google Play, jeśli chcesz ocenić aplikację. Ocena jest dobrowolna i niczego nie odblokowuje, bo w Gloam nic nie jest zablokowane.
+
+Poprawka: przeniesienie się na nowy telefon nie włącza już przyciemniania. Gloam odczytywał ze starego telefonu ustawienie „przyciemnianie włączone” i sam zasłaniał ekran nowego telefonu, i to na starym poziomie.
+```

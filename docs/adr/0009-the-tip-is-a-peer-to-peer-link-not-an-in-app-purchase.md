@@ -108,3 +108,34 @@ out of the first release.**
 
 If it is ever put back in-app, the wording is the whole defence: a tip to a person, not a donation to
 a project, and visibly unlocking nothing.
+
+Amendment, 2026-09-17 (Phase 5, §6): **the second amendment's own third bullet reaches further than
+it noticed, and where it reaches is the listing.** It removed the payment link from the app and put
+the tip on the repository and the Pages site — then required that nothing the app links to carries
+the tip, and named the Support screen's source-code link as the thing that constrained. That link
+does not exist. What does exist is the **listing**: its Website field points at the Pages site, and
+the last line of its full description points at the repository. Both are exactly the pages the second
+amendment sent the tip to, and StreetComplete's rejection is the same shape — it reached a project
+home page the app pointed at.
+
+So the rule holds at one level out, and the decision is plainer than before: **no tip ships on any
+surface this release controls.** Not in the app, and not on the two pages the listing links to. The
+promise in `README.md` and `CLAUDE.md` — that there may one day be a one-off tip that unlocks nothing
+— stays exactly as written, because a sentence with nothing to click is a statement about pricing
+rather than donation information.
+
+The two alternatives are kept rather than deleted, because this is reversible and someone will want
+to re-take it with an audience:
+
+- **Take the GitHub line out of the full description and keep the Website field tip-free**, so the
+  tip can live on the repository alone. It costs the listing's *"read it, verify it"* line, which is
+  part of how a source-available app earns trust, and it buys a tip nobody sends during a closed
+  test. **This is the option to take later**, which is what the second amendment meant by *revisit
+  once the app is live*.
+- **Ship it on both pages and accept the exposure.** The three conditions genuinely hold — one
+  person, 100%, nothing unlocks — and the policy text permits it. It loses on the same ground as
+  before: the distinction has to survive a reviewer skimming for an external payment link, and the
+  appeal path from a pre-launch rejection is poor.
+
+**What the app's freeness never depended on:** none of this changes what ships. Every feature is
+free either way, which is the whole reason the tip can wait.
