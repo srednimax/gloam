@@ -578,6 +578,55 @@ artifact with AndroidX's. Read them off `AppPreferences.kt` and the manifest, ne
       production path outright — nobody left who is allowed to approve. It reads as a security
       tightening and is, here, a lockout.
 
+## Phase 6 — seven more languages
+
+**Phase 6 is done and its record is [`phase-6.md`](phase-6.md)**, on 2026-09-17. Czech, German,
+Spanish, French, Italian, Brazilian Portuguese and Ukrainian: the app in nine languages and the Play
+listing in nine. The decision it makes is
+[ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md), which **retracts
+ADR-0004's promise of a native read-through** rather than adding a rule — seven reviewers were not
+available, only the fluency half of a read-through needed one, and the half that outranks fluency is a
+checklist answerable from the brief. **It carries no `fix:` commit and that is deliberate**: the two defects below were found inside the
+phase, in languages no release had ever offered, so neither is a bug anyone could have met. A
+changelog line for *"Portuguese could not be selected"* would be addressed to nobody.
+
+- [x] **Seven translations, complete and gated.** 99 translatable resources × 8 locales, no plurals
+      and no string-arrays in this app, so the CLDR trap is absent entirely. `translation-gate.py`
+      reads *complete, and nothing stale*; `TranslationTest` holds format arguments, orphans and
+      untranslatable resources as it always did.
+- [x] **The brief's placeholders are written.** `translator-brief.md` §§1, 2 and 5 were
+      `<Write this>` blocks, and **an audit against a placeholder is theatre** — §2 is now the three
+      rules that outrank fluency, §5 the vocabulary table that keeps nine files saying *shade* and
+      *brightness* the way `CONTEXT.md` means them, §3 records the register per language, and §8 is
+      what a language ships on. `translation-gate.py`'s docstring pointed at a §8 that did not exist;
+      it does now, and says the opposite of what the docstring used to claim.
+- [x] **The audit, in place of the read-through.** Forbidden-claim scan over all 99 × 8: **eighteen
+      candidates, all eighteen morphological false positives** (`сон` inside *сонця*, `oczy` inside
+      *Samoczynne*), so zero rule violations. Escape-hatch audit held in all nine — every locale keeps
+      the exclusive *only*, and names the notification's button with the same word the action uses.
+- [x] **That invariant is a test now.** `TranslationTest` asserts a string quoting another by name
+      still contains it, for two pairs. **Confirmed by deliberately mispairing it**, because a test
+      whose body silently skips is worse than none.
+- [x] **The report row.** *"Something read wrong?"* under the picker, one tap to the support hand-off,
+      `Gloam #language` subject of its own, and the resolved locale stamped into every report — read
+      off `resources.configuration`, since `currentAppLanguage()` is `null` for "follow the phone".
+- [x] **Six of nine languages were unreachable, and the device sweep is what found it.** `LanguageRow` was a plain `Row`: correct at
+      two chips, and at ten the device sweep found only *System*, *English*, *Polski* and *Čeština*
+      laid out with **the remaining six not laid out at all**. Translated, declared, gated, complete
+      and unselectable. **No gate in this repo could see it — none of them knows how wide a chip is.**
+      It is a `FlowRow` now, with the comment `DimControls` already carried for the auto-off chips.
+- [x] **`pt-BR` would never have matched.** `currentAppLanguage()` compared whole tags and the platform
+      reports plain `"pt"`, so the chip would never have looked selected. Matches language subtags
+      now, with `AppLanguageTest` asserting the uniqueness that makes it sound. **The reference repo
+      has the same bug unfixed.**
+- [x] **Nine listings and nine release notes.** `play-metadata.py --strict` and `notes-gate.py` both
+      named the seven missing locales before a word was written, and both pass now. Five of seven
+      full-description drafts were over Play's 4000 and were cut from enumerations and restatements —
+      never from the touch-through paragraph, the floor limits or the closing health line.
+- [ ] **Per-locale screenshots.** Deliberately not taken: three shots in one locale, shown under all
+      nine listings. A quality gap rather than a falsehood, `screenshots.py` already carries the
+      locale tag in its filenames, and it costs a device run per language. Open, not owed.
+
 ## Standing checks that never close
 
 - [ ] **Every release: run the artifact checks on the built AAB**, not on the source.
@@ -610,6 +659,8 @@ artifact with AndroidX's. Read them off `AppPreferences.kt` and the manifest, ne
       and this release adds a row to a screen and a preference key — so the number to expect is the
       same six. A release whose only feature opens a URL in another app is exactly the one where
       nobody would think to look.
+      **Phase 6 adds nothing to that number either**: seven locale files, a `FlowRow` and two mail
+      strings. Expect the same six, and read it off the artifact rather than off this sentence.
 - [ ] **Every release: read the release notes gate's output** rather than trusting it passed.
       **This is not hypothetical here.** Release PR #12 (`chore(main): release 0.3.0`) opened on
       2026-08-30 and its CI went red at this gate and nowhere else — `versionName is 0.3.0, but the
