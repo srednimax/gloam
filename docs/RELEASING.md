@@ -442,6 +442,13 @@ else's mileage. Ruby is confined to this workflow; the internal-track one never 
 ⚠️ **Changelog files are named by `versionCode`, not semver** — `409.txt`, not `1.9.0.txt`. supply
 keys notes to the build, and a name Play cannot match is ignored in silence rather than rejected.
 
+⚠ **An incomplete locale stops a listing upload, and only a listing upload.** supply saves a
+listing for every locale directory it is given, whichever `.txt` files are in it, and a directory
+exists for every language with release notes. So a language whose descriptions are blank reaches Play
+as an empty listing, and Play refuses the whole edit. `play-metadata.py --strict` refuses it first,
+and the production workflow passes that flag exactly when `update_listing` is on. Every other run only
+warns: supply skips listings there, and a release must not stop over copy it is not uploading.
+
 ## Setting up a new repository (once)
 
 **None of this is inherited.** GitHub's template mechanism copies files and nothing else: no

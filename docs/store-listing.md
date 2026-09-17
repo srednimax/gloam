@@ -113,12 +113,15 @@ rather than against a draft. Translate from the English above, per
 [`translator-brief.md`](translator-brief.md). **The listing cannot go live in Polish until these are
 filled** — Play publishes a locale it has copy for and silently shows English everywhere else.
 
-> **`play-metadata.py` writes the empty Polish fields out rather than skipping the locale.** A run
-> today produces `pl-PL/short_description.txt` and `pl-PL/full_description.txt` as **zero-byte
-> files**, not absent ones, and reports `listings: 2` either way. That is harmless while the upload
-> is done by hand in the Console, and it is a landmine the moment the publish workflow runs: an
-> empty short description is not a no-op to Play, it is a value. Either fill the Polish in or teach
-> the script to drop a locale whose copy is blank — **before** anything automated pushes metadata.
+> **A blank field here is left out, and a listing upload refuses to run with one.** Until 2026-09-17
+> `play-metadata.py` wrote the empty Polish fields as one-byte files, and a validate-only promotion
+> proved what that costs: Play refused the whole edit, *"This app has no short description
+> (promotional text) for language pl-PL"* (`docs/phase-5.md`, R1). It now omits a blank field and
+> warns, and `publish-play-production.yml` passes `--strict` whenever `update_listing` is on, which
+> turns the warning into a refusal. That flag is the real guard: supply saves a listing for every
+> locale directory whether or not its files are there, so an incomplete locale must never reach it
+> on the listing path. **Deleting these headings is not a way round it** — a shipped language with no
+> section is the same gap, spelled differently.
 
 **No tip is mentioned anywhere in this listing, and that is deliberate.** ADR-0009's 2026-08-30
 amendment: enforcement has rejected apps for an in-app donation route even where the policy text
