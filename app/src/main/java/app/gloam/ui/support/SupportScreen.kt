@@ -72,7 +72,12 @@ fun SupportScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
         ) {
-            for (request in SupportRequest.entries) {
+            // The two requests this screen owns, named rather than `entries`: the third,
+            // `SupportRequest.Language`, is a row in Settings' *Language* section instead, for the
+            // reason its own doc comment gives. Its label still comes from the `when` blocks at the
+            // bottom of this file — that is the one place a request's wording lives, and Settings
+            // reads it from there rather than keeping a second copy.
+            for (request in listOf(SupportRequest.Bug, SupportRequest.Feature)) {
                 SupportRow(
                     title = stringResource(request.titleRes()),
                     hint = stringResource(request.hintRes()),
@@ -137,16 +142,23 @@ private fun SupportRow(
 /**
  * Kotlin note: extensions on the enum rather than two more fields in it, the same split
  * `AutoOff.labelRes()` makes. [SupportRequest] carries what the *mail* is made of and has no Android
- * UI in it; what the row is labelled is this screen's business.
+ * UI in it; what a row is labelled is the UI layer's business.
+ *
+ * `internal` rather than `private` because one of the three rows is not on this screen: Settings'
+ * *Language* section renders [SupportRequest.Language] and reads its wording from here. The
+ * alternative was a second pair of `stringResource` calls over there, which is the shape that lets a
+ * row and its mail drift apart.
  */
-private fun SupportRequest.titleRes(): Int =
+internal fun SupportRequest.titleRes(): Int =
     when (this) {
         SupportRequest.Bug -> R.string.support_report
         SupportRequest.Feature -> R.string.support_feature
+        SupportRequest.Language -> R.string.settings_language_report
     }
 
-private fun SupportRequest.hintRes(): Int =
+internal fun SupportRequest.hintRes(): Int =
     when (this) {
         SupportRequest.Bug -> R.string.support_report_hint
         SupportRequest.Feature -> R.string.support_feature_hint
+        SupportRequest.Language -> R.string.settings_language_report_hint
     }

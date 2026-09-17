@@ -55,6 +55,17 @@ enum class SupportRequest(
 ) {
     Bug(R.string.support_subject_bug, R.string.support_body_bug),
     Feature(R.string.support_subject_feature, R.string.support_body_feature),
+
+    /**
+     * A word that reads wrong in the user's own language.
+     *
+     * **Reached from Settings' *Language* section, not from the Support screen** — which is why
+     * [SupportScreen] names the two requests it shows instead of rendering `entries`. It is the
+     * channel that stands in for a native read-through (ADR-0014), and it belongs beside the picker
+     * because that is where somebody is standing the moment a translation reads wrong. A second row
+     * for it on Support would only ask the user to choose between two words for the same thing.
+     */
+    Language(R.string.support_subject_language, R.string.support_body_language),
 }
 
 /**
@@ -132,5 +143,12 @@ private fun Context.supportMailBody(prompt: String): String =
         appendLine("---")
         appendLine("${getString(R.string.app_name)} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         appendLine("Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
-        append("${Build.MANUFACTURER} ${Build.MODEL}")
+        appendLine("${Build.MANUFACTURER} ${Build.MODEL}")
+        // The **resolved** locale, which is the one the sender is actually reading, rather than
+        // `currentAppLanguage()` — that returns null for "follow the phone", which is the ordinary
+        // state and tells a translation report nothing. Read off the configuration because that is
+        // what `stringResource` resolved against, so it is true whether the locale came from the
+        // in-app picker or from the phone. It is the fact a `#language` report cannot do without and
+        // the one nobody should have to type.
+        append("Locale ${resources.configuration.locales[0].toLanguageTag()}")
     }

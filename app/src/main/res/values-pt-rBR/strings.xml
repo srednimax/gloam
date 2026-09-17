@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Brazilian Portuguese. Translated from **English only** — never from another translation, which
+    compounds every interpretation the first translator made.
+
+    Register: *você*, sentence case, and the app speaks of itself in the third person as *Gloam*
+    rather than as "nós". Brazilian vocabulary throughout — *tela* rather than *ecrã*, *aplicativo*
+    rather than *aplicação*, *celular* rather than *telemóvel*. This file is `pt-BR` and not `pt`:
+    the qualifier is `values-pt-rBR`, the BCP-47 tag in `locales_config.xml` and `AppLanguage` is
+    `pt-BR`, and it is the one entry in the set that names a region.
+
+    Two vocabulary decisions worth confirming (ADR-0014 names them as the kind a native read-through
+    would have settled):
+
+    - **shade → `camada`.** The layer Gloam draws over the screen. Not `cortina` or `persiana`, which
+      are the literal window blinds, and never `filtro`, which CONTEXT.md rules out entirely.
+    - **warmth → `calidez`.** Never `temperatura de cor`: an overlay adds a colour on top and does
+      not change the temperature of the light.
+
+    `brilho` is reserved for Android's own value. Gloam's own number is the *nível de escurecimento*
+    and it counts the other way, which is the distinction CONTEXT.md exists to protect.
+-->
+<resources>
+    <string name="tab_dim">Escurecer</string>
+    <string name="tab_settings">Configurações</string>
+
+    <string name="action_back">Voltar</string>
+
+    <string name="dim_title">Escurecer</string>
+    <string name="dim_level_label">Nível de escurecimento</string>
+    <string name="dim_level_caption">da luz está coberto. Arraste a coluna para baixo para deixar menos luz.</string>
+    <string name="dim_column_floor">MÍNIMO</string>
+    <string name="dim_start">Começar a escurecer</string>
+    <string name="dim_stop">Parar de escurecer</string>
+    <string name="dim_permission_title">O Gloam precisa de permissão para desenhar sobre outros aplicativos</string>
+    <string name="dim_permission_body">A camada fica sobre o que estiver na tela, por isso o Android pede essa permissão de forma explícita. O Gloam não lê nada sobre os aplicativos que ficam embaixo. Quando você começar a escurecer, ele também vai pedir para mostrar uma notificação: é por essa notificação que o Gloam pode ser parado de qualquer lugar.</string>
+    <string name="dim_permission_grant">Abrir configurações</string>
+
+    <string name="dim_notification_warning_title">Não há botão Parar fora do Gloam</string>
+    <string name="dim_notification_warning_body">O Gloam pode escurecer sua tela, mas não pode mostrar uma notificação, então a única forma de parar o escurecimento é esta tela.</string>
+    <string name="dim_notification_warning_channel_body">A notificação do Gloam está desativada, então a única forma de parar o escurecimento é esta tela.</string>
+    <string name="dim_notification_warning_ask">Permitir notificações</string>
+    <string name="dim_notification_warning_settings">Abrir configurações de notificação</string>
+
+    <string name="dim_backlight_label">Também reduzir o brilho da tela</string>
+    <string name="dim_backlight_hint">Seu controle de brilho fica pausado enquanto o Gloam escurece.</string>
+    <string name="dim_backlight_unavailable">Este celular não informa o próprio brilho de um jeito que o Gloam consiga usar, então o Gloam escurece apenas desenhando sobre a tela.</string>
+
+    <string name="dim_auto_off_label">Desligar sozinho</string>
+    <string name="dim_auto_off_hint">O Gloam retira a camada sozinho depois desse tempo, para que uma tela escurecida e esquecida não continue escura amanhã.</string>
+    <string name="dim_auto_off_at">Desliga às %1$s</string>
+
+    <string name="compact_auto_off_never">Nunca</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 hora</string>
+    <string name="compact_auto_off_2h">2 horas</string>
+    <string name="compact_auto_off_4h">4 horas</string>
+
+    <string name="dim_warmth_label">Calidez</string>
+    <string name="dim_warmth_color_label">Cor</string>
+
+    <string name="controls_open_app">Abrir o Gloam</string>
+    <string name="panel_close">Fechar os controles</string>
+
+    <string name="settings_appearance">Aparência</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Escuro</string>
+    <string name="settings_controls">Controles</string>
+    <string name="settings_launcher_compact">Abrir os controles pequenos pelo ícone</string>
+    <string name="settings_launcher_compact_hint">Tocar no Gloam abre só os controles em vez do aplicativo inteiro. A notificação sempre abre os controles pequenos.</string>
+    <string name="settings_lock_screen">Tela de bloqueio</string>
+    <string name="settings_lock_screen_body">O Gloam não consegue escurecer a tela de bloqueio: o Android a mostra com o brilho do seu próprio celular. Mantenha esse brilho baixo à noite, para que a tela de bloqueio não seja a coisa mais clara em um quarto escuro.</string>
+    <string name="settings_flicker">Cintilação</string>
+    <string name="settings_flicker_body">Com brilho baixo, muitas telas cintilam rápido demais para se perceber, e algumas pessoas acham isso cansativo. Se for o seu caso, desative “%1$s” e mantenha o brilho do celular mais alto. A tela não vai ficar tão escura, mas não vai cintilar. Alguns celulares também têm uma opção contra cintilação ou de escurecimento DC nas configurações de tela.</string>
+
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system">Sistema</string>
+    <string name="settings_language_report">Algo está escrito errado?</string>
+    <string name="settings_language_report_hint">Me escreva se alguma palavra parecer errada no seu idioma. Abre seu aplicativo de e-mail, com o idioma que você está lendo já preenchido.</string>
+    <string name="settings_restart">Depois de reiniciar</string>
+    <string name="settings_restart_body">O Gloam recoloca a camada quando seu celular reinicia. Este celular só deixa um aplicativo rodar na inicialização se a inicialização automática estiver ativada para ele, e o Gloam não tem como verificar se está: então, se a camada não voltar, é essa a configuração para olhar.</string>
+    <string name="settings_restart_open">Abrir configurações de inicialização automática</string>
+
+    <string name="settings_about">Sobre</string>
+    <string name="settings_support">Ajuda e comentários</string>
+    <string name="settings_licences">Licenças de código aberto</string>
+
+    <string name="support_title">Ajuda e comentários</string>
+    <string name="support_report">Relatar um problema</string>
+    <string name="support_report_hint">Abre seu aplicativo de e-mail com o que o Gloam já sabe sobre seu celular preenchido.</string>
+    <string name="support_feature">Sugerir um recurso</string>
+    <string name="support_feature_hint">Todo recurso do Gloam é gratuito e sempre será, então a única pergunta é se ele faz sentido aqui.</string>
+    <string name="support_body_bug">O que aconteceu e o que você esperava em vez disso:</string>
+    <string name="support_body_feature">O que você gostaria que o Gloam fizesse?</string>
+    <string name="support_body_language">Qual palavra está escrita errado, e em qual tela?</string>
+    <string name="support_no_mail_app">Não há aplicativo de e-mail neste celular para abrir.</string>
+    <string name="support_rate">Avaliar o Gloam no Google Play</string>
+    <string name="support_rate_hint">Abre a página do Gloam no Google Play. Avaliar é opcional e não desbloqueia nada, porque nada no Gloam está bloqueado.</string>
+    <string name="support_no_play">Não há Google Play nem navegador neste celular para abrir.</string>
+
+    <string name="licence_text_missing">O texto desta licença não vem junto com o aplicativo.</string>
+
+    <string name="schedule_title">Programação</string>
+    <string name="schedule_enable">Escurecer por programação</string>
+    <string name="schedule_enable_hint">O Gloam coloca e retira a camada sozinho, todas as noites.</string>
+    <string name="schedule_kind_fixed">Horários fixos</string>
+    <string name="schedule_kind_sun">Do pôr do sol ao nascer do sol</string>
+    <string name="schedule_sun_tonight">Esta noite: pôr do sol %1$s, nascer do sol %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Esta noite o sol não se põe nem nasce aqui, então valem os horários abaixo.</string>
+    <string name="schedule_sun_fallback_note">Nas noites em que o sol não se põe nem nasce aqui, a camada segue estes horários.</string>
+    <string name="schedule_location_estimated">O pôr do sol é estimado pelo seu fuso horário.</string>
+    <string name="schedule_location_lent">O pôr do sol é calculado para a localização aproximada deste celular.</string>
+    <string name="schedule_location_none">Seu fuso horário não indica uma localização, então valem os horários abaixo todas as noites.</string>
+    <string name="schedule_location_ask">Usar a localização deste celular</string>
+    <string name="schedule_location_ask_hint">Para um pôr do sol mais preciso. O Gloam pede apenas a localização aproximada e a mantém neste celular.</string>
+    <string name="schedule_location_settings">Permitir a localização nas configurações</string>
+    <string name="schedule_on_at">Liga</string>
+    <string name="schedule_off_at">Desliga</string>
+    <string name="schedule_overnight">Durante a noite — a camada sai na manhã seguinte.</string>
+    <string name="schedule_same_time">Escolha dois horários diferentes. Um intervalo que começa e termina no mesmo instante nunca se abre.</string>
+    <string name="schedule_short_window">Este intervalo é muito curto. O Android pode iniciar o Gloam alguns minutos mais tarde, então um intervalo tão curto pode ser perdido por completo.</string>
+
+    <string name="schedule_battery_title">A otimização de bateria está ativada para o Gloam</string>
+    <string name="schedule_battery_body_delegated">O Android não deixa o Gloam se iniciar sozinho no horário que você escolheu. A camada aparece mesmo assim na próxima vez que você abrir o Gloam dentro do intervalo. Desative a otimização de bateria para o Gloam para que ele inicie sozinho.</string>
+    <string name="schedule_battery_action">Configurações de bateria</string>
+    <string name="schedule_rom_note">Este celular também pode impedir que aplicativos iniciem em segundo plano. Se a camada não aparecer sozinha, ela ainda vai aparecer quando você abrir o Gloam — e Depois de reiniciar, nas Configurações, é onde você pode mudar isso.</string>
+
+    <string name="dim_schedule_row">Programação</string>
+    <string name="dim_schedule_window">de %1$s às %2$s</string>
+    <string name="dim_schedule_off">Desativada</string>
+    <string name="dim_schedule_at_risk">Programação — pode não iniciar sozinha</string>
+
+    <string name="channel_shade_name">Escurecimento</string>
+    <string name="channel_shade_description">Mostrada enquanto a tela está escurecida, para que a camada possa ser desligada de qualquer lugar.</string>
+    <string name="shade_notification_title">Tela escurecida</string>
+    <string name="shade_notification_stop">Parar</string>
+    <string name="shade_notification_until">Até %1$s</string>
+    <string name="shade_notification_text_backlight">Seu controle de brilho fica pausado enquanto o Gloam escurece</string>
+
+</resources>

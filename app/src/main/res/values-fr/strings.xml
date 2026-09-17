@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    French. Translated from **English only** — never from another translation, which compounds every
+    interpretation the first translator made.
+
+    Register: **`vous`**, sentence case, and the app speaks of itself in the third person as *Gloam*
+    rather than as "nous". This is the one language in the set that does not take the informal form:
+    Android's own French UI is `vous`, and a `tu` app inside a `vous` system reads as over-familiar
+    rather than as friendly. Polish, Czech, German, Spanish, Italian and Ukrainian are all informal
+    here — French is the deliberate exception, and it is the sort of choice ADR-0014 expects a report
+    to argue with.
+
+    Two vocabulary decisions worth confirming:
+
+    - **shade → `voile`.** The veil Gloam draws over the screen. Not `store` or `rideau`, which are
+      the literal window blinds, and never `filtre`, which CONTEXT.md rules out entirely.
+    - **warmth → `chaleur`.** Never `température de couleur`: an overlay adds a colour on top and
+      does not change the temperature of the light.
+
+    `luminosité` is reserved for Android's own value, which is the distinction CONTEXT.md exists to
+    protect: Gloam's own number is the *niveau d'assombrissement* and it counts the other way.
+-->
+<resources>
+    <string name="tab_dim">Assombrir</string>
+    <string name="tab_settings">Paramètres</string>
+
+    <string name="action_back">Retour</string>
+
+    <string name="dim_title">Assombrir</string>
+    <string name="dim_level_label">Niveau d\'assombrissement</string>
+    <string name="dim_level_caption">de la lumière est couvert. Tirez la colonne vers le bas pour laisser moins de lumière.</string>
+    <string name="dim_column_floor">MINIMUM</string>
+    <string name="dim_start">Commencer à assombrir</string>
+    <string name="dim_stop">Arrêter d\'assombrir</string>
+    <string name="dim_permission_title">Gloam a besoin de l\'autorisation de dessiner par-dessus les autres applications</string>
+    <string name="dim_permission_body">Le voile est une couche posée sur ce qui est à l\'écran, c\'est pourquoi Android demande cette autorisation explicitement. Gloam ne lit rien sur les applications situées en dessous. Quand vous commencerez à assombrir, il demandera aussi à afficher une notification : c\'est par cette notification que Gloam s\'arrête depuis n\'importe où.</string>
+    <string name="dim_permission_grant">Ouvrir les paramètres</string>
+
+    <string name="dim_notification_warning_title">Aucun bouton Arrêter en dehors de Gloam</string>
+    <string name="dim_notification_warning_body">Gloam a le droit d\'assombrir votre écran mais pas d\'afficher de notification : le seul moyen d\'arrêter l\'assombrissement est donc cet écran.</string>
+    <string name="dim_notification_warning_channel_body">La notification de Gloam est désactivée : le seul moyen d\'arrêter l\'assombrissement est donc cet écran.</string>
+    <string name="dim_notification_warning_ask">Autoriser les notifications</string>
+    <string name="dim_notification_warning_settings">Ouvrir les paramètres de notification</string>
+
+    <string name="dim_backlight_label">Baisser aussi la luminosité de l\'écran</string>
+    <string name="dim_backlight_hint">Votre curseur de luminosité est suspendu pendant que Gloam assombrit.</string>
+    <string name="dim_backlight_unavailable">Ce téléphone ne communique pas sa luminosité sous une forme que Gloam puisse utiliser : Gloam assombrit donc uniquement en dessinant par-dessus l\'écran.</string>
+
+    <string name="dim_auto_off_label">S\'arrêter tout seul</string>
+    <string name="dim_auto_off_hint">Gloam retire le voile de lui-même au bout de ce délai, pour qu\'un écran assombri puis oublié ne soit pas encore sombre demain.</string>
+    <string name="dim_auto_off_at">S\'arrête à %1$s</string>
+
+    <string name="compact_auto_off_never">Jamais</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 heure</string>
+    <string name="compact_auto_off_2h">2 heures</string>
+    <string name="compact_auto_off_4h">4 heures</string>
+
+    <string name="dim_warmth_label">Chaleur</string>
+    <string name="dim_warmth_color_label">Couleur</string>
+
+    <string name="controls_open_app">Ouvrir Gloam</string>
+    <string name="panel_close">Fermer les commandes</string>
+
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_theme_system">Système</string>
+    <string name="settings_theme_light">Clair</string>
+    <string name="settings_theme_dark">Sombre</string>
+    <string name="settings_controls">Commandes</string>
+    <string name="settings_launcher_compact">Ouvrir les petites commandes depuis l\'icône</string>
+    <string name="settings_launcher_compact_hint">Toucher Gloam ouvre seulement les curseurs au lieu de toute l\'application. La notification ouvre toujours les petites commandes.</string>
+    <string name="settings_lock_screen">Écran de verrouillage</string>
+    <string name="settings_lock_screen_body">Gloam ne peut pas assombrir l\'écran de verrouillage : Android l\'affiche à la luminosité propre à votre téléphone. Gardez cette luminosité basse la nuit, pour que l\'écran de verrouillage ne soit pas ce qu\'il y a de plus lumineux dans une pièce sombre.</string>
+    <string name="settings_flicker">Scintillement</string>
+    <string name="settings_flicker_body">À faible luminosité, beaucoup d\'écrans scintillent trop vite pour qu\'on le voie, et certaines personnes trouvent cela fatigant. Si c\'est votre cas, désactivez « %1$s » et gardez la luminosité de votre téléphone plus haute. L\'écran ne deviendra pas aussi sombre, mais il ne scintillera pas. Certains téléphones proposent aussi une option anti-scintillement ou une gradation DC dans les paramètres d\'affichage.</string>
+
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_system">Système</string>
+    <string name="settings_language_report">Quelque chose se lit mal ?</string>
+    <string name="settings_language_report_hint">Dites-moi si un mot semble faux dans votre langue. Ouvre votre application de messagerie, avec la langue que vous lisez déjà indiquée.</string>
+    <string name="settings_restart">Après un redémarrage</string>
+    <string name="settings_restart_body">Gloam remet le voile quand votre téléphone redémarre. Ce téléphone ne laisse une application démarrer au lancement que si le démarrage automatique est activé pour elle, et Gloam n\'a aucun moyen de vérifier s\'il l\'est : donc si le voile ne revient pas, c\'est le paramètre à regarder.</string>
+    <string name="settings_restart_open">Ouvrir les paramètres de démarrage automatique</string>
+
+    <string name="settings_about">À propos</string>
+    <string name="settings_support">Aide et commentaires</string>
+    <string name="settings_licences">Licences open source</string>
+
+    <string name="support_title">Aide et commentaires</string>
+    <string name="support_report">Signaler un problème</string>
+    <string name="support_report_hint">Ouvre votre application de messagerie avec ce que Gloam sait déjà de votre téléphone, prérempli.</string>
+    <string name="support_feature">Proposer une fonctionnalité</string>
+    <string name="support_feature_hint">Toutes les fonctionnalités de Gloam sont gratuites et le resteront : la seule question est de savoir si elle a sa place ici.</string>
+    <string name="support_body_bug">Ce qui s\'est passé, et ce que vous attendiez à la place :</string>
+    <string name="support_body_feature">Qu\'aimeriez-vous que Gloam fasse ?</string>
+    <string name="support_body_language">Quel mot se lit mal, et sur quel écran ?</string>
+    <string name="support_no_mail_app">Aucune application de messagerie à ouvrir sur ce téléphone.</string>
+    <string name="support_rate">Noter Gloam sur Google Play</string>
+    <string name="support_rate_hint">Ouvre la page de Gloam sur Google Play. Noter est facultatif et ne débloque rien, puisque rien n\'est verrouillé dans Gloam.</string>
+    <string name="support_no_play">Ni Google Play ni navigateur à ouvrir sur ce téléphone.</string>
+
+    <string name="licence_text_missing">Le texte de cette licence n\'est pas fourni avec l\'application.</string>
+
+    <string name="schedule_title">Programmation</string>
+    <string name="schedule_enable">Assombrir selon une programmation</string>
+    <string name="schedule_enable_hint">Gloam pose et retire le voile de lui-même, chaque nuit.</string>
+    <string name="schedule_kind_fixed">Heures fixes</string>
+    <string name="schedule_kind_sun">Du coucher au lever du soleil</string>
+    <string name="schedule_sun_tonight">Cette nuit : coucher du soleil %1$s, lever %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Cette nuit, le soleil ne se couche ni ne se lève ici : ce sont donc les heures ci-dessous qui s\'appliquent.</string>
+    <string name="schedule_sun_fallback_note">Les nuits où le soleil ne se couche ni ne se lève ici, le voile suit ces heures.</string>
+    <string name="schedule_location_estimated">Le coucher du soleil est estimé d\'après votre fuseau horaire.</string>
+    <string name="schedule_location_lent">Le coucher du soleil est calculé pour la position approximative de ce téléphone.</string>
+    <string name="schedule_location_none">Votre fuseau horaire ne donne aucune position : ce sont donc les heures ci-dessous qui s\'appliquent chaque nuit.</string>
+    <string name="schedule_location_ask">Utiliser la position de ce téléphone</string>
+    <string name="schedule_location_ask_hint">Pour un coucher du soleil plus précis. Gloam ne demande que la position approximative et la garde sur ce téléphone.</string>
+    <string name="schedule_location_settings">Autoriser la position dans les paramètres</string>
+    <string name="schedule_on_at">Commence</string>
+    <string name="schedule_off_at">S\'arrête</string>
+    <string name="schedule_overnight">Toute la nuit — le voile est retiré le lendemain matin.</string>
+    <string name="schedule_same_time">Choisissez deux heures différentes. Une plage qui commence et se termine au même instant ne s\'ouvre jamais.</string>
+    <string name="schedule_short_window">Cette plage est très courte. Android peut démarrer Gloam quelques minutes plus tard, et une plage aussi courte peut être manquée entièrement.</string>
+
+    <string name="schedule_battery_title">L\'optimisation de la batterie est activée pour Gloam</string>
+    <string name="schedule_battery_body_delegated">Android ne laisse pas Gloam démarrer tout seul à l\'heure choisie. Le voile arrive quand même la prochaine fois que vous ouvrez Gloam pendant la plage. Désactivez l\'optimisation de la batterie pour Gloam afin qu\'il démarre tout seul.</string>
+    <string name="schedule_battery_action">Paramètres de batterie</string>
+    <string name="schedule_rom_note">Ce téléphone peut aussi empêcher les applications de démarrer en arrière-plan. Si le voile ne se pose pas tout seul, il arrivera quand même à l\'ouverture de Gloam — et Après un redémarrage, dans les Paramètres, est l\'endroit où vous pouvez changer cela.</string>
+
+    <string name="dim_schedule_row">Programmation</string>
+    <string name="dim_schedule_window">de %1$s à %2$s</string>
+    <string name="dim_schedule_off">Désactivée</string>
+    <string name="dim_schedule_at_risk">Programmation — peut ne pas démarrer toute seule</string>
+
+    <string name="channel_shade_name">Assombrissement</string>
+    <string name="channel_shade_description">Affichée pendant que l\'écran est assombri, pour que le voile puisse être retiré depuis n\'importe où.</string>
+    <string name="shade_notification_title">Écran assombri</string>
+    <string name="shade_notification_stop">Arrêter</string>
+    <string name="shade_notification_until">Jusqu\'à %1$s</string>
+    <string name="shade_notification_text_backlight">Votre curseur de luminosité est suspendu pendant que Gloam assombrit</string>
+
+</resources>

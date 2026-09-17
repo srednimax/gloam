@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Ukrainian. Translated from **English only** — never from another translation, which compounds
+    every interpretation the first translator made. In particular **not from Polish**: the two are
+    close enough that a Polish source would pull false friends through — *zasłona* and *заслона* are
+    not the same word in use — and close enough that nobody would notice.
+
+    Register: informal *ти*, sentence case, and the app speaks of itself in the third person as
+    *Gloam* rather than as "ми".
+
+    Two vocabulary decisions worth confirming (ADR-0014 names them as the kind a native read-through
+    would have settled):
+
+    - **shade → `запона`.** A dark veil drawn over the screen. Not `жалюзі` or `штора`, which are the
+      literal window blinds, and never `фільтр`, which CONTEXT.md rules out entirely.
+    - **warmth → `теплота`.** Never `температура кольору`: an overlay adds a colour on top and does
+      not change the temperature of the light.
+
+    `яскравість` is reserved for Android's own value. Gloam's own number is the *рівень
+    затемнення* and it counts the other way, which is the distinction CONTEXT.md exists to protect.
+
+    The name *Gloam* stays in Latin script and is not transliterated: it is the word on the icon, and
+    a user looking for it in a launcher needs to recognise it.
+-->
+<resources>
+    <string name="tab_dim">Затемнення</string>
+    <string name="tab_settings">Налаштування</string>
+
+    <string name="action_back">Назад</string>
+
+    <string name="dim_title">Затемнення</string>
+    <string name="dim_level_label">Рівень затемнення</string>
+    <string name="dim_level_caption">світла закрито. Потягни стовпець униз, щоб залишити менше світла.</string>
+    <string name="dim_column_floor">МІНІМУМ</string>
+    <string name="dim_start">Почати затемнення</string>
+    <string name="dim_stop">Припинити затемнення</string>
+    <string name="dim_permission_title">Gloam потребує дозволу малювати поверх інших застосунків</string>
+    <string name="dim_permission_body">Запона — це шар над тим, що є на екрані, тому Android питає про цей дозвіл окремо. Gloam не читає нічого про застосунки під нею. Коли ти почнеш затемнення, він попросить ще й показувати повідомлення — саме через це повідомлення Gloam можна зупинити з будь-якого місця.</string>
+    <string name="dim_permission_grant">Відкрити налаштування</string>
+
+    <string name="dim_notification_warning_title">Поза Gloam немає кнопки Зупинити</string>
+    <string name="dim_notification_warning_body">Gloam може затемнювати екран, але не може показувати повідомлення, тому єдиний спосіб зупинити затемнення — цей екран.</string>
+    <string name="dim_notification_warning_channel_body">Повідомлення Gloam вимкнене, тому єдиний спосіб зупинити затемнення — цей екран.</string>
+    <string name="dim_notification_warning_ask">Дозволити повідомлення</string>
+    <string name="dim_notification_warning_settings">Відкрити налаштування повідомлень</string>
+
+    <string name="dim_backlight_label">Знижувати також яскравість екрана</string>
+    <string name="dim_backlight_hint">Твій повзунок яскравості призупинений, поки Gloam затемнює.</string>
+    <string name="dim_backlight_unavailable">Цей телефон не повідомляє свою яскравість у спосіб, який Gloam може використати, тому Gloam затемнює лише малюванням поверх екрана.</string>
+
+    <string name="dim_auto_off_label">Вимикатися саме</string>
+    <string name="dim_auto_off_hint">Gloam сам знімає запону через цей час, щоб затемнений і забутий екран не був темним ще й завтра.</string>
+    <string name="dim_auto_off_at">Вимкнеться о %1$s</string>
+
+    <string name="compact_auto_off_never">Ніколи</string>
+    <string name="compact_auto_off_30m">30 хв</string>
+    <string name="compact_auto_off_1h">1 год</string>
+    <string name="compact_auto_off_2h">2 год</string>
+    <string name="compact_auto_off_4h">4 год</string>
+
+    <string name="dim_warmth_label">Теплота</string>
+    <string name="dim_warmth_color_label">Відтінок</string>
+
+    <string name="controls_open_app">Відкрити Gloam</string>
+    <string name="panel_close">Закрити керування</string>
+
+    <string name="settings_appearance">Вигляд</string>
+    <string name="settings_theme_system">Системна</string>
+    <string name="settings_theme_light">Світла</string>
+    <string name="settings_theme_dark">Темна</string>
+    <string name="settings_controls">Керування</string>
+    <string name="settings_launcher_compact">Відкривати з піктограми мале керування</string>
+    <string name="settings_launcher_compact_hint">Дотик до Gloam відкриває лише повзунки замість усього застосунку. Повідомлення завжди відкриває мале керування.</string>
+    <string name="settings_lock_screen">Екран блокування</string>
+    <string name="settings_lock_screen_body">Gloam не може затемнити екран блокування: Android показує його з яскравістю, встановленою в телефоні. Тримай цю яскравість низькою вночі, щоб екран блокування не був найсвітлішим у темній кімнаті.</string>
+    <string name="settings_flicker">Мерехтіння</string>
+    <string name="settings_flicker_body">За низької яскравості багато екранів мерехтять надто швидко, щоб це побачити, і деяких людей це втомлює. Якщо це твій випадок, вимкни «%1$s» і тримай власну яскравість телефону вищою. Екран не стане таким темним, але не мерехтітиме. Деякі телефони мають також опцію проти мерехтіння або DC-затемнення в налаштуваннях дисплея.</string>
+
+    <string name="settings_language">Мова</string>
+    <string name="settings_language_system">Системна</string>
+    <string name="settings_language_report">Щось читається не так?</string>
+    <string name="settings_language_report_hint">Напиши мені, якщо якесь слово виглядає неправильно твоєю мовою. Відкриває застосунок пошти з уже вписаною мовою, якою ти читаєш.</string>
+    <string name="settings_restart">Після перезавантаження</string>
+    <string name="settings_restart_body">Gloam повертає запону, коли телефон перезавантажується. Цей телефон дозволяє застосунку працювати після запуску лише тоді, коли для нього ввімкнений автозапуск, а Gloam не має як перевірити, чи ввімкнений він — тож якщо запона не повернулася, це те налаштування, яке варто переглянути.</string>
+    <string name="settings_restart_open">Відкрити налаштування автозапуску</string>
+
+    <string name="settings_about">Про застосунок</string>
+    <string name="settings_support">Довідка та відгуки</string>
+    <string name="settings_licences">Ліцензії з відкритим кодом</string>
+
+    <string name="support_title">Довідка та відгуки</string>
+    <string name="support_report">Повідомити про проблему</string>
+    <string name="support_report_hint">Відкриває застосунок пошти з уже вписаним тим, що Gloam знає про твій телефон.</string>
+    <string name="support_feature">Запропонувати функцію</string>
+    <string name="support_feature_hint">Кожна функція в Gloam безкоштовна і завжди такою буде, тож єдине питання — чи вона тут доречна.</string>
+    <string name="support_body_bug">Що сталося і що мало статися замість цього:</string>
+    <string name="support_body_feature">Що Gloam міг би робити?</string>
+    <string name="support_body_language">Яке слово читається не так і на якому екрані?</string>
+    <string name="support_no_mail_app">У цьому телефоні немає застосунку пошти, який можна відкрити.</string>
+    <string name="support_rate">Оцінити Gloam у Google Play</string>
+    <string name="support_rate_hint">Відкриває сторінку Gloam у Google Play. Оцінювання добровільне і нічого не відкриває, бо в Gloam ніщо не закрите.</string>
+    <string name="support_no_play">У цьому телефоні немає ні Google Play, ні браузера, які можна відкрити.</string>
+
+    <string name="licence_text_missing">Текст цієї ліцензії не входить до складу застосунку.</string>
+
+    <string name="schedule_title">Розклад</string>
+    <string name="schedule_enable">Затемнювати за розкладом</string>
+    <string name="schedule_enable_hint">Gloam сам натягує і знімає запону, щоночі.</string>
+    <string name="schedule_kind_fixed">Фіксовані години</string>
+    <string name="schedule_kind_sun">Від заходу до сходу сонця</string>
+    <string name="schedule_sun_tonight">Цієї ночі: захід сонця %1$s, схід %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Цієї ночі сонце тут не заходить і не сходить, тому діють години нижче.</string>
+    <string name="schedule_sun_fallback_note">У ночі, коли сонце тут не заходить і не сходить, запона діє за цими годинами.</string>
+    <string name="schedule_location_estimated">Захід сонця оцінений за твоїм часовим поясом.</string>
+    <string name="schedule_location_lent">Захід сонця обчислюється для приблизного розташування цього телефону.</string>
+    <string name="schedule_location_none">Твій часовий пояс не дає розташування, тому щоночі діють години нижче.</string>
+    <string name="schedule_location_ask">Використати розташування цього телефону</string>
+    <string name="schedule_location_ask_hint">Для точнішого заходу сонця. Gloam просить лише приблизне розташування і тримає його в цьому телефоні.</string>
+    <string name="schedule_location_settings">Дозволити розташування в налаштуваннях</string>
+    <string name="schedule_on_at">Увімкнеться</string>
+    <string name="schedule_off_at">Вимкнеться</string>
+    <string name="schedule_overnight">Через ніч — запона зникає наступного ранку.</string>
+    <string name="schedule_same_time">Вибери дві різні години. Вікно, яке починається і закінчується в ту саму мить, ніколи не відкривається.</string>
+    <string name="schedule_short_window">Це вікно дуже коротке. Android може запустити Gloam на кілька хвилин пізніше, тому таке коротке вікно може бути пропущене цілком.</string>
+
+    <string name="schedule_battery_title">Оптимізація акумулятора ввімкнена для Gloam</string>
+    <string name="schedule_battery_body_delegated">Android не дозволяє Gloam запуститися самому в вибраний час. Запона однаково з\'явиться, коли ти наступного разу відкриєш Gloam у межах вікна. Вимкни оптимізацію акумулятора для Gloam, щоб він запускався сам.</string>
+    <string name="schedule_battery_action">Налаштування акумулятора</string>
+    <string name="schedule_rom_note">Цей телефон може також забороняти застосункам запускатися у фоні. Якщо запона не з\'явиться сама, вона однаково з\'явиться після відкриття Gloam — а Після перезавантаження в Налаштуваннях є місце, де це можна змінити.</string>
+
+    <string name="dim_schedule_row">Розклад</string>
+    <string name="dim_schedule_window">з %1$s до %2$s</string>
+    <string name="dim_schedule_off">Вимкнений</string>
+    <string name="dim_schedule_at_risk">Розклад — може не запуститися сам</string>
+
+    <string name="channel_shade_name">Затемнення</string>
+    <string name="channel_shade_description">Показується, поки екран затемнений, щоб запону можна було вимкнути з будь-якого місця.</string>
+    <string name="shade_notification_title">Екран затемнений</string>
+    <string name="shade_notification_stop">Зупинити</string>
+    <string name="shade_notification_until">До %1$s</string>
+    <string name="shade_notification_text_backlight">Твій повзунок яскравості призупинений, поки Gloam затемнює</string>
+
+</resources>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Spanish. Translated from **English only** — never from another translation, which compounds every
+    interpretation the first translator made.
+
+    Register: informal *tú*, sentence case, and the app speaks of itself in the third person as
+    *Gloam* rather than as "nosotros". *Tú* rather than *usted* because Android's own Spanish UI uses
+    it and the English is plain-spoken throughout. European Spanish, with no regional vocabulary that
+    would read oddly in America: *pantalla*, *brillo*, *teléfono* are common to both.
+
+    Two vocabulary decisions worth confirming (ADR-0014 names them as the kind a native read-through
+    would have settled):
+
+    - **shade → `capa`.** The layer Gloam draws, not `persiana` or `cortina` — those are the literal
+      window blinds and read as furniture — and never `filtro`, which CONTEXT.md rules out entirely.
+    - **warmth → `calidez`.** Never `temperatura de color`: an overlay adds a colour on top and does
+      not change the temperature of the light.
+
+    *Atenuar* is the verb throughout and *brillo* is reserved for Android's own value, which is the
+    distinction CONTEXT.md exists to protect.
+-->
+<resources>
+    <string name="tab_dim">Atenuar</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <string name="action_back">Atrás</string>
+
+    <string name="dim_title">Atenuar</string>
+    <string name="dim_level_label">Nivel de atenuación</string>
+    <string name="dim_level_caption">de la luz está cubierto. Arrastra la columna hacia abajo para dejar menos luz.</string>
+    <string name="dim_column_floor">MÍNIMO</string>
+    <string name="dim_start">Empezar a atenuar</string>
+    <string name="dim_stop">Dejar de atenuar</string>
+    <string name="dim_permission_title">Gloam necesita permiso para dibujar sobre otras aplicaciones</string>
+    <string name="dim_permission_body">La capa se sitúa encima de lo que haya en la pantalla, así que Android pide este permiso de forma explícita. Gloam no lee nada sobre las aplicaciones que quedan debajo. Cuando empieces a atenuar, pedirá además mostrar una notificación: esa notificación es la que permite detener Gloam desde cualquier sitio.</string>
+    <string name="dim_permission_grant">Abrir ajustes</string>
+
+    <string name="dim_notification_warning_title">No hay botón Detener fuera de Gloam</string>
+    <string name="dim_notification_warning_body">Gloam puede atenuar la pantalla, pero no mostrar una notificación, así que la única forma de detener la atenuación es esta pantalla.</string>
+    <string name="dim_notification_warning_channel_body">La notificación de Gloam está desactivada, así que la única forma de detener la atenuación es esta pantalla.</string>
+    <string name="dim_notification_warning_ask">Permitir notificaciones</string>
+    <string name="dim_notification_warning_settings">Abrir ajustes de notificaciones</string>
+
+    <string name="dim_backlight_label">Bajar también el brillo de la pantalla</string>
+    <string name="dim_backlight_hint">Tu control de brillo está en pausa mientras Gloam atenúa.</string>
+    <string name="dim_backlight_unavailable">Este teléfono no informa de su brillo de una forma que Gloam pueda usar, así que Gloam atenúa solo dibujando sobre la pantalla.</string>
+
+    <string name="dim_auto_off_label">Apagarse por sí solo</string>
+    <string name="dim_auto_off_hint">Gloam retira la capa por sí solo al pasar este tiempo, para que una pantalla que atenuaste y olvidaste no siga oscura mañana.</string>
+    <string name="dim_auto_off_at">Se apaga a las %1$s</string>
+
+    <string name="compact_auto_off_never">Nunca</string>
+    <string name="compact_auto_off_30m">30 min</string>
+    <string name="compact_auto_off_1h">1 hora</string>
+    <string name="compact_auto_off_2h">2 horas</string>
+    <string name="compact_auto_off_4h">4 horas</string>
+
+    <string name="dim_warmth_label">Calidez</string>
+    <string name="dim_warmth_color_label">Color</string>
+
+    <string name="controls_open_app">Abrir Gloam</string>
+    <string name="panel_close">Cerrar los controles</string>
+
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_controls">Controles</string>
+    <string name="settings_launcher_compact">Abrir los controles pequeños desde el icono</string>
+    <string name="settings_launcher_compact_hint">Tocar Gloam abre solo los controles en lugar de toda la aplicación. La notificación abre siempre los controles pequeños.</string>
+    <string name="settings_lock_screen">Pantalla de bloqueo</string>
+    <string name="settings_lock_screen_body">Gloam no puede atenuar la pantalla de bloqueo: Android la muestra con el brillo de tu propio teléfono. Mantén ese brillo bajo por la noche, para que la pantalla de bloqueo no sea lo más luminoso de una habitación a oscuras.</string>
+    <string name="settings_flicker">Parpadeo</string>
+    <string name="settings_flicker_body">Con poco brillo, muchas pantallas parpadean demasiado rápido para verlo, y a algunas personas eso les resulta fatigoso. Si te pasa, desactiva «%1$s» y mantén más alto el brillo de tu teléfono. La pantalla no llegará a estar tan oscura, pero no parpadeará. Algunos teléfonos tienen además una opción contra el parpadeo o de atenuación DC en los ajustes de pantalla.</string>
+
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system">Sistema</string>
+    <string name="settings_language_report">¿Algo se lee mal?</string>
+    <string name="settings_language_report_hint">Escríbeme si alguna palabra no está bien en tu idioma. Abre tu aplicación de correo, con el idioma que estás leyendo ya indicado.</string>
+    <string name="settings_restart">Después de reiniciar</string>
+    <string name="settings_restart_body">Gloam vuelve a poner la capa cuando tu teléfono se reinicia. Este teléfono solo deja que una aplicación se ejecute al arrancar si tiene el inicio automático activado, y Gloam no tiene forma de comprobar si lo está: así que, si la capa no vuelve, este es el ajuste que conviene mirar.</string>
+    <string name="settings_restart_open">Abrir ajustes de inicio automático</string>
+
+    <string name="settings_about">Acerca de</string>
+    <string name="settings_support">Ayuda y comentarios</string>
+    <string name="settings_licences">Licencias de código abierto</string>
+
+    <string name="support_title">Ayuda y comentarios</string>
+    <string name="support_report">Informar de un problema</string>
+    <string name="support_report_hint">Abre tu aplicación de correo con lo que Gloam ya sabe de tu teléfono rellenado.</string>
+    <string name="support_feature">Sugerir una función</string>
+    <string name="support_feature_hint">Todas las funciones de Gloam son gratuitas y siempre lo serán, así que la única pregunta es si encaja.</string>
+    <string name="support_body_bug">Qué ocurrió y qué esperabas en su lugar:</string>
+    <string name="support_body_feature">¿Qué te gustaría que hiciera Gloam?</string>
+    <string name="support_body_language">¿Qué palabra se lee mal y en qué pantalla?</string>
+    <string name="support_no_mail_app">En este teléfono no hay ninguna aplicación de correo que abrir.</string>
+    <string name="support_rate">Valorar Gloam en Google Play</string>
+    <string name="support_rate_hint">Abre la página de Gloam en Google Play. Valorar es opcional y no desbloquea nada, porque en Gloam no hay nada bloqueado.</string>
+    <string name="support_no_play">En este teléfono no hay Google Play ni navegador que abrir.</string>
+
+    <string name="licence_text_missing">El texto de esta licencia no se incluye con la aplicación.</string>
+
+    <string name="schedule_title">Horario</string>
+    <string name="schedule_enable">Atenuar según un horario</string>
+    <string name="schedule_enable_hint">Gloam pone y retira la capa por sí solo, todas las noches.</string>
+    <string name="schedule_kind_fixed">Horas fijas</string>
+    <string name="schedule_kind_sun">Del atardecer al amanecer</string>
+    <string name="schedule_sun_tonight">Esta noche: atardecer %1$s, amanecer %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Esta noche el sol no se pone ni sale aquí, así que se usan las horas de abajo.</string>
+    <string name="schedule_sun_fallback_note">Las noches en que el sol no se pone ni sale aquí, la capa usa estas horas.</string>
+    <string name="schedule_location_estimated">El atardecer se estima a partir de tu zona horaria.</string>
+    <string name="schedule_location_lent">El atardecer se calcula para la ubicación aproximada de este teléfono.</string>
+    <string name="schedule_location_none">Tu zona horaria no indica ninguna ubicación, así que se usan las horas de abajo todas las noches.</string>
+    <string name="schedule_location_ask">Usar la ubicación de este teléfono</string>
+    <string name="schedule_location_ask_hint">Para un atardecer más exacto. Gloam pide solo la ubicación aproximada y la mantiene en este teléfono.</string>
+    <string name="schedule_location_settings">Permitir la ubicación en los ajustes</string>
+    <string name="schedule_on_at">Se enciende</string>
+    <string name="schedule_off_at">Se apaga</string>
+    <string name="schedule_overnight">Toda la noche: la capa se retira a la mañana siguiente.</string>
+    <string name="schedule_same_time">Elige dos horas distintas. Un intervalo que empieza y termina en el mismo instante nunca se abre.</string>
+    <string name="schedule_short_window">Este intervalo es muy corto. Android puede iniciar Gloam unos minutos tarde, así que un intervalo tan corto puede pasarse por completo.</string>
+
+    <string name="schedule_battery_title">La optimización de batería está activada para Gloam</string>
+    <string name="schedule_battery_body_delegated">Android no deja que Gloam se inicie por sí solo a la hora que elegiste. La capa aparece igualmente la próxima vez que abras Gloam dentro del intervalo. Desactiva la optimización de batería para Gloam si quieres que se inicie por sí solo.</string>
+    <string name="schedule_battery_action">Ajustes de batería</string>
+    <string name="schedule_rom_note">Este teléfono también puede impedir que las aplicaciones se inicien en segundo plano. Si la capa no se pone por sí sola, aparecerá igualmente al abrir Gloam, y Después de reiniciar, en Ajustes, es donde puedes cambiarlo.</string>
+
+    <string name="dim_schedule_row">Horario</string>
+    <string name="dim_schedule_window">de %1$s a %2$s</string>
+    <string name="dim_schedule_off">Desactivado</string>
+    <string name="dim_schedule_at_risk">Horario: puede no iniciarse por sí solo</string>
+
+    <string name="channel_shade_name">Atenuación</string>
+    <string name="channel_shade_description">Se muestra mientras la pantalla está atenuada, para poder retirar la capa desde cualquier sitio.</string>
+    <string name="shade_notification_title">Pantalla atenuada</string>
+    <string name="shade_notification_stop">Detener</string>
+    <string name="shade_notification_until">Hasta las %1$s</string>
+    <string name="shade_notification_text_backlight">Tu control de brillo está en pausa mientras Gloam atenúa</string>
+
+</resources>

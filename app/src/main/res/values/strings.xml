@@ -137,8 +137,27 @@
 
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>
+    <!-- Endonyms, and `translatable="false"` for the reason translator-brief.md §4 gives: each
+         language is named in its own language in *every* locale, so someone who has landed in a
+         language they cannot read finds their way out by a name they recognise. They live only in
+         this file — a locale that repeated them would be an orphan, and resource fallback already
+         serves the base value to every locale. -->
     <string name="settings_language_english" translatable="false">English</string>
     <string name="settings_language_polish" translatable="false">Polski</string>
+    <string name="settings_language_czech" translatable="false">Čeština</string>
+    <string name="settings_language_german" translatable="false">Deutsch</string>
+    <string name="settings_language_spanish" translatable="false">Español</string>
+    <string name="settings_language_french" translatable="false">Français</string>
+    <string name="settings_language_italian" translatable="false">Italiano</string>
+    <string name="settings_language_portuguese_br" translatable="false">Português (Brasil)</string>
+    <string name="settings_language_ukrainian" translatable="false">Українська</string>
+    <!-- The report route, and it is the mechanism that replaces a native read-through rather than a
+         courtesy row (ADR-0014). It sits here, under the picker, because this is where someone is
+         standing the moment a word reads wrong — a channel nobody can find is the same as no
+         channel. The hint says the language travels with the mail, so nobody has to explain which
+         one they are reading. -->
+    <string name="settings_language_report">Something read wrong?</string>
+    <string name="settings_language_report_hint">Tell me if a word looks wrong in your language. Opens your email app, with the language you are reading already filled in.</string>
     <!-- Reboot restore, and the hand-off to Xiaomi's autostart screen. Shown only where that
          screen exists, which is what lets the second sentence say "this phone" — nobody whose
          phone has no such setting ever reads it. It promises nothing about the outcome: the app
@@ -165,8 +184,16 @@
     <string name="support_feature_hint">Every feature in Gloam is free and always will be, so the only question is whether it belongs.</string>
     <string name="support_subject_bug" translatable="false">Gloam #bug</string>
     <string name="support_subject_feature" translatable="false">Gloam #feature</string>
+    <!-- A tag of its own rather than #bug, because seven languages ship without a native
+         read-through (ADR-0014) and translation reports are the one kind of mail this release
+         expects in quantity. Sorting them apart is what lets a fluency fix be batched into one
+         string release instead of triaged one report at a time. -->
+    <string name="support_subject_language" translatable="false">Gloam #language</string>
     <string name="support_body_bug">What happened, and what you expected instead:</string>
     <string name="support_body_feature">What would you like Gloam to do?</string>
+    <!-- Asks for the screen as well as the word: a resource id means nothing to the sender, and
+         where they saw it is what turns a report into an edit. -->
+    <string name="support_body_language">Which word read wrong, and on which screen?</string>
     <string name="support_no_mail_app">No email app on this phone to open.</string>
     <string name="support_rate">Rate Gloam on Google Play</string>
     <string name="support_rate_hint">Opens Gloam\'s page on Google Play. Rating is optional and unlocks nothing, because nothing in Gloam is locked.</string>

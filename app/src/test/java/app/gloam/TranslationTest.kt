@@ -175,10 +175,13 @@ class TranslationTest {
         // A dropped %1$s is not a typo — the argument is still passed at the call site, so the
         // sentence renders without the interpolated name and nothing anywhere fails.
         //
-        // Note what this cannot see: an argument that is *kept* and given a different job. Polish
-        // `photo_gallery_empty_help` carried its %1$s faithfully and moved it from the thing the
-        // photos are of to the gallery they land in, describing a folder that does not exist. Every
-        // assertion here passed. That half is the native read-through's, and always will be.
+        // Note what this cannot see: an argument that is *kept* and given a different job — carried
+        // faithfully, and moved from one thing to another, describing something that does not
+        // exist. Every assertion here would pass.
+        //
+        // That half was the native read-through's until ADR-0014 retracted it. What replaces it is
+        // not this test but the two below it plus a report row, and the honest statement of the
+        // boundary is that argument *roles* are still unchecked by any build in this repo.
         translations.forEach { (_, label, translated) ->
             base.strings.forEach { (name, element) ->
                 val counterpart = translated.strings[name] ?: return@forEach
@@ -205,6 +208,44 @@ class TranslationTest {
                         item.formatArguments(),
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Pairs where one string **quotes another by name**, and the quote is load-bearing.
+     *
+     * Each entry is (the string being quoted, the string that quotes it). English composes these by
+     * hand — *"No Stop button outside Gloam"* names the notification's own action, *"After a restart
+     * in Settings"* names a section header — and a translator working string by string has no way to
+     * see the pairing. Both halves come out fluent and they name two different things, which is the
+     * failure a native read-through used to catch and ADR-0014 no longer has one for.
+     *
+     * The alternative is `getString(R.string.other)` interpolation, which is what
+     * `settings_flicker_body` does with `dim_backlight_label` and why that pair is not in this table:
+     * the substitution cannot drift. It is not free, though — it forces the quoted string into
+     * whatever case and grammar the host sentence needs, which is wrong in most inflecting languages
+     * for a heading being cited. So the composed form stays, and this is what holds it together.
+     */
+    private val quotedPairs =
+        listOf(
+            "shade_notification_stop" to "dim_notification_warning_title",
+            "settings_restart" to "schedule_rom_note",
+        )
+
+    @Test
+    fun `a string that quotes another by name still contains it in every locale`() {
+        (listOf(Translation(BASE_LOCALE, "values/strings.xml", base)) + translations).forEach { (_, label, resources) ->
+            quotedPairs.forEach { (quoted, host) ->
+                val quotedText = resources.strings[quoted]?.textContent ?: return@forEach
+                val hostText = resources.strings[host]?.textContent ?: return@forEach
+                assertTrue(
+                    "in $label, '$host' is supposed to quote '$quoted' by name, but does not " +
+                        "contain it: '$quoted' is \"$quotedText\" and '$host' reads \"$hostText\" — " +
+                        "the two have to use the same word, because the user is being pointed at " +
+                        "a button or a section they then have to recognise",
+                    quotedText in hostText,
+                )
             }
         }
     }

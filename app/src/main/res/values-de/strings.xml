@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    German. Translated from **English only** — never from another translation, which compounds every
+    interpretation the first translator made.
+
+    Register: informal *du*, sentence case, and the app speaks of itself in the third person as
+    *Gloam* rather than as "wir". *Du* rather than *Sie* because the English is plain-spoken and
+    second-person throughout, and because Android's own German UI is *du* — a *Sie* app inside a *du*
+    system reads like a letter from a bank.
+
+    Two vocabulary decisions worth confirming (ADR-0014 names them as the kind a native read-through
+    would have settled):
+
+    - **shade → `Abdunklung`** for the mechanism and `Schicht` where the sentence needs the physical
+      thing. Not `Vorhang` or `Rollo`, which are the literal window blinds; not `Filter`, which
+      CONTEXT.md rules out entirely.
+    - **warmth → `Wärme`.** Never `Farbtemperatur`: an overlay adds a colour on top and does not
+      change the temperature of the light.
+
+    German compounds are long, and four of binky's clipped labels were German — `dim_column_floor`,
+    the chips and the tab labels are kept as short as the concept allows for that reason.
+-->
+<resources>
+    <string name="tab_dim">Abdunkeln</string>
+    <string name="tab_settings">Einstellungen</string>
+
+    <string name="action_back">Zurück</string>
+
+    <string name="dim_title">Abdunkeln</string>
+    <string name="dim_level_label">Abdunklungsstufe</string>
+    <string name="dim_level_caption">des Lichts sind abgedeckt. Zieh die Säule nach unten für weniger Licht.</string>
+    <string name="dim_column_floor">MINIMUM</string>
+    <string name="dim_start">Abdunkeln starten</string>
+    <string name="dim_stop">Abdunkeln beenden</string>
+    <string name="dim_permission_title">Gloam braucht die Berechtigung, über anderen Apps zu zeichnen</string>
+    <string name="dim_permission_body">Die Schicht liegt über allem, was auf dem Bildschirm ist, deshalb fragt Android ausdrücklich danach. Gloam liest nichts über die Apps darunter. Wenn du das Abdunkeln startest, fragt Gloam außerdem nach einer Benachrichtigung — über diese Benachrichtigung lässt sich Gloam von überall beenden.</string>
+    <string name="dim_permission_grant">Einstellungen öffnen</string>
+
+    <string name="dim_notification_warning_title">Außerhalb von Gloam gibt es keine Stopp-Schaltfläche</string>
+    <string name="dim_notification_warning_body">Gloam darf deinen Bildschirm abdunkeln, aber keine Benachrichtigung anzeigen. Das Abdunkeln lässt sich deshalb nur auf diesem Bildschirm beenden.</string>
+    <string name="dim_notification_warning_channel_body">Die Benachrichtigung von Gloam ist ausgeschaltet. Das Abdunkeln lässt sich deshalb nur auf diesem Bildschirm beenden.</string>
+    <string name="dim_notification_warning_ask">Benachrichtigungen erlauben</string>
+    <string name="dim_notification_warning_settings">Benachrichtigungseinstellungen öffnen</string>
+
+    <string name="dim_backlight_label">Auch die Bildschirmhelligkeit senken</string>
+    <string name="dim_backlight_hint">Dein Helligkeitsregler ist angehalten, während Gloam abdunkelt.</string>
+    <string name="dim_backlight_unavailable">Dieses Telefon meldet seine Helligkeit nicht in einer Form, die Gloam nutzen kann. Gloam dunkelt deshalb nur ab, indem es über den Bildschirm zeichnet.</string>
+
+    <string name="dim_auto_off_label">Von selbst beenden</string>
+    <string name="dim_auto_off_hint">Gloam nimmt die Schicht nach dieser Zeit von selbst weg, damit ein abgedunkelter und vergessener Bildschirm morgen nicht noch dunkel ist.</string>
+    <string name="dim_auto_off_at">Endet um %1$s</string>
+
+    <string name="compact_auto_off_never">Nie</string>
+    <string name="compact_auto_off_30m">30 Min.</string>
+    <string name="compact_auto_off_1h">1 Std.</string>
+    <string name="compact_auto_off_2h">2 Std.</string>
+    <string name="compact_auto_off_4h">4 Std.</string>
+
+    <string name="dim_warmth_label">Wärme</string>
+    <string name="dim_warmth_color_label">Farbe</string>
+
+    <string name="controls_open_app">Gloam öffnen</string>
+    <string name="panel_close">Steuerung schließen</string>
+
+    <string name="settings_appearance">Darstellung</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Hell</string>
+    <string name="settings_theme_dark">Dunkel</string>
+    <string name="settings_controls">Steuerung</string>
+    <string name="settings_launcher_compact">Über das Symbol die kleine Steuerung öffnen</string>
+    <string name="settings_launcher_compact_hint">Ein Tippen auf Gloam öffnet nur die Regler statt der ganzen App. Die Benachrichtigung öffnet immer die kleine Steuerung.</string>
+    <string name="settings_lock_screen">Sperrbildschirm</string>
+    <string name="settings_lock_screen_body">Gloam kann den Sperrbildschirm nicht abdunkeln: Android zeigt ihn mit der Helligkeit deines Telefons. Halte diese Helligkeit nachts niedrig, damit der Sperrbildschirm nicht das Hellste in einem dunklen Zimmer ist.</string>
+    <string name="settings_flicker">Flimmern</string>
+    <string name="settings_flicker_body">Bei niedriger Helligkeit flimmern viele Bildschirme zu schnell, um es zu sehen, und manche Menschen finden das ermüdend. Wenn es dir so geht, schalte „%1$s“ aus und halte die Helligkeit deines Telefons höher. Der Bildschirm wird dann nicht so dunkel, flimmert aber nicht. Manche Telefone haben in den Displayeinstellungen auch eine Option gegen Flimmern oder für DC-Dimming.</string>
+
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_report">Liest sich etwas falsch?</string>
+    <string name="settings_language_report_hint">Schreib mir, wenn ein Wort in deiner Sprache falsch aussieht. Öffnet deine E-Mail-App, die Sprache, die du liest, ist schon eingetragen.</string>
+    <string name="settings_restart">Nach einem Neustart</string>
+    <string name="settings_restart_body">Gloam legt die Schicht nach einem Neustart deines Telefons wieder an. Dieses Telefon lässt eine App nur beim Start laufen, wenn Autostart für sie eingeschaltet ist, und Gloam kann nicht nachsehen, ob er es ist — wenn die Schicht also nicht zurückkommt, ist das die Einstellung, in die du schauen solltest.</string>
+    <string name="settings_restart_open">Autostart-Einstellungen öffnen</string>
+
+    <string name="settings_about">Über die App</string>
+    <string name="settings_support">Hilfe und Rückmeldung</string>
+    <string name="settings_licences">Open-Source-Lizenzen</string>
+
+    <string name="support_title">Hilfe und Rückmeldung</string>
+    <string name="support_report">Problem melden</string>
+    <string name="support_report_hint">Öffnet deine E-Mail-App, mit allem schon eingetragen, was Gloam über dein Telefon weiß.</string>
+    <string name="support_feature">Funktion vorschlagen</string>
+    <string name="support_feature_hint">Jede Funktion in Gloam ist kostenlos und bleibt es, also ist die einzige Frage, ob sie hineinpasst.</string>
+    <string name="support_body_bug">Was ist passiert, und was hättest du stattdessen erwartet:</string>
+    <string name="support_body_feature">Was soll Gloam können?</string>
+    <string name="support_body_language">Welches Wort liest sich falsch, und auf welchem Bildschirm?</string>
+    <string name="support_no_mail_app">Auf diesem Telefon gibt es keine E-Mail-App zum Öffnen.</string>
+    <string name="support_rate">Gloam bei Google Play bewerten</string>
+    <string name="support_rate_hint">Öffnet die Seite von Gloam bei Google Play. Eine Bewertung ist freiwillig und schaltet nichts frei, weil in Gloam nichts gesperrt ist.</string>
+    <string name="support_no_play">Auf diesem Telefon gibt es weder Google Play noch einen Browser zum Öffnen.</string>
+
+    <string name="licence_text_missing">Der Text dieser Lizenz ist nicht in der App enthalten.</string>
+
+    <string name="schedule_title">Zeitplan</string>
+    <string name="schedule_enable">Nach Zeitplan abdunkeln</string>
+    <string name="schedule_enable_hint">Gloam legt die Schicht jede Nacht von selbst an und nimmt sie von selbst weg.</string>
+    <string name="schedule_kind_fixed">Feste Zeiten</string>
+    <string name="schedule_kind_sun">Von Sonnenuntergang bis Sonnenaufgang</string>
+    <string name="schedule_sun_tonight">Heute Nacht: Sonnenuntergang %1$s, Sonnenaufgang %2$s</string>
+    <string name="schedule_sun_fallback_tonight">Hier geht die Sonne heute Nacht weder unter noch auf, deshalb gelten die Zeiten unten.</string>
+    <string name="schedule_sun_fallback_note">In Nächten, in denen die Sonne hier weder unter- noch aufgeht, verwendet die Schicht diese Zeiten.</string>
+    <string name="schedule_location_estimated">Der Sonnenuntergang wird aus deiner Zeitzone geschätzt.</string>
+    <string name="schedule_location_lent">Der Sonnenuntergang wird für den ungefähren Standort dieses Telefons berechnet.</string>
+    <string name="schedule_location_none">Deine Zeitzone ergibt keinen Standort, deshalb gelten jede Nacht die Zeiten unten.</string>
+    <string name="schedule_location_ask">Standort dieses Telefons verwenden</string>
+    <string name="schedule_location_ask_hint">Für einen genaueren Sonnenuntergang. Gloam fragt nur nach dem ungefähren Standort und behält ihn auf diesem Telefon.</string>
+    <string name="schedule_location_settings">Standort in den Einstellungen erlauben</string>
+    <string name="schedule_on_at">Beginnt</string>
+    <string name="schedule_off_at">Endet</string>
+    <string name="schedule_overnight">Über Nacht — die Schicht verschwindet am nächsten Morgen.</string>
+    <string name="schedule_same_time">Wähle zwei verschiedene Zeiten. Ein Zeitraum, der im selben Moment beginnt und endet, öffnet sich nie.</string>
+    <string name="schedule_short_window">Dieser Zeitraum ist sehr kurz. Android startet Gloam vielleicht ein paar Minuten später, ein so kurzer Zeitraum kann deshalb ganz ausfallen.</string>
+
+    <string name="schedule_battery_title">Die Akku-Optimierung ist für Gloam eingeschaltet</string>
+    <string name="schedule_battery_body_delegated">Android lässt Gloam nicht zur gewählten Zeit von selbst starten. Die Schicht kommt trotzdem, sobald du Gloam das nächste Mal innerhalb des Zeitraums öffnest. Schalte die Akku-Optimierung für Gloam aus, damit es von selbst startet.</string>
+    <string name="schedule_battery_action">Akku-Einstellungen</string>
+    <string name="schedule_rom_note">Dieses Telefon kann Apps außerdem daran hindern, im Hintergrund zu starten. Wenn die Schicht nicht von selbst startet, kommt sie trotzdem, sobald du Gloam öffnest — und Nach einem Neustart in den Einstellungen ist die Stelle, an der du das ändern kannst.</string>
+
+    <string name="dim_schedule_row">Zeitplan</string>
+    <string name="dim_schedule_window">%1$s bis %2$s</string>
+    <string name="dim_schedule_off">Aus</string>
+    <string name="dim_schedule_at_risk">Zeitplan — startet vielleicht nicht von selbst</string>
+
+    <string name="channel_shade_name">Abdunkeln</string>
+    <string name="channel_shade_description">Wird angezeigt, während der Bildschirm abgedunkelt ist, damit die Schicht von überall ausgeschaltet werden kann.</string>
+    <string name="shade_notification_title">Bildschirm abgedunkelt</string>
+    <string name="shade_notification_stop">Stopp</string>
+    <string name="shade_notification_until">Bis %1$s</string>
+    <string name="shade_notification_text_backlight">Dein Helligkeitsregler ist angehalten, während Gloam abdunkelt</string>
+
+</resources>

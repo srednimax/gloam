@@ -1,7 +1,9 @@
 package app.gloam.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -28,6 +32,10 @@ import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.SectionHeader
 import app.gloam.ui.common.SwitchRow
+import app.gloam.ui.support.SupportRequest
+import app.gloam.ui.support.hintRes
+import app.gloam.ui.support.sendSupportMail
+import app.gloam.ui.support.titleRes
 import app.gloam.work.hasAutostartSettings
 import app.gloam.work.openAutostartSettings
 
@@ -99,6 +107,7 @@ fun SettingsScreen(
 
             SectionHeader(stringResource(R.string.settings_language))
             LanguageRow()
+            LanguageReportRow()
 
             AutostartRow()
 
@@ -175,19 +184,74 @@ private fun LanguageRow() {
     // Read on every composition rather than held in state: `setAppLanguage` recreates the Activity,
     // so this composable is rebuilt from scratch and the fresh read is always correct.
     val current = currentAppLanguage()
-    Row(modifier = Modifier.padding(horizontal = Spacing.base)) {
+    // `FlowRow` rather than `Row`, and the same reasoning the auto-off chips carry: ten chips do not
+    // fit one line. This one is not a judgement call — **it shipped broken and the phone said so.**
+    // With two languages a `Row` was correct and looked correct; at nine, a device sweep found only
+    // *System*, *English*, *Polski* and *Čeština* laid out and the remaining six simply absent, so
+    // six of the nine languages were unreachable from the switcher that exists to reach them. No
+    // test could see it: `AppLanguageTest` compares the enum to `locales_config.xml` and neither
+    // knows how wide a chip is. Do not narrow this back to a `Row`.
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.tight),
+        verticalArrangement = Arrangement.spacedBy(Spacing.tight),
+        modifier = Modifier.padding(horizontal = Spacing.base),
+    ) {
         FilterChip(
             selected = current == null,
             onClick = { setAppLanguage(null) },
             label = { Text(stringResource(R.string.settings_language_system)) },
-            modifier = Modifier.padding(end = Spacing.tight),
         )
         for (language in AppLanguage.entries) {
             FilterChip(
                 selected = current == language,
                 onClick = { setAppLanguage(language) },
                 label = { Text(stringResource(language.labelRes)) },
-                modifier = Modifier.padding(end = Spacing.tight),
+            )
+        }
+    }
+}
+
+/**
+ * *Something read wrong?* — the channel that stands in for a native read-through (ADR-0014).
+ *
+ * It is directly under the picker on purpose. Seven of the nine languages ship without a native
+ * speaker having read them, so the fluency half of that review happens in the field, one report at a
+ * time — and this is the screen somebody is on at the moment they notice. A row on Help and feedback
+ * as well would be a second name for the same thing.
+ *
+ * The mail carries the resolved locale in its own block (`SupportHandoff`), so nobody has to say
+ * which language they are reading, and `Gloam #language` sorts the reports apart from bugs.
+ */
+@Composable
+private fun LanguageReportRow() {
+    val context = LocalContext.current
+    // Same contract as the Support screen's: it says "the tap you just made went nowhere", which is
+    // only true of that tap, so it is deliberately not `rememberSaveable` and a rotation clears it.
+    var mailMissing by remember { mutableStateOf(false) }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { mailMissing = !context.sendSupportMail(SupportRequest.Language) }
+                .padding(horizontal = Spacing.base, vertical = Spacing.snug),
+    ) {
+        Text(
+            text = stringResource(SupportRequest.Language.titleRes()),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(SupportRequest.Language.hintRes()),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // Inline and in the error colour, the same way the Support screen reports it: there is no
+        // snackbar host anywhere in this app, and the failure belongs to the row that was tapped.
+        if (mailMissing) {
+            Text(
+                text = stringResource(R.string.support_no_mail_app),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }
