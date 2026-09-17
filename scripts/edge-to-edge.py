@@ -49,8 +49,52 @@ from xml.etree import ElementTree
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import project  # noqa: E402  — the path insert above has to come first
 
+# **Which of the two installs on the phone this driver drives.** Both are there at once — the debug
+# one from `installDebug`, the shipped one from Play — and every `pm clear`, `appops set`,
+# `pm grant` and `am start -n` below names one of them. Pointed at the wrong one *nothing fails*:
+# the walk photographs a real app that answers every needle, just not the one the run was for.
+#
+# The debug install stays the default, because it is what the inset matrix has always measured and
+# what a developer has to hand. [select_build] is how a run says otherwise.
 PACKAGE = project.DEBUG_APPLICATION_ID
 ACTIVITY = project.MAIN_ACTIVITY
+
+# The compact controls' own Activity. It is a second launcher entry rather than a screen inside the
+# app — empty `taskAffinity`, its own task — and `am start -n` reaches it because the launcher
+# `<intent-filter>` makes it exported. That is the same window the ongoing notification opens
+# ("The notification always opens the small controls", `settings_launcher_compact_hint`), which is
+# what makes it the honest route: the debug section's *Open compact controls* button reaches the
+# same place, but only on a build no user has.
+CONTROLS_ACTIVITY = f"{PACKAGE}/{project.NAMESPACE}.ControlsActivity"
+
+# **Whether [wipe] is allowed to run at all.** True for the debug install, which is scratch; false
+# for the shipped one, which is somebody's actual Gloam — their dim level, warmth, schedule and
+# theme, with no `run-as` on a release build to back any of it up first. See [select_build].
+WIPEABLE = True
+
+
+def select_build(build: str) -> None:
+    """Point the driver at the debug install (`debug`) or at the shipped one (`release`).
+
+    **`release` is the build a store screenshot has to come from**, and not for tidiness: the
+    developer-only Settings section lives in `app/src/debug/`, so on the shipped build
+    `DebugSettings()` is `= Unit` and the section is *absent* rather than hidden. A set shot off
+    `debug` photographs the backlight sweep and *Summon panel* the moment any scene scrolls
+    Settings.
+
+    It also takes the wipe away, which is the dangerous half. `debug` is a scratch install nobody
+    mourns; `…gloam` is the app on the phone's home screen, and [run_cell] reseeds — that is,
+    `pm clear`s — once per cell. Nine locales would be nine wipes of live configuration. So
+    [WIPEABLE] goes false here and [wipe] refuses, rather than leaving it to whoever remembers a
+    flag at 2am.
+    """
+    global PACKAGE, ACTIVITY, CONTROLS_ACTIVITY, WIPEABLE
+    if build not in ("debug", "release"):
+        raise SystemExit(f"unknown build {build!r}: expected 'debug' or 'release'")
+    PACKAGE = project.DEBUG_APPLICATION_ID if build == "debug" else project.APPLICATION_ID
+    ACTIVITY = f"{PACKAGE}/{project.NAMESPACE}.MainActivity"
+    CONTROLS_ACTIVITY = f"{PACKAGE}/{project.NAMESPACE}.ControlsActivity"
+    WIPEABLE = build == "debug"
 
 # The three inset types a screen can be wrongly drawn under. `displayCutout` is listed separately
 # from `statusBars` on purpose: in portrait they coincide, and in landscape they do not. That was the
@@ -1009,6 +1053,16 @@ def wipe() -> None:
     drops that shows on screen is the overlay appop and POST_NOTIFICATIONS, which is exactly the
     state the `empty` suite exists to photograph.
     """
+    # **The shipped install is not ours to clear.** On `debug` this is free; on `…gloam` it destroys
+    # a real dim level, warmth, schedule and theme, and a release build has no `run-as` to read them
+    # back out first. Raising here rather than checking at every call site is deliberate: `wipe` has
+    # three routes into it — the `empty` suite's own first step, [reset_to_seeded], and
+    # [ensure_seed] — and a guard on two of them is a guard on none.
+    if not WIPEABLE:
+        raise StepFailed(
+            f"refusing to `pm clear {PACKAGE}`: that is the shipped install, and this would wipe "
+            "settings nothing here can restore. Run with --no-reseed, or point the driver at debug",
+        )
     global _SEEDED
     _SEEDED = None
     shell(f"pm clear {PACKAGE}")
@@ -1150,6 +1204,75 @@ def ensure_seed(variant: str) -> None:
         seed_variant(variant)
 
 
+# **The article the compact controls float over**, per language, keyed by the language subtag.
+#
+# A *real page in the reader's own language* rather than one of Gloam's own screens, because the
+# compact controls' whole claim is that they work on top of whatever you are reading — a shot of
+# them over Gloam's Settings proves the opposite of the thing being sold.
+#
+# **Filled in only where the title has been checked, and a missing entry is a hard failure rather
+# than a guess.** A wrong title is not a broken run, it is a Wikipedia "there is no article with
+# this exact name" page sitting in the middle of a store listing in a language nobody on this side
+# reads. [open_url] raises on a language that is not here; fill it by opening the article and
+# copying the title out of the URL, never by translating the English one.
+WIKIPEDIA_ARTICLE = {
+    "en": "Night",
+}
+
+
+def _language() -> str:
+    """The language subtag this run is in — the pinned locale, or the phone's own when none is."""
+    if _LOCALE is not None:
+        return _LOCALE.split("-")[0]
+    for prop in ("persist.sys.locale", "ro.product.locale"):
+        value = shell(f"getprop {prop}").strip()
+        if value:
+            return value.replace("_", "-").split("-")[0]
+    raise StepFailed("no locale is pinned and the phone will not say what its own is")
+
+
+def open_url(url: str) -> None:
+    """Hand a URL to whatever the phone opens links with, and wait for it to be up.
+
+    `{lang}` and `{article}` in [url] are filled from the run's locale, so one line in [SCENES]
+    covers nine locales and each one gets its own Wikipedia rather than an English page behind a
+    Ukrainian listing.
+
+    **This leaves the app**, which no other step in this table does, so it is only ever correct in a
+    scene whose subject is a window drawn *over* another app. [relaunch] is what puts things back,
+    and every scene starts with one.
+
+    Two things it cannot check and you can: that the phone has a default browser rather than a
+    chooser (a chooser photographs as a chooser), and that the page actually resolved. Both are
+    visible in the screenshot, which is why the English cell is reviewed before the other eight run.
+    """
+    language = _language()
+    article = WIKIPEDIA_ARTICLE.get(language)
+    if "{article}" in url and article is None:
+        raise StepFailed(
+            f"no checked Wikipedia article for {language!r} — add one to WIKIPEDIA_ARTICLE. "
+            "Do not translate the English title; open the article and copy the title from the URL",
+        )
+    shell(f"am start -a android.intent.action.VIEW -d '{url.format(lang=language, article=article)}'")
+    # A page load is a network round trip, and unlike everything else here there is no signal to
+    # wait on that means "readable" rather than "attached". Long enough for a Wikipedia article
+    # over a phone connection; the screenshot shows a half-drawn page if it was not.
+    settle(4.0)
+
+
+def start_controls() -> None:
+    """Open the compact controls the way the notification does.
+
+    `am start -n` on [CONTROLS_ACTIVITY] rather than a tap on the debug section's *Open compact
+    controls* button, which is the route [SCENES] used to take and which does not exist on the
+    build a store screenshot comes from. The Activity is exported — it carries the launcher
+    `<intent-filter>` — so this is reachable on debug and release alike, and its empty
+    `taskAffinity` is what lets it land over the browser instead of inside Gloam's own task.
+    """
+    shell(f"am start -n {CONTROLS_ACTIVITY}")
+    wait_for_app()
+
+
 STEP_RUNNERS = {
     "tap": lambda arg: tap(arg),
     "tap?": lambda arg: tap(arg, optional=True),
@@ -1164,6 +1287,8 @@ STEP_RUNNERS = {
     "wait": lambda arg: settle(float(arg)),
     "wipe": lambda arg: wipe(),
     "deny": lambda arg: deny_asks(),
+    "open_url": open_url,
+    "start_controls": lambda arg: start_controls(),
 }
 
 
@@ -1268,27 +1393,35 @@ SCENES = [
     # clip it**. The window is bottom-weighted and sized to its content, which is exactly the shape
     # that gets clipped, and R5 already caught the Polish leg overflowing its height on the phone.
     #
-    # **Reached through the debug section rather than through the launcher icon**, which was forced
-    # when this was written and is now a choice worth keeping. `ControlsActivity` was
-    # `exported="false"`, so `am start -n` could not reach it at all (`phase-3.md` R2); shape iv
-    # exports it, because it carries the launcher `<intent-filter>` now, and the command would work.
-    # The button stays: [relaunch] drives `MainActivity`, which is still the exported component this
-    # whole matrix walks, and its explicit-component start deliberately carries no
-    # `CATEGORY_LAUNCHER` — which is what keeps the launcher preference from deciding where any
-    # scene in this table lands.
+    # **It used to be reached by tapping the debug section's *Open compact controls* button, and
+    # that route is gone.** It was forced when this was written — `ControlsActivity` was
+    # `exported="false"`, so `am start -n` could not reach it at all (`phase-3.md` R2) — and shape iv
+    # removed the reason by giving the Activity the launcher `<intent-filter>`, which exports it.
     #
-    # The button's label is a Kotlin literal in `DebugSettings.kt` rather than a string resource, so
-    # [resolve_needles] finds no match and passes it through unchanged. That is the licence name's
-    # case again and it is correct for the same reason: the debug section is English on every leg.
+    # What retired the button is the store set. Developer surface lives in `app/src/debug/`, so on
+    # the shipped build `DebugSettings()` is `= Unit` and the button is *absent*: a tap on it there
+    # does not find a disabled control, it finds nothing, and the scene fails. [start_controls]
+    # names the Activity instead, which is the route the ongoing notification itself takes and works
+    # on both builds. A screenshot of a surface reached only from a debug menu was always answering
+    # a question nobody asked.
+    #
+    # **What sits behind it is not decided here**, and that is the split between the two scripts
+    # rather than an omission. This matrix asks whether a gesture bar clips the window, and the
+    # answer does not depend on what is underneath; a store screenshot asks whether the controls
+    # look usable on top of what you are reading, and there the background *is* the subject. So the
+    # scene reaches a bare window and `screenshots.py --background-url` is what puts an article
+    # under it — which also keeps this table runnable on a CI emulator that has no browser to hand
+    # a `VIEW` intent to.
+    #
+    # Note what a capture can and cannot show either way: the shade's overlay *is* in a screencap
+    # (R5, ×0.929 at dim 72), the backlight fall from 500 nits to 2 is not (`DOD.md` §"The
+    # shade-down screenshot closes as a refusal"). This frame understates the product however it is
+    # staged.
     #
     # **The panel is not in this harness and cannot be.** It is a `WindowManager` window with no
     # Activity under it, and this driver walks activities; its size bound is held by `PanelWidthTest`
     # on the JVM instead, which is the trade ADR-0011 makes explicit.
-    Scene(
-        "compact-controls",
-        "floating",
-        [("tap", "Settings"), ("swipe_end", ""), ("tap", "Open compact controls")],
-    ),
+    Scene("compact-controls", "floating", [("start_controls", "")]),
 ]
 
 
@@ -1608,6 +1741,16 @@ def main() -> int:
     )
     parser.add_argument("--restore", action="store_true", help="undo the pinned rotation and nav mode")
     parser.add_argument(
+        "--build",
+        choices=("debug", "release"),
+        default="debug",
+        help=(
+            "which install to drive. 'release' is the shipped applicationId — the build a store "
+            "screenshot must come from, since the developer-only Settings section does not exist "
+            "there. It also refuses every wipe, because that install is the user's own app"
+        ),
+    )
+    parser.add_argument(
         "--retry-unreached",
         type=int,
         default=0,
@@ -1628,6 +1771,7 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    select_build(args.build)
 
     if args.restore:
         set_locale(None)
