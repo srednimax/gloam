@@ -1112,12 +1112,66 @@ close — see* **Done when** *.)*
   **no icon and no feature graphic** — neither word appears in the script — so `supply` found no
   `images/icon.png`, uploaded none, and left Play's art untouched. "The icon and feature graphic
   validate" belongs in the list of things that only look like readings, below.
-- **R2** — the release-shaped build. —
+- **R2** — the release-shaped build. **Read 2026-09-17.** Built with `assembleDebug -PreleaseShapedDebug`
+  (a single 2.6 MB `classes.dex`, and `mapping/debug` was written), after `device-gate.py` showed
+  autostart and the battery exemption both on. Every surface did its job under R8:
+  - `MY_PACKAGE_REPLACED` over a running shade logged *shade restored*, and the overlay and the
+    floor override came back.
+  - The notification (`ongoing`, `NO_CLEAR`, one *Stop* action) opened the panel. The panel drew
+    252 px wide at `END|CENTER`, and dragging its column moved the dim level from 72 to 90.
+  - `ControlsActivity` opened on the same 90. Its *Stop dimming* removed the window, the override
+    and the notification together.
+  - `ScheduleReceiver` handled a window moved to 18:40–18:50. It logged *scheduled shade up until
+    18:50* at 18:40:00.094, and the override was released at 18:50:00.102.
+  **Not driven by adb:** the notification's own *Stop*. HyperOS would not expand the notification
+  for an injected swipe in three tries. For a person it is one tap.
 - **R3** — the update in place, and the pinned icon. **Struck**: the transition it asks about happened on
   2026-09-08 at 05:22, before this plan was read back. §15.
-- **R4** — the restore. —
-- **R5** — the shade-down capture. —
-- **R6** — the API-33 pass. —
+- **R4** — the restore. **Read 2026-09-17, and one result was not what §9 expected.** It ran on the debug
+  build, because the release-shaped build is not debuggable and `run-as` cannot read its files.
+  `bmgr` went through `LocalTransport`, and the phone was switched back to Google's transport
+  afterwards. The backed-up state was a shade raised by the sun schedule: `shade_running = true`,
+  `off_at_millis` at tomorrow's sunrise, and auto-off at *Never*. It also held a valid 17-byte
+  `lent_location.preferences_pb`, written with `run-as`: the schedule refuses a location read while
+  a window is open, and one was open. After `pm clear` and `bmgr restore 1`:
+  - `app_preferences.preferences_pb` came back byte for byte, and so did the debug build's
+    `reading-test.csv`. **`lent_location.preferences_pb` did not come back**, so ADR-0013 §8's
+    exclusion works.
+  - **Neither the restore nor the first launch raised anything.** There was no process, no window
+    and no override, and the dim screen offered *Start* because `shadeOnScreen` was false. The
+    intent was still `true` on disk.
+  - The battery warning was honest at once. With the exemption removed before launch, the dim
+    screen's schedule row read *may not start on its own*. The launch re-armed the alarm toward the
+    next window.
+  - On HyperOS, `pm clear` left the overlay's uid mode at `allow`. It reset `POST_NOTIFICATIONS`
+    and the location grant, and it **turned autostart off**.
+  - ⚠ **The next update then put the shade up.** With autostart back on, `adb install -r`
+    delivered `MY_PACKAGE_REPLACED`, and `BootReceiver` logged *shade restored* from the restored
+    intent, at dim 90. **No notification was posted**, because the permission had been reset, and
+    the dim screen showed *No Stop button outside Gloam*.
+  **So the answer to §9's first row is "no, once", not "no, twice over".** A restored intent meets
+  only one refusal, the overlay grant. The deadline refusal needs a deadline: with auto-off at
+  *Never*, `off_at_millis` is 0 and `isDue` never returns true. On a new phone the user grants the
+  overlay at first launch, and the first reboot or Play update after that raises a shade they never
+  started on that phone. Nothing has asked for the notification permission by then, so it may come
+  up without one. This is the case §9 set aside a `fix:` for: one more refusal at the read.
+- **R5** — the shade-down capture. **Read 2026-09-17: the shade is in the capture, and the backlight
+  half is not.** The capture was of Gloam's own dim screen at dim 72, shade off and then on. Every
+  brightness band fell by the same ×0.929 (the medians of four bands ran from 0.928 to 0.931),
+  which means blending in stored values, as `phase-3.md` R3 found at dim 100. During the same
+  capture the override took the panel from 0.49995 to 6.84e-4, which is 500 nits to 2, and the file
+  shows none of it. §8's refusal stands. **For 2b:** ×0.929 is a lighter shade than the ramp's
+  ×0.855 for a top of 0.49995. This phone stores `screen_brightness = 255` with no float key, and
+  its panel's non-HBM ceiling is `hbmMax = 0.499951`. The capture fits a top near 1.0, twice what
+  the panel will give, so for a user at full brightness the ramp credits the backlight half with
+  light it does not have. That affects feel, not safety: the ramp is still monotone, and dim 100
+  still ends at `MAX_SHADE_ALPHA`.
+- **R6** — the API-33 pass. **Blocked 2026-09-17.** `gloam-api33` on emulator 37.1.11.0 segfaulted
+  (exit 139) three times, each within seconds of Gloam being installed or launched: a snapshot
+  boot and a cold boot with `swiftshader_indirect`, and a cold boot with `-gpu guest`. The emulator
+  log names no cause. One reading survived. On that image the Play package (1.8, a stub) answers no
+  `https` intent pinned to it, and the listing URL resolves to Chrome alone. So an API-33 phone
+  without a working Play takes the rate row's fallback, and something answers it.
 - **R7** — the artifact checks on the promoted bundle. —
 - **R8** — the listing as a reviewer sees it, both locales. **Not yet read**: the Polish listing goes up
   with F's promotion. One part is already done: on 2026-09-17 the debug build's rate row opened
