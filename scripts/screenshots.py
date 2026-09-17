@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Capture every screen in light and dark, as the before/after evidence for a redesign.
+"""Capture every screen, as the store's listing set and as before/after evidence for a redesign.
+
+It used to say "in light and dark" here. Only dark can be captured now - [set_theme] explains what
+stopped working, and refusing is the fix rather than the limitation.
 
 INHERITED FROM ANOTHER APP - AND NOW POINTED AT THIS ONE.
 
@@ -26,16 +29,21 @@ screens.
 
 Run it before the redesign starts and again at the gate, same scenes, same cells:
 
-    scripts/screenshots.py --out docs/screenshots/before
-    scripts/screenshots.py --out docs/screenshots/after
-    scripts/screenshots.py --out DIR --theme light             # one cell
+    scripts/screenshots.py --out DIR --theme dark              # every scene, one cell
     scripts/screenshots.py --out DIR --scene <name>,<name>     # one screen, while iterating
     scripts/screenshots.py --out DIR --scene <name> --numbered # 1_<name>-en.png
     scripts/screenshots.py --restore                           # hand the phone back
 
-**The Play listing takes the LIGHT set.** Both cells are still captured, because the app ships
-both themes and the before/after comparison needs the pair - this is a decision about what goes in
-the Console. Use `--theme light` when the run is only for the listing.
+    # the store set: the shipped build, its own language, a real page under the floating window
+    scripts/screenshots.py --out DIR --theme dark --build release --locale <tag> --numbered \
+        --scene compact-controls,dim,settings,settings-bottom,support \
+        --background-url 'https://{lang}.m.wikipedia.org/wiki/{article}'
+
+**`--theme dark` is not a shortcut, it is the only cell that can be captured.** The light one is
+refused - see [set_theme] for what stopped working and how it was found. That also retires the
+line that used to stand here saying the Play listing takes the *light* set: the listing is dark
+now, which for an app used in the dark is the more honest picture anyway, and `docs/store-listing.md`
+carries the same correction.
 
 Filenames carry the locale they were taken in - `dim-pl.png`, not `dim.png` - because a PNG loses
 the directory that used to carry its language the moment anyone moves it. See [locale_tag].
@@ -64,6 +72,7 @@ assuming it stayed true.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import importlib.util
 import json
 import re
@@ -106,10 +115,24 @@ SUITES = ("full", "empty")
 
 
 def set_theme(theme: str) -> None:
-    """Flip the system dark theme. `AppTheme` reads `isSystemInDarkTheme()`, so this is the lever.
+    """Flip the system dark theme — which the app only follows when it is asked to.
 
-    There is no in-app theme preference to drive instead — `MainActivity` calls `AppTheme {}` with
-    no arguments — which is why this is a device setting and not a tap sequence.
+    **The second paragraph of this docstring used to say there was no in-app theme preference to
+    drive instead, and it was true when it was written.** `MainActivity` now calls
+    `AppTheme(themeMode = themeMode)`, Settings grew an Appearance section, and
+    `AppPreferences.themeMode` defaults to **`ThemeMode.DARK` rather than `ThemeMode.SYSTEM`**
+    (`AppPreferences.kt:119`). Every cell begins with a `pm clear`, so the app is back on that
+    default before the first tap and `cmd uimode night no` moves nothing.
+
+    Nothing failed when that happened, which is the part worth keeping in mind: on 2026-09-17 a
+    light cell walked all six scenes, wrote six files under `light/` and reported success, and every
+    one of them was dark — mean luminance 22–51, against 236–248 for the set committed on
+    2026-09-05. A silent wrong answer, at the end of a run long enough that nobody re-reads it.
+
+    So this is still the right lever for `dark` (the default agrees with it) and is *not* a lever
+    for `light` at all; [main] refuses that rather than pretending. Restoring light means driving
+    Settings → Appearance → Light after each reseed, which is a tap sequence this script does not
+    have yet.
     """
     e2e.shell(f"cmd uimode night {THEMES[theme]}")
     # The mode change restarts activities out of process. Nothing publishes a "the new configuration
@@ -310,7 +333,42 @@ def main() -> int:
         action="store_true",
         help="skip the wipe-and-seed each cell starts with. For iterating on one screen, not for a full set",
     )
+    parser.add_argument(
+        "--background-url",
+        metavar="URL",
+        help=(
+            "put a real page behind every floating-window scene, so the compact controls are shot "
+            "over something somebody would actually be reading rather than over Gloam's own "
+            "Settings. `{lang}` and `{article}` are filled from the run's locale — see "
+            "edge-to-edge.py's WIKIPEDIA_ARTICLE. Omitted, the window is shot over a bare app"
+        ),
+    )
+    parser.add_argument(
+        "--build",
+        choices=("debug", "release"),
+        default="debug",
+        help=(
+            "which install to shoot. 'release' is the shipped applicationId, and it is what a store "
+            "screenshot must come from: the developer-only Settings section is compiled out there, "
+            "so a scrolled Settings screen photographs the app instead of the backlight sweep"
+        ),
+    )
     args = parser.parse_args()
+    e2e.select_build(args.build)
+
+    # **The shipped install is already seeded, in the only sense this fixture means.** `reset_to_seeded`
+    # exists to turn a wiped app into one that has been used — overlay allowed, notifications granted
+    # — and the app on the phone's home screen has been used by definition. So reseeding it buys
+    # nothing and costs the user's dim level, warmth, schedule and theme, which no release build lets
+    # us read back first. [e2e.wipe] refuses outright; this is what stops the run reaching it at all.
+    #
+    # Two things follow, and both are for whoever reviews the shots rather than for the code: the
+    # screenshots show real settings, so a sun schedule prints a real sunset and sunrise and that is
+    # a soft hint at where somebody lives; and the theme is whatever is actually set rather than the
+    # DARK default the dark cell is relying on.
+    if args.build == "release" and not args.no_reseed:
+        args.no_reseed = True
+        print("-- release build: reseeding disabled, that install is the user's own app")
 
     if args.restore:
         e2e.restore_device()
@@ -332,6 +390,22 @@ def main() -> int:
             parser.error(f"unknown theme(s): {', '.join(sorted(unknown))}")
         themes = [theme for theme in THEMES if theme in wanted]
 
+    # **Refused rather than shot wrong.** [set_theme] no longer reaches the app's own theme, so a
+    # light cell produces dark pixels under `light/` names and says nothing — which is how six files
+    # were captured and believed on 2026-09-17. An error here costs whoever wanted light an hour of
+    # reading; the alternative cost a run and very nearly cost a store listing.
+    #
+    # It refuses the *default* too, which is the point: `--out DIR` alone used to mean both themes,
+    # and leaving that as a silent half-truth would keep the trap open for exactly the person who
+    # did not read this file.
+    if "light" in themes:
+        parser.error(
+            "the light cell cannot be captured: AppPreferences.themeMode defaults to DARK, so "
+            "`cmd uimode night no` no longer moves the app and a light run writes dark pixels "
+            "under light/ filenames. Use --theme dark. Restoring light means driving "
+            "Settings -> Appearance -> Light after each reseed; see set_theme's docstring",
+        )
+
     scenes = list(e2e.SCENES)
     if args.scene:
         # A list, not a set: under --numbered the order asked for *is* the listing's order, and a set
@@ -344,6 +418,21 @@ def main() -> int:
         scenes = [by_name[name] for name in wanted]
     elif args.numbered:
         parser.error("--numbered needs --scene: the number is the position in the list you asked for")
+
+    # Prepended rather than written into [e2e.SCENES], because the two scripts want different things
+    # from the same scene: the inset matrix asks whether the window is clipped, which no background
+    # changes, and a listing asks whether it looks usable over a page. Injecting it here also keeps
+    # the nightly runnable on an emulator with no browser to answer a `VIEW` intent.
+    #
+    # `family == "floating"` rather than the scene's name: a window drawn over other apps is exactly
+    # the set that wants something under it, and that is what the family means.
+    if args.background_url:
+        scenes = [
+            dataclasses.replace(scene, steps=[("open_url", args.background_url), *scene.steps])
+            if scene.family == "floating"
+            else scene
+            for scene in scenes
+        ]
 
     if args.numbered:
         global _ORDER
