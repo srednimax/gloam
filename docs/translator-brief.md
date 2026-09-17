@@ -12,22 +12,74 @@ translator made gets compounded, silently.
 
 ## 1. What the app is, in one paragraph
 
-<Write this. A translator who does not know what the app is *for* will produce fluent sentences that
-are wrong about the thing. Say who uses it and in what situation — copy for someone worried at 2am
-reads differently from copy for a productivity tool.>
+Gloam is a screen dimmer for people who read in the dark and find their phone's lowest brightness
+setting still too bright. It takes the screen *below* that setting by drawing a dark layer — the
+**shade** — over everything, and it can warm the colour at the same time. The person reading this
+copy is in bed with the lights off, one hand on the phone, eyes adapted to the dark; they are not at
+a desk and they are not shopping for features. So the copy is quiet and short, it never exclaims,
+and it assumes the reader is mildly annoyed rather than delighted. Every feature is free, there is no
+account and no premium tier, and nothing here is ever selling anything.
+
+Two consequences for the wording. **The app is not a health product** — it makes a screen darker,
+which is a comfort, and §2.2 is what keeps it that way. And **the screen it is describing may be
+nearly black while being read**, which is why several strings are blunt to the point of terseness:
+they get read at the very bottom of the brightness range, sometimes by somebody trying to undo what
+they just did.
 
 ## 2. The rules that outrank fluency
 
-<Write these. They are the promises the copy makes that a translator must not soften, sharpen, or
-"improve". Number them, and say what each one protects — a translator will follow a rule they
-understand the reason for and will helpfully fix one they do not. Shapes that recur:
+Three of them. They are the promises this copy makes, and a translation that breaks one is wrong in a
+way no reviewer of style would flag. **These are also the checklist a language is audited against
+before it ships** ([ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md)),
+so they are written to be answerable string by string.
 
-- *Never state something the app does not know.* Where a value is absent because nobody entered it,
-  the copy says so — it does not say everything is fine.
-- *The app observes; it never advises.* A verb that becomes an imperative in translation changes what
-  the app claims to be, and in some domains that is a regulatory question rather than a stylistic one.
-- *A unit that is always shown one way stays that way*, however unnatural it reads, because the whole
-  point is that a small change stays visible.>
+### 2.1 The escape hatch stays findable, and its wording is a safety claim
+
+The shade covers every other app, including Gloam's own screen. The notification is how a person
+stops it from anywhere, and when Gloam is not allowed to post one, **the app says so and says that
+the current screen is the only way out.**
+
+- *"the only way to stop dimming is this screen"* must stay **exclusive**. Not *"you can also stop it
+  here"*, not *"one way to stop it is here"*. The whole sentence exists to tell somebody they must
+  not leave this screen.
+- The warning title names a button — *"No **Stop** button outside Gloam"* — and that word must be
+  **the same word** as the notification's own action (`shade_notification_stop`). The user is being
+  told to look for something and then has to recognise it. A test enforces this pair; it is in the
+  brief because a test cannot tell you *why*.
+- Nothing in this group gets softened for politeness. It is the one place in the app where being
+  slightly rude is correct.
+
+### 2.2 No health claims, ever
+
+Gloam is declared to Google Play as a non-health app, and that declaration has to stay true of every
+language. **Never introduce**: *eye strain*, *eyes*, *sleep*, *melatonin*, *blue light*, *protects*,
+*healthier*, *rest your eyes*. Not as a benefit, not in a hint, not "helpfully".
+
+The two places the temptation is strongest, because this is what apps of this shape usually say:
+
+- **Warmth.** It is a colour, described as a colour. The English says the tint shifts towards amber or
+  red — it never says why anyone might want that.
+- **Flicker and the schedule.** The flicker copy says some people find flicker *tiring*
+  (`tiring`, not *harmful*, not *damaging*); the lock-screen copy talks about the brightest thing in
+  a dark room, which is **glare**, not sleep. Keep both at that level exactly.
+
+And a vocabulary rule that comes from the same place: **never translate the app's warmth as a
+"filter"**, in any language. An overlay adds light on top; it cannot subtract a colour from what is
+underneath, so "blue-light filter" would be a false claim as well as a forbidden one.
+
+### 2.3 Never state what the app cannot know
+
+Two settings decide whether Gloam can start itself — the phone's autostart permission and its battery
+optimisation — and **Gloam cannot read either one back.** So that copy names where to look and
+promises no outcome:
+
+- *"this is the setting to look at"* stays a suggestion. Never *"turn this on and the shade will come
+  back"*.
+- *"Gloam has no way to check whether it is"* is not hedging to be tidied away; it is the honest part
+  of the sentence.
+- Where the English says **this phone** it means the vendor's behaviour, and where it says **Android**
+  it means the platform's. They are different claims and blaming the wrong one makes the sentence
+  false on somebody's phone. Keep them apart.
 
 ## 3. Register
 
@@ -40,6 +92,28 @@ often guesses.
   saved" are different products.
 - **Sentence case or title case** in buttons and headings. English tolerates both; most languages do
   not use title case at all, so a translated title-cased heading reads as a mistake.
+
+### Decided, for this app
+
+**Sentence case everywhere**, including buttons. **Gloam speaks of itself in the third person** — "Gloam
+cannot dim the lock screen" — never as "we"; there is one person behind it and a corporate *we* would
+be a fiction. And the app addresses the reader **informally**, in every language that forces the
+choice **except French**:
+
+| Language | Form | Note |
+| --- | --- | --- |
+| Polish | *ty* | Verb forms chosen to avoid gendered past tenses — see 6.2 |
+| Czech | *ty* | |
+| German | *du* | Android's own German UI is *du*; a *Sie* app inside a *du* system reads like a letter from a bank |
+| Spanish | *tú* | European vocabulary, nothing that reads oddly in America |
+| French | **`vous`** | The deliberate exception: Android's French UI is *vous*, and *tu* reads as over-familiar rather than friendly |
+| Italian | *tu* | Not *Lei* |
+| Portuguese (BR) | *você* | Brazilian vocabulary — *tela*, *celular*, *aplicativo* |
+| Ukrainian | *ти* | Translate from English, **not from Polish**: the two are close enough to pull false friends through and close enough that nobody would notice |
+
+The name **Gloam** is never translated or transliterated, including into Cyrillic — it is the word on
+the launcher icon and the user has to recognise it. It may inflect where a language needs it to
+(Czech *Gloamu*, Ukrainian *Gloam* left undeclined), which is grammar rather than translation.
 
 ## 4. Do not translate
 
@@ -80,6 +154,29 @@ most languages.
 
 Words that genuinely *are* one word everywhere — *Settings*, *Close*, *Edit*, *Delete* — belong in
 the same table with a note saying so, otherwise someone will vary them for variety.
+
+### The table, for this app
+
+Gloam's naming problem is unusually sharp for an app this size, and [`CONTEXT.md`](../CONTEXT.md) is
+where it is settled: **two completely different mechanisms both look like "brightness" to a user, and
+only one of them is ours.** Android's backlight has a floor; Gloam exists for the range below it,
+which it reaches by drawing a dark layer instead. A translation that blurs the two produces an app
+that appears to have two brightness sliders that disagree.
+
+| English | Where | The rule | Watch for |
+| --- | --- | --- | --- |
+| **dim level** | `dim_level_label`, and the number beside it | Gloam's own value, 0–100, counting **upwards into darkness**. Needs a word built on *dim / darken / obscure*, never on *bright* | A translation that says "brightness 40%" inverts the meaning of the whole screen |
+| **brightness** | `dim_backlight_*`, `settings_lock_screen_body`, `settings_flicker_body`, `shade_notification_text_backlight` | **Android's** value, the one with the system slider. Use the exact word the phone's own settings use in that language | Using this word for the dim level, or inventing a synonym for it |
+| **shade** | Everywhere the dark layer is meant | One word per language, held across all ~20 strings that mention it. Not the literal window blind (`roleta`, `Rollo`, `persiana`, `store`, `tapparella`, `жалюзі`) and **never** *filter* (§2.2) | Varying it for variety: the same object is called the same thing in the permission body, the schedule hints and the notification |
+| **warmth** | `dim_warmth_label` | The tint's strength. A word built on *warm* | *Colour temperature* — forbidden, and wrong: an overlay adds a colour, it does not change the light's temperature |
+| **warmth colour** | `dim_warmth_color_label` | Which tint, amber → deep red. Hue only. Short — it sits in a narrow column | *Filter colour*, for the same reason |
+| **floor** | `dim_column_floor` | The dimmest Android's own backlight goes. Rendered as a short all-caps word; *minimum* is the right sense in most languages | Anything reading as *Gloam's* minimum — it is the phone's |
+| **the controls** | `controls_open_app`, `panel_close`, `settings_controls`, `settings_launcher_compact*` | One word for the small window of sliders, wherever it appears. The user meets two different windows as one thing, so they must share a name | Two different words in the Settings label and the Close button |
+| **schedule** | `schedule_*`, `dim_schedule_*` | The nightly window. Not *alarm* (nothing rings) and not *timer* | *Timer*, which belongs to auto-off and not here |
+| **Never** | `compact_auto_off_never` | The choice that disables auto-off. It is *Never*, not *Off* — "off" is reserved for the shade not being drawn at all | Translating it as *Off*, which would read as "the shade stays on" |
+| **Stop** | `shade_notification_stop`, and quoted in `dim_notification_warning_title` | The notification's action. The same word in both places — §2.1 | |
+| **location** | `schedule_location_*` | The approximate position sunset is worked out for. Gloam never asks for the precise one | *GPS*, and *precise location* |
+| **Settings, Close, Back, Language** | throughout | Genuinely one word everywhere. Use the platform's own term and do not vary it | |
 
 ## 6. Traps
 
@@ -140,3 +237,25 @@ without the number, and `quantity="one"` in Polish means *exactly* one, not "the
    check: it parses, it carries its arguments, and it says something the app no longer means.
 4. The language is offered to users only when its tag is added to `res/xml/locales_config.xml` and
    `AppLanguage`. Until then it exists and reaches nobody, which is the correct state for a draft.
+
+## 8. What a language ships on
+
+**An audit against §2 and a report row — not a native speaker's read-through.**
+[ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md) is the decision and
+the reasoning; the short version is that seven reviewers were not available, that only the *fluency*
+half of a read-through needed one, and that the half which outranks fluency is a bounded checklist
+answerable from this brief and the string.
+
+So, before a language goes into `locales_config.xml`:
+
+- **Every string in §2's three groups is read against §2**, in that language. Escape-hatch copy keeps
+  its *only* and its shared button word; nothing has acquired a health claim or the word *filter*;
+  nothing promises an outcome the app cannot see.
+- **The §5 table is checked for consistency**, because that is the failure that makes an app look
+  sloppy in a way no test catches.
+- **It is compiled, installed and looked at.** A staged draft has never met `aapt2`: clipped labels
+  and lint's plural warnings are invisible until it does, and neither needs a native speaker to see.
+
+After it ships, *"Something read wrong?"* under the language picker is the route back, and fluency
+findings arrive as ordinary bug reports. **What a report must not do is talk the app back across §2**
+— the reporter has the fluency, and this file has the reasoning.

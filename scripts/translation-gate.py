@@ -38,8 +38,11 @@ Drafts staged in `translations/<tag>/` are **reported and never gated**. A langu
 one number nothing else prints, since `TranslationTest` checks a draft's correctness and says
 nothing about how much of it exists yet.
 
-What it deliberately does not check: whether the translation is any *good*. A language ships on a
-native speaker's read-through (`docs/translator-brief.md` §8), and no script stands in for that.
+What it deliberately does not check: whether the translation is any *good*. A language ships on an
+audit against `docs/translator-brief.md` §2 plus the report row under the language picker
+(`docs/translator-brief.md` §8, and ADR-0014) — **not** on a native speaker's read-through, which
+seven of the nine languages did not get and will not get. No script stands in for either half: this
+one counts resources.
 """
 
 from __future__ import annotations
