@@ -58,9 +58,11 @@
 
         A named package, not QUERY_ALL_PACKAGES: we look for exactly one thing and say which.
 
-        The three <intent> entries are for hand-offs to a mail app, Play and a browser. None of the
-        launches needs them — package visibility has never blocked `startActivity`, and each launch
-        is a try/catch around `ActivityNotFoundException`. What visibility *does* block is
+        The two <intent> entries are for hand-offs to a mail app, and to Play or a browser. Play is
+        reached by an `https` link pinned to its package, not by `market://`, which HyperOS also
+        hands to Xiaomi's own store (see `rateOnPlay`). None of the launches needs these entries:
+        package visibility has never blocked `startActivity`, and each launch is a try/catch
+        around `ActivityNotFoundException`. What visibility *does* block is
         `resolveActivity`, which would answer "no mail app" on every phone that has one. Nothing
         performs such a pre-check today; these entries exist so one added later cannot silently lie.
     -->
@@ -70,10 +72,6 @@
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="market" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />

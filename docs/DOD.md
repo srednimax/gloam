@@ -485,8 +485,9 @@ permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the sourc
       hand-offs, and lists three routes off the phone, the support mail among them. `docs/index.md`
       and the listing's English full description were rewritten from the same list. The listing
       also stopped calling the app *open source*, which `README.md` says it is not.
-      **D owes the policy one line**: the rate-on-Play row is a fourth hand-off, and it is described
-      when it exists rather than before.
+      **D added the rate-on-Play row's line on 2026-09-17**, inside the policy's *Google Play* item
+      rather than as a fourth route, because the row leads to the same place. The row opens the
+      listing in Play and tells it nothing about the user.
 - [x] **`scripts/play-metadata.py` no longer sends a blank locale to Play.** Fixed 2026-09-17 in C,
       before any Polish copy, after R1 showed Play refusing the one-byte files. A blank field is now
       omitted, and blank and missing are one rule: a **warning** on the notes-only path and a

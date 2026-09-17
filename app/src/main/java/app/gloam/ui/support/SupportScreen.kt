@@ -1,5 +1,6 @@
 package app.gloam.ui.support
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,16 +26,17 @@ import app.gloam.ui.common.DetailScaffold
  * The route out of the app, for a tester who has found something.
  *
  * It exists at the door rather than in the polish phase for one reason: **a tester with no way to
- * report is a tester whose fourteen days produce nothing.** The rate-on-Play link and the tip are
- * Phase 5's, where there is a listing to rate and an audience to tip.
+ * report is a tester whose fourteen days produce nothing.** The rate-on-Play row is Phase 5's, which
+ * is when there was a listing to rate. There is no tip row, and that is a decision, not a gap
+ * (ADR-0009).
  *
  * A detail screen pushed from Settings' *About* section, beside the licences row — not a third tab.
  * The bottom bar switches between roots, and support is not a root; it is somewhere you go once,
  * from the place you already go to look things up.
  *
- * No `ViewModel`, because there is no state to hold: two rows, each of which builds an intent from
- * constants and hands it to the system. The one piece of state is whether the last hand-off found a
- * mail app, which is about this composition and nothing else.
+ * No `ViewModel`, because there is no state to hold: three rows, each of which builds an intent from
+ * constants and hands it to the system. The one piece of state is which app, if any, the last
+ * hand-off found missing. That belongs to this composition and nothing else.
  */
 @Composable
 fun SupportScreen(
@@ -45,7 +47,19 @@ fun SupportScreen(
 
     // Not `rememberSaveable`: this says "the tap you just made went nowhere", which is only true of
     // the tap you just made. A rotation clears it, and the next tap says it again if it is still so.
-    var noMailApp by remember { mutableStateOf(false) }
+    // Kotlin note: `mutableStateOf<Int?>(null)` is `useState<number | null>(null)`: the id of the
+    // message to show, or null for none. One slot rather than a Boolean per row, because only the
+    // most recent tap is worth reporting.
+    var missingApp by remember { mutableStateOf<Int?>(null) }
+
+    // Assigned from every tap, whatever it returned, so a hand-off that works clears the message
+    // an earlier one left behind.
+    fun reportHandOff(
+        opened: Boolean,
+        @StringRes missing: Int,
+    ) {
+        missingApp = if (opened) null else missing
+    }
 
     DetailScaffold(
         title = stringResource(R.string.support_title),
@@ -62,18 +76,26 @@ fun SupportScreen(
                 SupportRow(
                     title = stringResource(request.titleRes()),
                     hint = stringResource(request.hintRes()),
-                    // Inverted rather than assigned from the return value directly, so a second
-                    // hand-off that works clears a message the first one left behind.
-                    onClick = { noMailApp = !context.sendSupportMail(request) },
+                    onClick = {
+                        reportHandOff(context.sendSupportMail(request), R.string.support_no_mail_app)
+                    },
                 )
             }
+
+            SupportRow(
+                title = stringResource(R.string.support_rate),
+                hint = stringResource(R.string.support_rate_hint),
+                onClick = { reportHandOff(context.rateOnPlay(), R.string.support_no_play) },
+            )
 
             // Inline rather than a snackbar: the app has no snackbar host anywhere, and the failure
             // is about the row that was just tapped rather than about the screen. Stated as what is
             // missing on the phone — the app is not broken and neither is the address.
-            if (noMailApp) {
+            // Kotlin note: `?.let { }` runs only when the value is not null, the way
+            // `{missingApp != null && <Text …/>}` does in JSX.
+            missingApp?.let { message ->
                 Text(
-                    text = stringResource(R.string.support_no_mail_app),
+                    text = stringResource(message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
@@ -86,7 +108,7 @@ fun SupportScreen(
 /**
  * A tappable row: what it does, and what will happen if you tap it.
  *
- * The hint is not decoration. Both of these rows leave Gloam for another app, and a row that opens
+ * The hint is not decoration. Every row here leaves Gloam for another app, and a row that opens
  * somebody's mail composer with no warning is the kind of thing a user backs out of and never taps
  * again.
  */

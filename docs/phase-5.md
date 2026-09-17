@@ -527,6 +527,16 @@ rate-on-Play link is Phase 5's, *"where there is a listing to rate"*, and that i
   of the message; the rate row's failure is a different missing app and gets its own string rather than a
   shared vague one.
 
+⚠ **Correction, 2026-09-17, read from the phone while building D: `market://` is not the Play app on
+HyperOS.** `cmd package query-activities` lists two handlers for `market://details?id=`, Xiaomi's own
+store (`com.xiaomi.mipicks`) ahead of Play (`com.android.vending`), and `resolve-activity` returns the
+system chooser. The order above would put a user one tap from rating in a store that does not list
+the app. The `https://play.google.com/…` link resolves to Play alone. So the row sends **that link
+with `setPackage("com.android.vending")`** first, then the **same link without a package**, which a
+browser answers. That is also the shape Google's *Linking to Google Play* page gives. The fallback is
+still one `||`. The manifest's `market` query went with it, because nothing launches that scheme now.
+The title says *Google Play* rather than *Play*, which follows `translator-brief.md`'s brand-name rule.
+
 ### The three that are not built, and why each refusal is its own reason
 
 - **The tip.** ADR-0009's amendment: no payment link ships inside the app in v1. §6 goes further than
@@ -1109,7 +1119,11 @@ close — see* **Done when** *.)*
 - **R5** — the shade-down capture. —
 - **R6** — the API-33 pass. —
 - **R7** — the artifact checks on the promoted bundle. —
-- **R8** — the listing as a reviewer sees it, both locales. —
+- **R8** — the listing as a reviewer sees it, both locales. **Not yet read**: the Polish listing goes up
+  with F's promotion. One part is already done: on 2026-09-17 the debug build's rate row opened
+  **Gloam's own listing inside Play**, with no chooser (`topResumedActivity` was
+  `com.android.vending/…finsky.activities.MainActivity`). In early access, Play labels the stars
+  *Private feedback to developer*, so a tester's rating is not a public review.
 
 ---
 

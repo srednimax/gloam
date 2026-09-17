@@ -67,7 +67,8 @@ this app has no server to offer.
 
 Would change: user-generated content, communication between users, or a link out to anything that
 has either. The Support screen's mail hand-off is not user-to-user communication: it opens the user's
-own mail app, addressed to the developer.
+own mail app, addressed to the developer. Its rate row (0.8.0) opens the app's own Play listing, whose
+reviews are Play's surface rather than the app's: nothing in Gloam shows, sends or relays them.
 
 ⚠ **Which IARC category was picked is in the Console but not here.** Copy it into this section at
 the next re-declaration.
@@ -128,6 +129,8 @@ The answer rests on four facts, one per route data could take:
    apps. The claim is true because of what "collect" means, and that is the reason to give.
    What the developer does with a mail that arrives is in the privacy policy: used to reply, deleted on
    request.
+   The **rate row** (0.8.0) is the same argument with less in it: it hands Play, or a browser, a URL
+   holding the app's own package name and nothing about the user.
 
 Would change any of it:
 

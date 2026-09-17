@@ -168,6 +168,9 @@
     <string name="support_body_bug">What happened, and what you expected instead:</string>
     <string name="support_body_feature">What would you like Gloam to do?</string>
     <string name="support_no_mail_app">No email app on this phone to open.</string>
+    <string name="support_rate">Rate Gloam on Google Play</string>
+    <string name="support_rate_hint">Opens Gloam\'s page on Google Play. Rating is optional and unlocks nothing, because nothing in Gloam is locked.</string>
+    <string name="support_no_play">No Google Play or web browser on this phone to open.</string>
 
     <!-- Licences -->
     <string name="licence_text_missing">The text of this licence is not bundled with the app.</string>
