@@ -27,7 +27,7 @@ Three scripts read this file, so its headings are load-bearing:
 | Phone screenshots | [`art/play-screenshots/`](../art/play-screenshots/) — **real, captured 2026-09-05 by `scripts/screenshots.py` off the shipped mark.** Three shots — `1_dim-en.png`, `2_settings-en.png`, `3_support-en.png` — 1452×2582 (9:16), light theme, status bar cropped. The device shoots 1220×2712 (9:20), which is taller than Play accepts, so `art/pad-screenshot.py --crop-status-bar` pads each onto a 9:16 canvas in the shot's own edge colour and takes the DND bell with it. A fourth scene, `dim-bottom`, was captured and dropped: the Dim screen is short enough that scrolled and unscrolled are the same picture, and a listing reads a near-duplicate as padding. Both themes for all four are in [`docs/screenshots/`](screenshots/). Upload in filename order; the numeric prefix *is* the upload position |
 | App category | **Tools** — not Personalisation, which is launchers, wallpapers and themes. Set in Store settings, with up to five tags; skip any health-flavoured tag, it would contradict the Health declaration in App content |
 | Contact email | `gloam.dimmer@gmail.com` — created 2026-08-30. The **per-app** support address, set in Store settings and **public on the listing**. Not the account-level developer email, which is public on every app you own. The same address answers IARC's content-rating contact; the privacy policy deliberately names none, pointing at "the address listed on the app's Google Play listing" so it never needs updating |
-| Website | `https://srednimax.github.io/gloam/` — written 2026-08-30, so the field is no longer blank. It describes the build at the door (dim level, warmth, auto-off) and deliberately omits later phases; if a phase slips a feature, `docs/index.md` moves with it. Health claims stay off it as well as off this file — Play's enforcement has treated a linked page as part of the listing |
+| Website | `https://srednimax.github.io/gloam/` — written 2026-08-30, so the field is no longer blank. It describes the app as shipped through 0.7 — rewritten 2026-09-17 by Phase 5 B after three phases shipped features it never mentioned — and a release that adds something a user can see moves `docs/index.md` in the same PR, together with the full description below. Health claims stay off it as well as off this file — Play's enforcement has treated a linked page as part of the listing |
 
 ## English (default listing language)
 
@@ -54,7 +54,7 @@ The line that appears under the name in search results, and the most-read text i
 Dim the screen below Android's lowest brightness, for reading in the dark.
 ```
 
-### Full description — 2571/4000
+### Full description — 3594/4000
 
 ```
 Android's brightness slider stops at a floor. On most phones that floor is still too bright to read in a properly dark room. Gloam is the range underneath it.
@@ -66,8 +66,11 @@ Gloam takes the backlight down to the lowest level your phone allows, then draws
 WHAT YOU GET
 
 - Dim past the floor. One slider, well below what the system lets you set.
-- Warmth. A separate control that tints the screen amber, as far or as little as you like.
-- Auto-off. Every shade you start gets a deadline, so you never unlock a phone you cannot read the next morning. Set it to Never if you would rather it stayed on.
+- Warmth. A second control tints the screen, and a colour bar picks the tint, from amber to deep red.
+- Controls where you are. Tap the notification and a small panel opens over whatever you are reading. It sits above the shade, so it stays readable at full dim. The app icon opens a compact version of the same controls.
+- A schedule. Two clock times, or sunset to sunrise, moving with the season. Sunset is estimated from your time zone, or from your approximate location if you allow it.
+- Auto-off. A shade you start by hand comes down after a while you choose, so you never unlock a phone you cannot read the next morning. Set it to Never if you would rather it stayed on. A scheduled shade comes down at the end of its window.
+- Back after a restart. A shade that was on when the phone switched off comes back when it starts.
 - Works over everything. Other apps, the launcher, your browser, your reader.
 
 EVERY FEATURE IS FREE
@@ -76,15 +79,15 @@ No ads. No account. No sign-up. No server. No subscription, no premium tier, and
 
 NO NETWORK AT ALL
 
-Gloam does not request the internet permission, so it cannot phone home even by accident. It remembers a dim level and whether the shade should be on. That is the whole of it.
+Gloam does not request the internet permission, so it cannot phone home even by accident. It keeps its settings on your phone. Your approximate location is read only if you ask the schedule to use it, kept on the phone rounded to about 11 km, and left out of backups.
 
 WHAT IT CANNOT DO
 
 Gloam does not make the screen emit less light than its backlight floor. No installed app can. That floor belongs to the display driver. Gloam gets the backlight down to it and puts a dark layer in front of it. The result reads far dimmer, but the panel is still lit.
 
-System permission dialogs and some secure screens draw above every app's overlay by design, so they will appear at full brightness. That is Android protecting you from apps like this one, and it is working as intended.
+System permission dialogs, some secure screens and the lock screen draw above every app's overlay by design, so they appear at your phone's own brightness. That is Android protecting you from apps like this one.
 
-The shade never takes your taps. Every touch passes straight through to whatever is underneath, and there is always an ongoing notification with a Stop button. An overlay drawn over every other app has to be impossible to get stuck behind.
+The shade never takes your taps. Every touch passes straight through to whatever is underneath, and while it is on there is always a notification that leads to the controls and their Stop button. An overlay drawn over every other app has to be impossible to get stuck behind.
 
 Some phones stop it. Aggressive battery managers, Xiaomi's especially, will kill the service on their own. If the shade vanishes without you touching anything, that is the battery settings on your phone rather than Gloam.
 
@@ -93,9 +96,12 @@ Gloam is a dimmer. It makes no claim about your eyes, your sleep or your health.
 PERMISSIONS
 
 - Display over other apps. This is the whole mechanism. The shade is that window.
-- Notifications. The ongoing notification is how you turn the shade off, and on Android 13 and up it does not appear until you allow it.
+- Notifications. The ongoing notification is how you reach the controls and turn the shade off, and on Android 13 and up it does not appear until you allow it.
+- Foreground service. Keeps the shade on screen while you use other apps.
+- Run at startup. Puts back a shade that was on, and sets the schedule again, after a restart.
+- Approximate location, optional. Only for sunset to sunrise, only if you allow it, never precise and never in the background.
 
-Open source, built in the open: github.com/srednimax/gloam
+Source available, built in the open: github.com/srednimax/gloam
 ```
 
 ## Polish

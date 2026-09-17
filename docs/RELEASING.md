@@ -278,6 +278,16 @@ why the workflow renders metadata unconditionally and still skips the listing fi
 Granting these is the deliberate act that opens the production door, and leaving them ungranted is a
 fourth brake on top of the three that workflow already carries.
 
+**Where Gloam's account stands, read off a run rather than off this page.** *Manage store presence*
+**is granted**: Phase 5's gate (`docs/phase-5.md`, R1, 2026-09-17) ran this workflow `internal → alpha`
+with `update_listing: true` and `dry_run: true`, and it uploaded three screenshots and both locales'
+changelogs before Play's validator stopped it on a *field* — a listing write that a missing permission
+would have refused with a 403 first. *Release to production* has **not** been read either way: a
+promotion onto a testing track does not need it, so no run yet has asked. The first production
+promotion is the run that finds out, and a 403 there is this paragraph rather than a broken pipeline.
+The setup steps above still describe the two boxes a *fresh* account starts with, which is what they
+are for.
+
 **Nor is any of it needed to reach closed testing.** `publish-play-closed.yml` promotes onto a
 testing track and skips the listing unconditionally, so the two original boxes cover it - which
 is why it works on a first run where the production workflow 403s.

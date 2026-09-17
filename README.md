@@ -24,11 +24,16 @@ whatever you are reading — the one surface in Gloam that stays readable at ful
 over Gloam's own screen. The launcher icon can be pointed at a compact version of the same controls,
 in Settings.
 
-**And it dims on a schedule.** One pair of times — on at one, off at the other, every night,
-including a window that runs across midnight. Getting there costs more than it sounds like on a
-phone that would rather your app were not running: the shade comes up from an *inexact* alarm, which
-Android delivers at the far end of a window 75% as wide as its futurity, so the app arms a chain of
-hops toward the on-instant instead of the instant itself
+**And it dims on a schedule** — a pair of clock times, including a window that runs across
+midnight, or **sunset to sunrise**
+([ADR-0013](docs/adr/0013-the-schedule-can-follow-the-sun-and-its-location-is-estimated-unless-lent.md)).
+The sun needs a place, and Gloam estimates one from the phone's time zone unless the user lends it
+the phone's approximate location, which is kept on the phone and out of backups.
+
+Getting any schedule to fire costs more than it sounds like on a phone that would rather your app
+were not running: the shade comes up from an *inexact* alarm, which Android delivers at the far end
+of a window 75% as wide as its futurity, so the app arms a chain of hops toward the on-instant
+instead of the instant itself
 ([ADR-0003](docs/adr/0003-two-scheduling-mechanisms.md)'s third amendment has the measurements). And
 because one stored deadline now has four writers, there is a rule in front of it: it is *resolved*
 when the hand starts a shade and when the schedule's on-instant arrives, and every other writer may
@@ -36,7 +41,8 @@ only bring it forward ([ADR-0012](docs/adr/0012-one-deadline-monotone-except-at-
 
 The template's data layer is gone ([ADR-0007](docs/adr/0007-gloam-stores-settings-not-records-so-it-has-no-database.md)):
 Gloam stores settings, not records, so there is no database. The release pipeline and quality gates
-are real. Nothing is on Play yet, and the feature set beyond "it dims" is still being decided.
+are real. Gloam is on Play in closed testing, not yet in production, and what it stores is written
+down in the [privacy policy](docs/privacy-policy.md) rather than here.
 
 ## Screenshots
 
