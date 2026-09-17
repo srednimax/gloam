@@ -23,6 +23,7 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 - [x] **Phase 3b** — The panel *(the go/no-go went: `phase-3.md` R1)*
 - [x] **Phase 4** — It turns itself on and off *(the gate went: `phase-4.md` R2)*
 - [ ] **Phase 5** — Ship shape
+- [x] **Phase 6** — Seven more languages *(the opt-in this plan said would get a phase file)*
 
 **Three boxes below an unticked one are ticked, and that is the real state rather than a slip.** Phase
 2's code has been done since 2026-09-02; what its box waits on is twelve testers opted in for
@@ -485,6 +486,8 @@ Languages are not a phase of their own. `scripts/translation-gate.py` makes comp
 gate, so English and Polish stay in step branch by branch. Adding a third is an opt-in, and the day
 it happens it gets a phase file.
 
+**That day came, and it brought seven rather than a third** — [`phase-6.md`](phase-6.md), below.
+
 **Built, 2026-09-17, and what it came to.** The privacy policy was wrong in a way no gate could
 see — it never mentioned the location permission that had already shipped — and rewriting it against
 the source is most of what this phase was. The gate went first and earned its place: Play refused a
@@ -496,6 +499,46 @@ one fault the documents had asserted away: a restored `shade_running` put the sh
 user had never dimmed, so `BootReceiver` gained a refusal and rule 3 gained its fifth test.
 
 **The version stays 0.x** (rule 2). There is no 1.0 in this plan and nothing will produce one.
+
+---
+
+## Phase 6 — Seven more languages ✅
+
+**The opt-in the *Languages* note above said would get a phase file.** Czech, German, Spanish,
+French, Italian, Brazilian Portuguese and Ukrainian: the app in nine languages, and the Play listing
+in nine as well. Details in [`phase-6.md`](phase-6.md).
+
+**It is not sequenced after Phase 5 so much as beside it.** Nothing in it waits on the promotion and
+nothing in the promotion waits on it — a listing locale is refused or accepted at upload time either
+way, and the app's languages are decided by `locales_config.xml` alone. It is written down after
+Phase 5 because that is when it was done, not because it depended on it.
+
+**The phase is mostly one argument, and it is not about translating.** A promise stood in front of
+the work — *a language ships on a native speaker's read-through* — and seven reviewers were not
+available. [ADR-0014](adr/0014-a-language-ships-on-an-audit-not-a-native-read-through.md) retracts it
+on the grounds that a read-through was doing two jobs and only one of them needed a person: fluency
+does, and the three rules that outrank fluency — the escape hatch stays exclusive, no health claims,
+never state what the app cannot know — are a checklist answerable from the brief and the string. So
+the second half was audited properly and the first half got a channel instead of a gate, which is
+*"Something read wrong?"* under the language picker.
+
+**Built, 2026-09-17, and what it came to.** The forbidden-claim scan over all 99 × 8 resources
+returned eighteen candidates and all eighteen were morphological false positives — `сон` inside
+*сонця*, `oczy` inside *Samoczynne* — so zero rule violations, and the noise is what makes the clean
+read believable. The escape-hatch audit held in all nine, and the cross-string invariant behind it is
+a test now, confirmed by being deliberately broken. **And the device sweep found the thing the phase
+existed to find**: `LanguageRow` was a plain `Row`, so at ten chips **six of the nine languages were
+not laid out at all** — translated, declared, gated, complete and unselectable. It is a `FlowRow` now,
+carrying the comment the auto-off chips already had. Nothing in the repo could have caught it; none of
+the three gates knows how wide a chip is.
+
+Two smaller things came with it. `currentAppLanguage()` matched whole tags, which `pt-BR` is the first
+entry to break — the platform reports plain `"pt"` — so it matches language subtags now, with a test
+asserting the uniqueness that makes that sound. And five of the seven listing drafts were over Play's
+4000 characters; the cuts came out of enumerations and restatements, never out of the touch-through
+paragraph, the backlight-floor limits or the closing health line. **Four languages now sit within five
+characters of the ceiling**, which is a cost this phase hands forward: an English sentence added to
+the full description is a cut in four other languages.
 
 ---
 
