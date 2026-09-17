@@ -419,9 +419,10 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
             the other app is gone, the tagline is Gloam's own line, and its three colours are
             *read out of* `theme/Color.kt`'s dark scheme at render time rather than pasted — so a
             regenerated palette reaches the listing art by re-running one script.
-      - [ ] **Polish short and full descriptions.** Deliberately deferred, English first, and now
-            Phase 5 C's second commit. The trap that used to be noted here, blank pl-PL files sent
-            as values, was measured by R1 and fixed in C's first commit.
+      - [x] **Polish short and full descriptions.** Written 2026-09-17 in Phase 5 C, from the
+            English B rewrote that morning: 76/80 and 3924/4000, so the Polish full description has
+            76 characters of headroom and an English addition means a Polish cut. `--strict`
+            passes on the document. The screenshots stay English (`phase-5.md` §4).
       - [x] Real screenshots off a real mark. Done 2026-09-05: the `[SCENES]` rewrite had already
             landed in Phase 2's checkpoint F, so this was the capture rather than the walk. Light set
             in `art/play-screenshots/`, both themes in `docs/screenshots/`.

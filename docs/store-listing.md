@@ -106,12 +106,15 @@ Source available, built in the open: github.com/srednimax/gloam
 
 ## Polish
 
-**Deliberately empty as of 2026-08-30 — English only for now.** `scripts/translation-gate.py` governs
+**Written 2026-09-17 in Phase 5 C, from the English above as rewritten in B the same day.** It was
+deliberately empty until then — English only, from 2026-08-30 — and the reasoning below is why it
+waited. `scripts/translation-gate.py` governs
 *app strings*, not this file, so an untranslated listing does not redden a build; the reason to write
 the English first is the same one behind the gate, that copy gets translated once, after review,
 rather than against a draft. Translate from the English above, per
-[`translator-brief.md`](translator-brief.md). **The listing cannot go live in Polish until these are
-filled** — Play publishes a locale it has copy for and silently shows English everywhere else.
+[`translator-brief.md`](translator-brief.md). **Until these were filled the listing could not go live
+in Polish** — Play publishes a locale it has copy for and silently shows English everywhere else —
+and since C, a listing upload refuses to run with either of them blank.
 
 > **A blank field here is left out, and a listing upload refuses to run with one.** Until 2026-09-17
 > `play-metadata.py` wrote the empty Polish fields as one-byte files, and a validate-only promotion
@@ -138,14 +141,67 @@ Untranslated on purpose — see the English section above.
 Gloam
 ```
 
-### Short description — 0/80
+### Short description — 76/80
+
+A rewrite to fit rather than a word-for-word translation, and the imperative matches the English one.
 
 ```
+Przyciemnij ekran poniżej najniższej jasności Androida, by czytać po ciemku.
 ```
 
-### Full description — 0/4000
+### Full description — 3924/4000
+
+**76 characters of headroom, against 406 in English**, so an English addition of a sentence is a
+Polish cut somewhere else. Two choices a reviewer should not "fix": the closing health line avoids
+*ściemniacz*, which is slang for a bluffer, and no sentence addresses the reader in the past tense,
+because Polish past-tense verbs carry a gender the app does not know (`translator-brief.md` §6.2).
 
 ```
+Suwak jasności w Androidzie kończy się na pewnym minimum. W większości telefonów to minimum wciąż jest za jasne, żeby czytać w naprawdę ciemnym pokoju. Gloam działa poniżej niego.
+
+JAK TO DZIAŁA
+
+Gloam obniża podświetlenie do najniższego poziomu, na jaki pozwala telefon, a resztę drogi pokonuje zasłoną nałożoną na ekran. Jeden suwak steruje obiema częściami, od lekkiego przyciemnienia po niemal całkowitą ciemność.
+
+CO DOSTAJESZ
+
+- Ciemniej niż minimum. Jeden suwak, sięgający dużo niżej, niż pozwala system.
+- Ciepło barwy. Drugi suwak zabarwia ekran, a pasek odcienia wybiera barwę, od bursztynu po głęboką czerwień.
+- Sterowanie tam, gdzie jesteś. Dotknij powiadomienia, a nad tym, co czytasz, otworzy się mały panel. Jest nad zasłoną, więc da się go odczytać nawet przy pełnym przyciemnieniu. Ikona aplikacji otwiera małą wersję tego samego sterowania.
+- Harmonogram. Stałe godziny albo od zachodu do wschodu słońca, zgodnie z porą roku. Zachód słońca jest szacowany na podstawie strefy czasowej albo liczony dla przybliżonej lokalizacji telefonu, jeśli na to zezwolisz.
+- Samoczynne wyłączanie. Zasłona włączona ręcznie znika po wybranym czasie, więc rano nie odblokujesz telefonu, na którym nic nie widać. Wybierz Nigdy, jeśli wolisz, żeby została. Zasłona włączona przez harmonogram znika z końcem swojego przedziału.
+- Powrót po ponownym uruchomieniu. Zasłona, która była włączona, gdy telefon się wyłączył, wraca po jego starcie.
+- Działa nad wszystkim. Nad innymi aplikacjami, ekranem głównym, przeglądarką i czytnikiem.
+
+KAŻDA FUNKCJA JEST ZA DARMO
+
+Bez reklam. Bez konta. Bez rejestracji. Bez serwera. Bez subskrypcji, bez wersji premium i bez niczego za opłatą. Nie ma płatnej wersji, którą trzeba by utrzymywać, więc każda funkcja trafia do wszystkich albo nie trafia wcale.
+
+ŻADNEJ SIECI
+
+Gloam nie prosi o uprawnienie do internetu, więc nie może niczego wysłać, nawet przypadkiem. Ustawienia trzyma w telefonie. Przybliżona lokalizacja jest odczytywana tylko wtedy, gdy harmonogram ma z niej korzystać, przechowywana w telefonie z dokładnością do około 11 km i pomijana w kopiach zapasowych.
+
+CZEGO NIE POTRAFI
+
+Gloam nie sprawi, że ekran wyemituje mniej światła niż minimum podświetlenia. Nie potrafi tego żadna instalowana aplikacja. To minimum należy do sterownika wyświetlacza. Gloam obniża podświetlenie do tego minimum i kładzie przed nim ciemną warstwę. Efekt wygląda na dużo ciemniejszy, ale panel nadal świeci.
+
+Systemowe okna uprawnień, niektóre zabezpieczone ekrany i ekran blokady są z założenia rysowane nad nakładkami wszystkich aplikacji, więc pokazują się z jasnością ustawioną w telefonie. To Android chroni cię przed aplikacjami takimi jak ta.
+
+Zasłona nigdy nie przejmuje dotyku. Każde dotknięcie trafia prosto do tego, co jest pod spodem, a dopóki zasłona jest włączona, zawsze jest powiadomienie prowadzące do sterowania i przycisku, który ją wyłącza. Z nakładki nad wszystkimi innymi aplikacjami zawsze musi być wyjście.
+
+Niektóre telefony ją zatrzymują. Agresywne menedżery baterii, zwłaszcza Xiaomi, same zamykają usługę. Jeśli zasłona znika sama, winne są ustawienia baterii w telefonie, a nie Gloam.
+
+Gloam to aplikacja do przyciemniania ekranu. Nie obiecuje niczego w sprawie oczu, snu ani zdrowia.
+
+UPRAWNIENIA
+
+- Wyświetlanie nad innymi aplikacjami. To cały mechanizm. Zasłona jest właśnie takim oknem.
+- Powiadomienia. Stałe powiadomienie prowadzi do sterowania i pozwala wyłączyć zasłonę, a na Androidzie 13 i nowszym nie pojawi się, dopóki na nie nie zezwolisz.
+- Usługa na pierwszym planie. Utrzymuje zasłonę na ekranie, gdy korzystasz z innych aplikacji.
+- Uruchamianie przy starcie. Po ponownym uruchomieniu przywraca włączoną zasłonę i ustawia harmonogram na nowo.
+- Przybliżona lokalizacja, opcjonalnie. Tylko dla trybu od zachodu do wschodu słońca, tylko za twoją zgodą, nigdy dokładna i nigdy w tle.
+
+Kod źródłowy jest publicznie dostępny: github.com/srednimax/gloam
 ```
 
 ## Release notes (Play's "What's new", 500 chars per locale)
