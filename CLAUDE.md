@@ -56,6 +56,11 @@ let us do otherwise".
   **The test is cardinality, not subject matter.** A *fixed set* is not a *list*, however many
   members it has: four schedule values are settings, and seven per-day windows would be fourteen
   settings. What needs a table is the user creating rows nobody knew about at build time.
+  **Every key you add is backed up, whether or not you meant it to be.** Auto Backup carries the
+  whole store, exclusions are per *file*, and the store is one file — so a key lands on the user's
+  next phone with no code of ours involved in the write. Ask what it means there: a setting is
+  welcome, live state is not, and live state is judged **at the read** ([ADR-0005](docs/adr/0005-backup-is-automatic-for-the-database-and-manual-for-media.md)'s
+  amendments, and `shade_began_at` is what that cost once).
   **If a feature ever needs a list the user creates**, the whole Room apparatus comes back with it —
   `scripts/schema-gate.py`, ADR-0001 and this rule's previous wording are all still in git history
   for that. Adding a table is a deliberate act with a migration story attached, not a convenience.

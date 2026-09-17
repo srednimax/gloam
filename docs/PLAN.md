@@ -122,7 +122,16 @@ the app exists to prevent:
 So the rule has two clauses. **Device behaviour is proven by measurement; the pure functions that
 compute or bound safety values are proven by test, and the phase that introduces one introduces its
 test.** That is four tests across the whole remaining roadmap, not a testing culture — and it is four
-tests standing in front of the properties `CLAUDE.md` calls load-bearing. The top of the ramp is not
+tests standing in front of the properties `CLAUDE.md` calls load-bearing.
+
+**Reconciled at the end of Phase 5, and the count came out at five.** The four are shipped:
+`ShadeRampTest` (Phase 1), `PanelWidthTest` (3b), `ScheduleTest` and `DeadlineTest` (4). Phase 5
+planned none and `phase-5.md` §16 argued why — then its own R4 found a restored `shade_running`
+raising the shade on a phone the user had never dimmed, and the fix is a refusal rather than a
+computation: `RestoredIntentTest` stands in front of *the shade does not come up unbidden*, which is
+as load-bearing as anything in the list. **So the rule's shape held and its number did not**, and
+that is the honest way round: a test arrived because a reading found a fault, which is the rule
+working rather than an exception to it. The top of the ramp is not
 visible on a device until it strands somebody.
 
 ### 4. Ask for nothing before the feature that needs it
@@ -171,6 +180,14 @@ is named here rather than assumed.
   hand-offs move into Phase 2, because a tester with no route to report is a tester whose 14 days
   produce nothing. The rate-on-Play link and the tip stay in the polish half, where there is a
   listing to rate and an audience to tip.
+
+**Reconciled at the end of Phase 5, and this rule retires unused.** The first bullet's channel was
+never opened: nobody was asked, so Phases 3's and 4's open questions close **unanswered, on the
+values that shipped**, each with the reason it could not be asked (`phase-5.md` §10 and `DOD.md`).
+That is worth recording rather than dropping quietly, because the rule was load-bearing for two
+phases' worth of decisions and what actually carried them was the code's own readings.
+**The second bullet held.** The mail hand-offs have shipped since Phase 2, and the rate-on-Play row
+shipped in 0.8.0. The tip did not ship on any surface at all — ADR-0009's third amendment.
 
 ---
 
@@ -454,17 +471,29 @@ of the Support screen — the rate-on-Play link, and:
 reopens the bullet above.** The listing's Website field and the last line of its full description
 point at the Pages site and the repository — **the two pages ADR-0009's amendment named as the tip's
 home** — so moving the link out of the app never moved it out of the listing's reach;
-[`phase-5.md`](phase-5.md) §6, and ADR-0009's third amendment. `scripts/play-metadata.py` renders an
-untranslated locale as *zero-byte* description files rather than skipping it, which is inert until
-the first promotion that carries a listing and is then a value Play is asked to store; §4. And
-`docs/play-app-content.md`, which `DOD.md` has said this phase owes since Phase P, is still not
-written; §7. The phase's own gate is a **validate-only promotion** taken before a word of new copy,
+[`phase-5.md`](phase-5.md) §6, and ADR-0009's third amendment, **written 2026-09-17: no tip on any
+surface this release controls**. `scripts/play-metadata.py` renders an untranslated locale as
+*zero-byte* description files rather than skipping it, which is inert until the first promotion that
+carries a listing and is then a value Play is asked to store; §4 — **and the gate proved it by being
+refused, so it is fixed, with `--strict` as the guard on the listing path**. And
+`docs/play-app-content.md`, which `DOD.md` has said this phase owes since Phase P, **is written**;
+§7. The phase's own gate is a **validate-only promotion** taken before a word of new copy,
 because none of the four documents this phase is mostly about has a gate in this repo standing in
 front of it.
 
 Languages are not a phase of their own. `scripts/translation-gate.py` makes completeness a merge
 gate, so English and Polish stay in step branch by branch. Adding a third is an opt-in, and the day
 it happens it gets a phase file.
+
+**Built, 2026-09-17, and what it came to.** The privacy policy was wrong in a way no gate could
+see — it never mentioned the location permission that had already shipped — and rewriting it against
+the source is most of what this phase was. The gate went first and earned its place: Play refused a
+blank Polish description, which is a bug that would have surfaced at the promotion instead. The
+Polish listing is written. The Support screen has its rate row, which makes this release **0.8.0**,
+and it reaches Play by an `https` link pinned to the Play app rather than by `market://`, because on
+HyperOS that scheme belongs to Xiaomi's store as well. The tip ships nowhere. And the readings found
+one fault the documents had asserted away: a restored `shade_running` put the shade up on a phone the
+user had never dimmed, so `BootReceiver` gained a refusal and rule 3 gained its fifth test.
 
 **The version stays 0.x** (rule 2). There is no 1.0 in this plan and nothing will produce one.
 
