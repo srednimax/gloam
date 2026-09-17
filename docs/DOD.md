@@ -260,7 +260,9 @@ one step with an external queue is behind you.
       item above is untouched by this and remains the sharpest thing in this file.
       Permissions granted, and the per-app convention behind them, are in `RELEASING.md` under
       *Creating the service account* — two boxes for the internal pipeline, and the two more that
-      only the production workflow wants.
+      only the production workflow wants. **One of those two is granted**: *Manage store presence*,
+      read off Phase 5's gate on 2026-09-17 rather than off the settings page. *Release to
+      production* has not been read yet, because nothing has promoted to production.
 
 - [x] **Decide the `applicationId` deliberately.** Done: **`io.github.srednimax.gloam`**. Reverse-DNS
       on a namespace verifiably yours; Play has never checked domain ownership and package
@@ -294,12 +296,18 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       halves, re-read on every resume beside `canDrawShade()` — rather than a remembered outcome,
       because the fix for it is a settings screen the app hands the user off to. It self-clears when
       they fix it and appears if they revoke mid-session.
-- [ ] **Recruit 12 closed testers — start in Phase 1, not when the build is ready.** Production
-      access needs them opted in *continuously for 14 days*, and **this is now confirmed to apply to
-      Gloam** (Phase P, 2026-08-30) rather than being an assumption. It is the longest lead item in
-      the plan, it is calendar time rather than effort, and it depends on other people replying.
-      **Recruit more than twelve.** The window wants twelve opted in *continuously*; one person
-      uninstalling partway through is the failure this rule is shaped to produce.
+- [ ] **The 14-day closed-test window is the only thing between Gloam and production** — the owner,
+      2026-09-17: twelve testers opted in, every Console answer given. **Six continuous days in on
+      2026-09-17, so the window opened about 2026-09-11 and reaches fourteen days about
+      2026-09-25** — the date Phase 5 F is scheduled against. The Console's Dashboard holds the exact
+      count; trust it over this arithmetic. The window wants twelve opted in *continuously*, and
+      there are exactly twelve, so **one tester leaving restarts the count** — the only way this box
+      can slip, and the reason a thirteenth tester is still worth having.
+      **After the window, Play still has to grant production access**: a new personal account applies
+      from the Console's Dashboard, answering questions about how the closed test went, and Play
+      reviews the application before the production track opens. Budget days for that, not minutes.
+      `phase-5.md` §10 is the honest source for those answers — the rule-5 questions were never put
+      to the testers, and the application should not imply they were.
 - [ ] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
       it is the longest value that is still obviously not "the next day", which is the failure
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
@@ -458,23 +466,30 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
 The listing, the feature graphic and the screenshots **used to be here** and moved to *Before the
 door* on 2026-08-30: a closed test will not open without them, so they are schedule, not polish.
 
-**Phase 5 is planned and its detail is [`phase-5.md`](phase-5.md)** — six checkpoints, A-F, none
-built. Read that file for the sequence; what follows is only what this file is for, the boxes.
-**Its gate is A and it is cheap**: a validate-only promotion with `update_listing=true`, which makes
-Play read the whole metadata edit and discard it. Take it before writing copy — none of the four
-documents this phase is about (the policy, the site, the listing, the declaration) has a gate in this
-repo standing in front of it, so that dry run is the phase's only substitute for a compiler.
+**Phase 5 is being built and its detail is [`phase-5.md`](phase-5.md)** — six checkpoints, A-F.
+Read that file for the sequence; what follows is only what this file is for, the boxes.
+**A, the gate, was taken 2026-09-17 and came back as verdict 2**: Play rejects the one-byte Polish
+short description, so C's `fix:` is a blocker rather than hygiene. The readings block has the rest —
+*Manage store presence* is granted, the screenshots validate, and the promotion path works before
+production access exists. **B is written.** **A to E do not wait on the closed-test window; F's
+promotion does** — the window, then Play's production-access review (*Before the door*).
+⚠ **The sun schedule landed after `phase-5.md` was planned, and its counts are stale.** The app
+stores fourteen keys in one file plus three in a second, backup-excluded one, and declares **six**
+permissions, `ACCESS_COARSE_LOCATION` the sixth. B was written against the source, not the plan.
 
-- [ ] **The privacy policy is factually wrong today, and it is served without a release.** It says
-      *five settings*, lists *four*, and one of the four is `onboardingDone`, which Phase 2 deleted.
-      The app stores **thirteen** keys and declares **five** permissions, of which the policy names
-      two — `RECEIVE_BOOT_COMPLETED` is the one a reader finds on the Play listing and cannot map
-      onto anything the document says, and the support mail is a third thing happening outside the
-      app in a section that names two. **The same false sentence is in three files**, not two:
-      `docs/index.md` and the *listing's own English full description*, both of which are three
-      phases behind besides. `phase-5.md` §§2 and 3, all of it in checkpoint B.
-- [ ] **`scripts/play-metadata.py` renders an untranslated locale as blank files.** One byte each,
-      not absent: inert while a human pastes into the Console, a value Play is asked to store the
+- [x] **The privacy policy is true of 0.7.1.** Rewritten 2026-09-17 in B, against
+      `AppPreferences.kt` and the 0.7.1 artifact rather than against the plan. It was worse than this
+      box said: besides the deleted `onboardingDone` and the five-that-were-four, **it never mentioned
+      location, and 0.7.0 had shipped `ACCESS_COARSE_LOCATION` to the closed track the day before**.
+      It now has a section on the lent location, names all six permissions and both Settings
+      hand-offs, and lists three routes off the phone, the support mail among them. `docs/index.md`
+      and the listing's English full description were rewritten from the same list. The listing
+      also stopped calling the app *open source*, which `README.md` says it is not.
+      **D owes the policy one line**: the rate-on-Play row is a fourth hand-off, and it is described
+      when it exists rather than before.
+- [ ] **`scripts/play-metadata.py` renders an untranslated locale as blank files, and Play rejects
+      them** — *"This app has no short description (promotional text) for language pl-PL"*, R1,
+      2026-09-17. One byte each, not absent: inert while a human pastes into the Console, a value Play is asked to store the
       first time a promotion carries a listing. **The fix lands before the Polish copy is written**,
       because afterwards there is no blank field left to see it with - and it makes blank and missing
       the same thing, so the tidier document stops being the one that breaks a release. §4.
@@ -483,7 +498,16 @@ repo standing in front of it, so that dry run is the phase's only substitute for
       description point at exactly those two pages. **No tip ships in Phase 5 on any surface it
       controls**, and ADR-0009 gets a third amendment saying why the second did not reach far
       enough. §6.
-- [ ] **`docs/play-app-content.md`** — owed since Phase P, still not written. §7.
+- [x] **`docs/play-app-content.md`** — written 2026-09-17 in B. Every answer, what it rests on and
+      what would change it, and the Data safety answer re-reasoned for the location permission
+      against Play's own definitions. **It corrects `phase-5.md` §§2 and 7**: Play's Data safety page
+      has no exemption for support flows, and the mail is *not collected* because Gloam transmits
+      nothing, which is the reason to give.
+- [x] **Every App content answer is in the Console** — confirmed by the owner 2026-09-17, the
+      foreground-service declaration and the advertising-ID question included. Three *values* are
+      still only in the Console rather than in `play-app-content.md` — the IARC category, the
+      advertising-ID date, the `specialUse` wording — and each is a ⚠ there to copy at the next
+      re-declaration. That is record-keeping, not a blocker.
 - [ ] **A restore is a claim nobody has read off a device.** ADR-0005's amendment says platform Auto
       Backup covers the preferences file; `shade_running` and `off_at_millis` are live state rather
       than settings and travel with it. §9. **A `data_extraction_rules.xml` cannot fix that** -

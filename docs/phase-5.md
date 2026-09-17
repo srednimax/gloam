@@ -26,6 +26,25 @@ not smaller: §4's blank-locale landmine, §7's missing declaration file and §6
 roadmap did not know were here, and two of them were found by reading the pipeline rather than by
 planning.
 
+⚠ **Correction, 2026-09-17, found while writing B: the sun schedule landed after this file was
+planned, and every count below that describes the app is stale.** ADR-0013 shipped in 0.7.0 and
+0.7.1, and it changed four things this file argues from:
+
+- **Fourteen keys in the main file, plus three in a second one** — `schedule_kind` and `warmth_color`
+  joined the main store, and `latitude_tenths`, `longitude_tenths` and `zone_id` live in
+  `lent_location`. Wherever this file says *thirteen keys*, read the source.
+- **Six permissions, not five.** `ACCESS_COARSE_LOCATION` is the sixth, seven on the artifact with
+  AndroidX's. §2's table is short by one more than it knew, and it is the one that matters most: **the
+  live privacy policy did not mention location while 0.7.1 held the permission on the closed track.**
+- **`res/xml/data_extraction_rules.xml` exists.** §§9 and 12 say no such file can be written, and for
+  the live-state keys that is still right — they share the main file with every setting. ADR-0013 took
+  §9's *priced, not taken* alternative for a different value: a second file, excluded by path, for the
+  location. The rule for `shade_running` and `off_at_millis` still lives at the read.
+- **0.7.0 and 0.7.1 are cut.** This phase's one `feat:` makes **0.8.0**, not 0.7.0 as §17 says.
+
+B was written against `AppPreferences.kt` and the 0.7.1 artifact rather than against this file, and F
+reconciles the sections themselves.
+
 ---
 
 ## 0. What this phase inherits, and why nothing in it is caught by a compiler
@@ -328,9 +347,11 @@ two, which is the only currency this document has.
 the user at all, and saying so is the whole of what it needs.
 
 ⚠ **It is also the one place the *developer* receives something.** A user who sends that mail sends their
-own address with it. Play exempts data a user initiates in a support flow, which is why *"no data
-collected"* survives — but that is a **reason** rather than an assertion, and §7 is the file whose job is
-to hold reasons. The heading changes with the count; the section's argument does not.
+own address with it. *"No data collected"* survives because Play defines collection as *the app*
+transmitting data off the device, and Gloam hands a `mailto:` to another app and cannot transmit
+anything — **not** because of a support-flow exemption, which Play's Data safety page does not have
+(corrected 2026-09-17, B). That is a **reason** rather than an assertion, and §7 is the file whose job
+is to hold reasons. The heading changes with the count; the section's argument does not.
 
 ### Two sentences that are still exactly right, and must survive the rewrite
 
@@ -601,9 +622,10 @@ closed items get deleted from it.
 
 **The second nuance, and it arrives with D.** The Support screen's mail hand-off means a user can send
 the developer their own email address, along with the six facts `SupportHandoff.kt` composes into the
-body. **That is still "no data collected"** — Play exempts data a user initiates in a support flow, the
-mail is composed in their client and editable before it is sent, and the app has no route to send
-anything itself. Write the exemption down rather than the conclusion: a year from now the answer is easy
+body. **That is still "no data collected"** — Play defines collecting as the app transmitting data off the
+device, the mail is composed in the user's own client and editable before it is sent, and the app has
+no route to send anything itself. *(An earlier draft of this paragraph said Play exempts support
+flows. Its Data safety page has no such exemption, and `play-app-content.md` says so.)* Write the exemption down rather than the conclusion: a year from now the answer is easy
 to re-give and the *reason* is the part nobody can reconstruct, which is the whole premise of this file.
 §2 says the same fact to the other audience.
 
@@ -919,6 +941,13 @@ Play, which is a third party answering questions no local check can.
   privacy policy claiming the app stores five settings passes every one of them.
 - **"The screenshots are the right size."** 1452×2582 is a fact about the file. Three pictures of Gloam's
   own settings screens is a fact about the listing, and it is the one §8 is about.
+- **"The gate validated the icon and the feature graphic."** It did not, and §1 listed them anyway.
+  `play-metadata.py` renders neither — the tree it writes is titles, descriptions, changelogs and
+  `phoneScreenshots`, and the word *icon* does not occur in the script. `supply` uploads the files it
+  finds, so Play's art was never in the edit and is untouched by any run of this workflow. The art is
+  proven by `art/mark.py` and by the Console, and a run of R1 says nothing about either. **Found by
+  rendering the tree locally before dispatching**, which is a habit worth keeping: the half of "what
+  does the pipeline send" that costs no round trip is the half you can read off a directory listing.
 - **"The app has no `INTERNET` permission, so nothing about the user can leave the phone."** True of the
   app and *not* the whole answer: the mail hand-off composes the app version, the Android version and the
   device model into the user's own mail client. It is their mail, visible to them, editable line by line,
@@ -1046,7 +1075,23 @@ review wait into two.
 *(Filled in as each is taken. A dash left here at the end of the phase is a checkpoint that did not
 close — see* **Done when** *.)*
 
-- **R1** — the gate. —
+- **R1** — the gate. **Taken 2026-09-17, and it is §1's verdict 2: Play rejects the blank Polish.**
+  `internal → alpha`, `update_listing=true`, `dry_run=true`, versionCode 189 —
+  *"Google Api Error: Invalid request - This app has no short description (promotional text) for
+  language pl-PL."* Play reads a one-byte file as **no value**, so §4's fix is a **blocker rather than
+  hygiene** and C's `fix:` lands before a word of Polish copy. Four things the run proved on its way to
+  that error, none of which needed a second attempt: **no 403**, so *Manage store presence* **is**
+  granted — it uploaded three screenshots and wrote changelogs for both locales, which are listing
+  writes, and `RELEASING.md` and `DOD.md` describing it as ungranted are now B's stale sentences to
+  delete; **the three screenshots validated as a set**, at 1452×2582, with no dimension or count
+  complaint; **`pl-PL/changelogs/189.txt` was accepted while `pl-PL/short_description.txt` was
+  rejected**, which is §4's warn-on-the-notes-path / refuse-on-the-listing-path split measured rather
+  than argued; and **a promotion is accepted before production access exists** — `internal → alpha` is
+  a testing-track release the existing rights cover, exactly as §1 predicted, so the brake is unspent.
+  ⚠ **One question on §1's list was never asked and could not have been**: `play-metadata.py` renders
+  **no icon and no feature graphic** — neither word appears in the script — so `supply` found no
+  `images/icon.png`, uploaded none, and left Play's art untouched. "The icon and feature graphic
+  validate" belongs in the list of things that only look like readings, below.
 - **R2** — the release-shaped build. —
 - **R3** — the update in place, and the pinned icon. **Struck**: the transition it asks about happened on
   2026-09-08 at 05:22, before this plan was read back. §15.
