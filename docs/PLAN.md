@@ -336,11 +336,18 @@ worth having on its own:
   permission still reads as granted, no notification appears, and nothing in the app can tell. The
   tile needs neither a permission nor a channel. **That independence, not raw strength, is the
   argument for having both.**
+  **Read on the phone 2026-09-18, and it passes**: the tile is rendered by HyperOS's Control
+  Center, a tap starts the shade and a second stops it, and it highlights while on like the ROM's
+  own tiles. `cmd statusbar click-tile` is refused with `isBound: false` and a `uiautomator` dump
+  reports `checked="false"` on a custom tile that is plainly lit, so both of the adb routes to this
+  answer lie; `ShadeTile`'s KDoc has the detail and `DOD.md` the consequence.
 - **`requestAddTileService()`** — the one-tap *"Add Gloam tile?"* system dialog. `minSdk` 33 is
   exactly the level at which the app can ask the system to add the tile rather than hoping the user
-  finds it. Worth building only once the tile is known to work by hand, which on HyperOS means a
-  finger: the ROM's Control Center ignores the AOSP `sysui_qs_tiles` list and refuses
-  `cmd statusbar click-tile` with `isBound: false`, so there is no adb route to the tap.
+  finds it. **The same day's R2 turned this from a convenience into the point.** HyperOS draws no
+  notification action buttons at all: *Stop* is on the notification object and needs a **two-finger**
+  pull to appear on screen. So the notification is reachable and not discoverable, and the tile is
+  not the second one-tap hatch on this ROM — it is the only one. A hatch the user has to find in a
+  tile editor is a hatch most users will not have.
 
 **The live hatch gate is not built, and nothing asks for it.** 2b was going to gate ultra dark on
 `escapeHatchLive() || tileAdded()`, re-read continuously rather than trusting that the Phase 1 ask

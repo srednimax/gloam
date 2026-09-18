@@ -55,6 +55,26 @@ import kotlinx.coroutines.launch
  * liveness check, no unlock. It writes the intent and calls [stopShade], and `stopService` on a
  * service that a ROM already killed is a no-op rather than a throw.
  *
+ * ## Measured on the phone, 2026-09-18
+ *
+ * All three questions answered on HyperOS, by hand and from adb. The tile **is** rendered in
+ * Control Center; a tap starts the shade (`shade_running` false→true, the service up, auto-off
+ * armed) and a second tap stops it, clearing `off_at_millis` rather than leaving a deadline behind;
+ * and it **highlights while on**, like the ROM's own tiles.
+ *
+ * Two things that only look like failures. `cmd statusbar click-tile` is refused with
+ * `isBound: false`, but that is the command rather than the tile — `dumpsys activity services`
+ * shows SystemUI bound (`hasBound=true received=true`), so [onStartListening] runs and [render]
+ * lands. And a `uiautomator` dump reports `checked="false"` on this tile while the shade is up,
+ * while the ROM's own tiles report `checked="true"` when on: HyperOS does not map a **custom**
+ * tile's state onto the accessibility attribute, though it draws it correctly. Read this tile's
+ * state by eye or by effect, never from a dump.
+ *
+ * **And the tile turned out to matter more than this file assumed.** Taking R2 the same day found
+ * that HyperOS renders no notification action buttons at all — *Stop* needs a two-finger pull to
+ * appear. So on this ROM the tile is not the *second* one-tap hatch. It is the only one, which is
+ * the argument for `requestAddTileService()` that `PLAN.md` asks for. `DOD.md` carries both.
+ *
  * Kotlin note: `TileService` is a `Service`, so it has a `Context` and may start the shade itself.
  * That is not the rule CLAUDE.md states for a `ViewModel` — the rule there is that a `ViewModel`
  * outlives no `Context`; a Service *is* one.
