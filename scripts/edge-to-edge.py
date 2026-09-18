@@ -1305,6 +1305,22 @@ def ensure_seed(variant: str) -> None:
 # fourth would mean the page has stopped responding to drags rather than that it needs another.
 BROWSER_CHROME_TRIES = 3
 
+# Where the framing drag ends, as a fraction of screen height, starting from [SCROLL_FROM]. The
+# default suits a long article with a lead photograph; the exceptions are languages whose article is
+# short enough that the default runs off the end of it and lands on Wikipedia's footer — a "last
+# edited by <username>" bar, a *Related pages* card, a navigation box. Measured 2026-09-18 by
+# looking at all nine frames side by side, which is the only way any of this is visible.
+SCROLL_FROM = 0.85
+SCROLL_END_DEFAULT = 0.18
+WIKIPEDIA_SCROLL_END = {
+    # *Notte* is a stub with a long table of contents: the default put the whole section list in
+    # frame and the editor's name under it.
+    "it": 0.45,
+    # *Ніч* opens on a `час доби` navigation box rather than a photograph, so it needs to travel
+    # less far to clear it and still not reach the references.
+    "uk": 0.45,
+}
+
 WIKIPEDIA_ARTICLE = {
     "en": "Night",
     "pl": "Noc",
@@ -1411,18 +1427,26 @@ def open_url(url: str) -> None:
     # question. Failing loudly at the end is the point: a cell that cannot hide the toolbar must not
     # become a screenshot.
     width, height = screen_size()
+    end = WIKIPEDIA_SCROLL_END.get(language, SCROLL_END_DEFAULT)
     shell("input keyevent 122")  # MOVE_HOME — the top of the document, wherever the browser was
     settle(1.0)
-    shell(f"input swipe {width // 2} {int(height * 0.85)} {width // 2} {int(height * 0.18)} 2000")
+    shell(
+        f"input swipe {width // 2} {int(height * SCROLL_FROM)} "
+        f"{width // 2} {int(height * end)} 2000"
+    )
     # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of it.
     settle(2.0)
 
     for attempt in range(BROWSER_CHROME_TRIES):
         if not any("url_bar" in node.resource_id for node in dump_ui()):
             return
-        # Shorter and a little faster than the first drag: this is here to move the page, not to
-        # frame it, and every one of these shifts the content the review is about to look at.
-        shell(f"input swipe {width // 2} {int(height * 0.70)} {width // 2} {int(height * 0.40)} 1200")
+        # **A tenth of the screen, and the smallness is the fix rather than a detail.** This nudge
+        # was 30% of the height first, and on a short article three of them walked the page off the
+        # end of the document and into the footer — so the retry that saved the frame from the
+        # address bar was what ruined it. Chrome does not need distance to hide the toolbar, only
+        # some downward motion: 10% over 800 ms clears it, measured on the shortest article in the
+        # set. This exists to move the page, not to frame it.
+        shell(f"input swipe {width // 2} {int(height * 0.60)} {width // 2} {int(height * 0.50)} 800")
         settle(2.0)
     raise StepFailed(
         f"the browser's address bar is still on screen after {BROWSER_CHROME_TRIES} scrolls — "
