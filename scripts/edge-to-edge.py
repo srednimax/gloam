@@ -624,6 +624,11 @@ class Node:
     # itself carries no text (the label is a child `TextView`), which is why [showing_home] compares
     # rectangles instead of reading it off the labelled node.
     selected: bool = False
+    # Only read for *other* apps' chrome, where there is no string to match on. Gloam's own screens
+    # are found by their translated labels, which is what [find] is for — a Compose node's
+    # `resource-id` is usually empty anyway. [open_url] uses this to ask "is the browser's address
+    # bar on screen", which has no answer in any language.
+    resource_id: str = ""
 
     @property
     def label(self) -> str:
@@ -673,6 +678,7 @@ def dump_ui() -> list[Node]:
                 package=attrs.get("package", ""),
                 clickable=attrs.get("clickable") == "true",
                 selected=attrs.get("selected") == "true",
+                resource_id=attrs.get("resource-id", ""),
             )
         )
     return nodes
@@ -1294,6 +1300,11 @@ def ensure_seed(variant: str) -> None:
 # sitelinks for the same item, which is each wiki's real title for the same subject rather than a
 # translation of "Night" — and every one was then confirmed to resolve to an article with a lead
 # photograph. `pt-BR` is not a Wikipedia: [_language] cuts the region off, so it reads `pt`.
+# How many extra scrolls [open_url] will spend trying to get the browser's own chrome off screen
+# before it gives up and fails the scene. Three, because one has always been enough so far and a
+# fourth would mean the page has stopped responding to drags rather than that it needs another.
+BROWSER_CHROME_TRIES = 3
+
 WIKIPEDIA_ARTICLE = {
     "en": "Night",
     "pl": "Noc",
@@ -1385,12 +1396,38 @@ def open_url(url: str) -> None:
     # clipped: a listing frame wants a photograph behind the controls, not a wall of body text.
     # **It is bounded, not controlled** — each language is a different document, so the same offset
     # lands on different content, and that is what the per-locale review is for.
+    #
+    # **The one drag is not enough on its own, and believing it was cost a whole nine-locale set.**
+    # Shot 2026-09-18: `en` and `pl` hid the toolbar and the other seven did not, so seven listing
+    # frames carried an address bar and a tab counter reading somebody's real tab count. Nothing
+    # failed — the cells were green, the manifest was clean, and the defect is only visible to an
+    # eye on the picture. It does not reproduce from the gesture alone either: the same drag on the
+    # same article hides the toolbar sometimes, which is why this is a *check* and not a longer drag.
+    # A second, shorter drag cleared it on the first try in every case measured.
+    #
+    # So: drag, then ask the screen whether the address bar is still there, and drag again if it is.
+    # The check is on `resource-id` because there is no text to match — the URL is a different
+    # string in every locale, and "is the browser's own chrome on screen" is not a translatable
+    # question. Failing loudly at the end is the point: a cell that cannot hide the toolbar must not
+    # become a screenshot.
     width, height = screen_size()
     shell("input keyevent 122")  # MOVE_HOME — the top of the document, wherever the browser was
     settle(1.0)
     shell(f"input swipe {width // 2} {int(height * 0.85)} {width // 2} {int(height * 0.18)} 2000")
     # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of it.
     settle(2.0)
+
+    for attempt in range(BROWSER_CHROME_TRIES):
+        if not any("url_bar" in node.resource_id for node in dump_ui()):
+            return
+        # Shorter and a little faster than the first drag: this is here to move the page, not to
+        # frame it, and every one of these shifts the content the review is about to look at.
+        shell(f"input swipe {width // 2} {int(height * 0.70)} {width // 2} {int(height * 0.40)} 1200")
+        settle(2.0)
+    raise StepFailed(
+        f"the browser's address bar is still on screen after {BROWSER_CHROME_TRIES} scrolls — "
+        "a listing frame cannot carry it, and it brings a tab counter with it"
+    )
 
 
 def start_controls() -> None:
