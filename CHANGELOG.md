@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0](https://github.com/srednimax/gloam/compare/v0.8.0...v0.9.0) (2026-09-18)
+
+
+### Features
+
+* add the Quick Settings tile that stops the shade ([750b6b6](https://github.com/srednimax/gloam/commit/750b6b636dd444ec035a815d2c4f6e9bd920dfea))
+* ask the system to add the Quick Settings tile ([4b492a3](https://github.com/srednimax/gloam/commit/4b492a3599b589ae43a910e92ec2b255f9a9baff))
+
 ## [0.8.0](https://github.com/srednimax/gloam/compare/v0.7.1...v0.8.0) (2026-09-17)
 
 
