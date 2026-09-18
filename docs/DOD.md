@@ -374,7 +374,7 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       unbuilt: the toggle in HyperOS's own Settings does nothing (taps arrive, the secure value
       stays `0`), while `settings put` works, so the mechanism is fine and the ROM's Settings app
       is not. A *Darker still* deep link was built and deleted for that reason.
-- [ ] **R2 is owed again, by eye: is the notification's *Stop* still readable at 2.0 nits?**
+- [x] **R2 is owed again, by eye: is the notification's *Stop* still readable at 2.0 nits?**
       *Raised by the box above, 2026-09-13; kept open when it closed 2026-09-18.* Phase 2's R2 read
       the escape hatch against a 6.64-nit backlight. [ADR-0010](adr/0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
       fifth amendment moved `MIN_BACKLIGHT` to the panel's floor for 3.3× more darkness, and the
@@ -383,6 +383,32 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       *Stop*, once in a dark room and once in a lit one. If it fails, the way back is
       `MIN_BACKLIGHT = 0.01f`, and the debug build's Settings → Developer switches back up to the old
       value for the comparison. Nothing downstream is blocked on it; a failure costs the 3.3×.
+      **Read 2026-09-18, and it passes.** At dim 100 — confirmed from the store rather than the UI,
+      `dim_level = 0x64` — in a **lit** room, which is the hard case: the notification sits at the
+      overridden backlight while the eye is light-adapted. *Stop* is legible and it works, end to
+      end: `shade_running` went false, the notification went, and `ShadeService` went with it, and
+      the deadline in `off_at_millis` cleared rather than being left behind. **`MIN_BACKLIGHT` stays
+      at the panel's floor. The 3.3× stands and `0.01f` is not coming back.** The dark-room half was
+      not taken and is not worth taking: a dark-adapted eye at 2.0 nits is the easy direction.
+- [ ] **The notification's *Stop* is reachable on HyperOS but not discoverable, and the tile is the
+      answer.** *Found 2026-09-18, taking R2.* The action exists — `dumpsys notification` reads
+      `actions=1`, `[0] "Stop"`. It is **not drawn**: a full uiautomator dump of the rendered row
+      holds `app_icon`, `title`, `time` and `text` and no `id/actions` node, no expand chevron, and a
+      one-finger drag does not reveal it. **A two-finger pull does**, and that is how R2 above was
+      taken. It is the ROM rather than our construction — the only other notification on the phone
+      with an action (`com.google.android.gms`) draws no button either, and HyperOS substitutes its
+      own *"Tap for more options."* hint.
+      **What it costs.** `work/Channels.kt`'s KDoc says someone who dims to 95% and cannot find the
+      app *"still has this notification and its Stop action"*. On this ROM that holds only for
+      someone who knows the gesture. The route that does work without knowing anything is the
+      notification **body** — it opens the panel, which carries its own stop and sits above the shade
+      — so the hatch is two taps rather than one, and it runs through a window Gloam draws.
+      **The decision this wants** is not new copy inside the notification, which the ROM would
+      collapse the same way. It is `requestAddTileService()`: the QS tile is the only *one-tap* hatch
+      on this device, which turns it from the second hatch into the discoverable one. That reframes
+      `PLAN.md`'s Phase 2b bullet from *nice to have* to *the point*.
+      **What is not known** is how far this generalises. It is one ROM, and stock Android draws
+      action buttons in the collapsed row; the twelve testers are the sample that could say.
 - [x] **Read the shade's transmission in light, not in stored values.** Done 2026-09-13, from the
       phone alone, and the ramp now derives the shade alpha from light. The readings and what moved
       are in ADR-0010's seventh amendment.

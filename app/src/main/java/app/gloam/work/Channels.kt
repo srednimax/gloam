@@ -48,6 +48,15 @@ enum class AppChannel(
      *
      * It is also the user's way out. Someone who dims to 95% and then cannot find the app still has
      * this notification and its Stop action, so it is deliberately not dismissible.
+     *
+     * ⚠ **On HyperOS that last sentence holds only for someone who knows a gesture.** Measured
+     * 2026-09-18: the ROM draws the row as icon, title, time and text and renders **no action
+     * button and no expand chevron**, though `dumpsys notification` confirms the action is on the
+     * object. A **two-finger** pull reveals *Stop*, and it works from there. It is not our
+     * construction — the only other notification on that phone carrying an action draws no button
+     * either. The route that needs no knowledge is the notification **body**, which opens the panel
+     * and its own stop; that is two taps and it runs through a window this app draws. `DOD.md` holds
+     * the reading and the consequence, which is that the QS tile is the only one-tap hatch there.
      */
     Shade(
         "shade",
