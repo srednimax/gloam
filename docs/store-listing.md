@@ -1067,3 +1067,93 @@ Corrigido: mudar de celular não leva mais o escurecimento com você. O Gloam li
 
 Виправлено: перехід на новий телефон більше не переносить затемнення. Gloam читав зі старого телефону налаштування «затемнення увімкнене» і сам натягував запону на новому, ще й на рівні старого.
 ```
+
+### 0.9.0 — a second way out
+
+**One feature, told once.** The tile and the Settings row that asks the phone to add it are two
+commits and one thing for the reader: the row is how the tile gets found, so the note gives it as the
+step that follows rather than as a second feature. The rest of the release is documents and the
+screenshot driver, and none of it changes what the reader does.
+
+**The note says what the tile does not depend on, not why that matters on this phone.** Phase 2b's R2
+found that HyperOS draws no notification action buttons at all, so on the phone Gloam is built on the
+tile is the only one-tap way to stop the shade. That is a fact about one vendor's ROM, and a note that
+led with it would read as a warning to everybody else. Settings already carries the part that is true
+everywhere — *it still works when the notification does not* — so the note reuses that sentence, and
+in every language it is the translation the app already ships, verbatim where the grammar allows. The
+button is quoted by its own label for the same reason: it is what the reader will be looking for.
+
+**The last clause names the tile.** Its label is `app_name`, and a reader editing Quick Settings by
+hand is scanning a grid of short names for one they recognise.
+
+**English** — 354/500:
+
+```
+New: a Quick Settings tile that turns the shade on and off from anywhere, without opening Gloam. It does not need notifications to be allowed, so it still works when the notification does not.
+
+To add it, open Settings in Gloam and tap "Add the tile". If your phone does not offer to, add it yourself by editing Quick Settings — the tile is called Gloam.
+```
+
+**Polish** — 380/500:
+
+```
+Nowość: kafelek szybkich ustawień, który włącza i wyłącza zasłonę z dowolnego miejsca, bez otwierania Gloam. Nie potrzebuje włączonych powiadomień, więc działa także wtedy, gdy powiadomienie nie działa.
+
+Aby go dodać, otwórz Ustawienia w Gloam i dotknij „Dodaj kafelek”. Jeśli telefon tego nie zaproponuje, dodaj go ręcznie, edytując szybkie ustawienia — kafelek nazywa się Gloam.
+```
+
+**Czech** — 362/500:
+
+```
+Novinka: dlaždice v Rychlém nastavení, která zapíná a vypíná závoj odkudkoli, bez otevírání Gloamu. Nepotřebuje povolená oznámení, takže funguje i tehdy, když oznámení nefunguje.
+
+Přidáš ji tak, že v Gloamu otevřeš Nastavení a klepneš na „Přidat dlaždici“. Pokud to telefon nenabídne, přidej si ji ručně v úpravách Rychlého nastavení — dlaždice se jmenuje Gloam.
+```
+
+**German** — 446/500:
+
+```
+Neu: eine Schnelleinstellungen-Kachel, die die Schicht von überall ein- und ausschaltet, ohne Gloam zu öffnen. Sie braucht keine erlaubten Benachrichtigungen und funktioniert deshalb auch dann, wenn die Benachrichtigung es nicht tut.
+
+Zum Hinzufügen öffne in Gloam die Einstellungen und tippe auf „Kachel hinzufügen“. Bietet dein Telefon das nicht an, füge sie selbst hinzu, indem du die Schnelleinstellungen bearbeitest – die Kachel heißt Gloam.
+```
+
+**Spanish** — 390/500:
+
+```
+Novedad: un mosaico de ajustes rápidos que activa y desactiva la capa desde cualquier sitio, sin abrir Gloam. No necesita que las notificaciones estén permitidas, así que sigue funcionando cuando la notificación no lo hace.
+
+Para añadirlo, abre Ajustes en Gloam y toca «Añadir el mosaico». Si tu teléfono no lo ofrece, añádelo a mano editando los ajustes rápidos; el mosaico se llama Gloam.
+```
+
+**French** — 442/500:
+
+```
+Nouveau : une tuile des réglages rapides qui active et désactive le voile depuis n'importe où, sans ouvrir Gloam. Elle n'a pas besoin que les notifications soient autorisées : elle fonctionne donc même quand la notification ne fonctionne pas.
+
+Pour l'ajouter, ouvrez Paramètres dans Gloam et touchez « Ajouter la tuile ». Si votre téléphone ne le propose pas, ajoutez-la vous-même en modifiant les réglages rapides ; la tuile s'appelle Gloam.
+```
+
+**Italian** — 410/500:
+
+```
+Novità: un riquadro delle impostazioni rapide che accende e spegne il velo da qualsiasi punto, senza aprire Gloam. Non ha bisogno che le notifiche siano consentite, quindi funziona anche quando la notifica non funziona.
+
+Per aggiungerlo, apri Impostazioni in Gloam e tocca «Aggiungi il riquadro». Se il telefono non lo propone, aggiungilo a mano modificando le impostazioni rapide: il riquadro si chiama Gloam.
+```
+
+**Brazilian Portuguese** — 420/500:
+
+```
+Novidade: um bloco das configurações rápidas que liga e desliga a camada de qualquer lugar, sem abrir o Gloam. Ele não precisa que as notificações estejam permitidas, então continua funcionando quando a notificação não funciona.
+
+Para adicioná-lo, abra Configurações no Gloam e toque em “Adicionar o bloco”. Se o seu celular não oferecer, adicione-o manualmente editando as configurações rápidas; o bloco se chama Gloam.
+```
+
+**Ukrainian** — 376/500:
+
+```
+Нове: плитка швидких налаштувань, яка вмикає та вимикає запону звідусіль, без відкривання Gloam. Їй не потрібні дозволені повідомлення, тож вона працює й тоді, коли повідомлення не працює.
+
+Щоб додати її, відкрий Налаштування в Gloam і торкнися «Додати плитку». Якщо телефон цього не запропонує, додай її вручну, відредагувавши швидкі налаштування, — плитка називається Gloam.
+```
