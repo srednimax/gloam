@@ -18,7 +18,7 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 - [x] **Phase P** — The pipeline
 - [x] **Phase 1** — The mechanism is complete
 - [ ] **Phase 2** — Safe to hand over ← **the door: closed testing opens here**
-- [ ] **Phase 2b** — As dark as it goes
+- [ ] **Phase 2b** — The second escape hatch *(ultra dark is cancelled: ADR-0015)*
 - [x] **Phase 3a** — The controls, from the launcher
 - [x] **Phase 3b** — The panel *(the go/no-go went: `phase-3.md` R1)*
 - [x] **Phase 4** — It turns itself on and off *(the gate went: `phase-4.md` R2)*
@@ -76,7 +76,7 @@ phones, four things stop being free to change:
 | `applicationId` | Registration is keyed to the signing key and cannot be re-pointed | Ratified; **Phase P landed 2026-08-30** — registered and married to the upload key |
 | `minSdk` | Raising it strands existing installs on the last build that fitted them (ADR-0008) | Settled at 33 |
 | Every DataStore key **that has been written** | A key on a real phone cannot be renamed or removed without consequence | `onboardingDone` is the open one — Phase 2 |
-| The escape-hatch inventory | Ultra dark is gated on it, and the gate has to mean the same thing forever | Phase 2 |
+| The escape-hatch inventory | It was ultra dark's gate; ultra dark is cancelled, but the inventory is what 2b's tile is *for* | Phase 2 |
 
 **Anything cheap now and expensive later is pulled in front of the door.** In practice that is
 `DOD.md`'s scaffolding cleanup: four pieces of the repo describing features the app does not have,
@@ -253,8 +253,9 @@ starts from had to be verified against the phone before it shipped. **It passed*
 of the screen's own inactivity dimming rather than a property of the device.
 
 It opens with an **entry gate**: ask for `POST_NOTIFICATIONS` before anything else, because this
-phase produces the darkest state the app will ever reach short of ultra dark and the ongoing
-notification is the documented way out of it.
+phase produces the darkest state the app will ever reach — ultra dark was cancelled after it, so
+there is no "short of" any more (ADR-0015) — and the ongoing notification is the documented way out
+of it.
 
 It runs as **five checkpoints, each its own merge**, so the entry gate lands ahead of the device work
 it does not depend on. Two of its readings are taken for later phases' benefit — **Phase 3b's
@@ -266,10 +267,10 @@ here** as insurance against the 14-day requirement.
 **Detail: [`phase-2.md`](phase-2.md).**
 
 **This is the door.** Everything in it answers one question — *must a stranger have this before they
-can be handed the app?* — and nothing in it is a feature. Ultra dark used to live here and does not
-any more: it *depends* on the safety work, which is not the same as being part of it, and it is the
-riskiest thing in the document. It should meet twelve people while you are watching, which is what
-Phase 2b is for.
+can be handed the app?* — and nothing in it is a feature. Ultra dark used to live here, moved out to
+2b because it *depends* on the safety work rather than being part of it, and was then **cancelled
+outright** once it was measured (ADR-0015). Both moves were right for the same reason: the riskiest
+thing in the document had to be priced before it was built, and the price came back at 17%.
 
 - **First run, owned end to end.** The ask-late rule deliberately scatters three asks across Phases
   0, 1 and 2, which is right and leaves nobody owning the coherence of a new user's first two
@@ -309,26 +310,48 @@ also the reason a guaranteed-bright escape hatch exists at all.
 
 **When this phase closes the app is safe to hand over. Closed testing opens here.**
 
-## Phase 2b — As dark as it goes
+## Phase 2b — The second escape hatch
 
-Behind the door on purpose: the riskiest feature in the plan, shipped *into* a running closed test
-rather than in front of it.
+**It was called *As dark as it goes*, and its headline mechanism is cancelled.**
+[ADR-0015](adr/0015-ultra-dark-is-cancelled-the-touch-obscuring-clamp-is-the-floor.md) is the record.
+The short version: an app overlay that passes touches may not obscure more than
+`maximum_obscuring_opacity_for_touch`, which is **0.8** on the phone and on the API-33 emulator, and
+the window manager writes that straight into the shade's window alpha. Past that point more alpha buys
+nothing, which is why the invariants compute 5% transmission where the device reads 24%. Raising
+`MAX_SHADE_ALPHA` to the clamp is worth **17%** and costs both of `shadeValuesFor`'s bounds. The
+phase's real win — the backlight to the panel's floor, **3.3×** — was taken on 2026-09-13, outside
+this phase, as [ADR-0010](adr/0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s fifth
+amendment. `FLAG_DIM_BEHIND`, window stacking and an Extra dim hand-off were each measured and each
+died; the ADR says how.
 
-- **Ultra dark**, going past `MAX_SHADE_ALPHA`, **gated on a live hatch check re-read continuously**.
-  Not on "the Phase 1 ask succeeded" — that is a historical grant, and a grant is not a permanent
-  fact. `POST_NOTIFICATIONS` can be revoked later, and more quietly the user can disable the shade's
-  *notification channel* without touching the permission at all, at which point the permission still
-  reads as granted, no notification exists, and the gate would wave ultra dark through. It is a real
-  gate, not a warning dialog, and it reads what is true now.
-- **The Quick Settings tile**, which is safety equipment rather than reach and therefore travels with
-  the feature that needs it. Work out the hatch inventory at high alpha and it is exactly three
+So what is left of the phase is the piece that came along as safety equipment and turns out to be
+worth having on its own:
+
+- **The Quick Settings tile.** Work out the hatch inventory at maximum dim and it is exactly three
   surfaces, all in the undimmable layer: **the ongoing notification's Stop action, a QS tile, and the
-  power menu.** Nothing else. The QS gear icon is a trap — bright and tappable, but Settings opens
-  *beneath* the shade and is invisible, so force-stop is not reachable. The tile needs no permission
-  and cannot be silenced by a notification-channel setting, so it fails independently of the
-  notification; that independence, not raw strength, is the argument for having both. `minSdk` 33 is
-  also exactly the level at which the app can ask the system to add the tile rather than hoping the
-  user finds it.
+  power menu.** Nothing else — the QS gear icon is a trap, bright and tappable, but Settings opens
+  *beneath* the shade and is invisible, so force-stop is not reachable that way. Until 2b the app
+  shipped one of the three, and it dies two ways: `POST_NOTIFICATIONS` revoked, which is visible and
+  deliberate, or the shade's **notification channel** lowered to `IMPORTANCE_NONE`, at which point the
+  permission still reads as granted, no notification appears, and nothing in the app can tell. The
+  tile needs neither a permission nor a channel. **That independence, not raw strength, is the
+  argument for having both.**
+- **`requestAddTileService()`** — the one-tap *"Add Gloam tile?"* system dialog. `minSdk` 33 is
+  exactly the level at which the app can ask the system to add the tile rather than hoping the user
+  finds it. Worth building only once the tile is known to work by hand, which on HyperOS means a
+  finger: the ROM's Control Center ignores the AOSP `sysui_qs_tiles` list and refuses
+  `cmd statusbar click-tile` with `isBound: false`, so there is no adb route to the tap.
+
+**The live hatch gate is not built, and nothing asks for it.** 2b was going to gate ultra dark on
+`escapeHatchLive() || tileAdded()`, re-read continuously rather than trusting that the Phase 1 ask
+once succeeded. With no ultra dark there is nothing to gate — which is lucky, because there is no live
+read of *"is my tile added"*. The only route is `onTileAdded` / `onTileRemoved` remembered into a
+DataStore key, and that is live state in a store Auto Backup carries whole to the next phone, where
+the tile is absent and the key says otherwise.
+
+**The phase is still behind the door**, but not for its original reason. The tile is not risky. It
+ships into a running closed test because that costs nothing, not because twelve people need to be
+watched using it.
 
 ## Phase 3a — The controls, from the launcher
 

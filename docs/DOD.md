@@ -329,7 +329,7 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       **Closed 2026-09-17 as *shipped, unasked* (`phase-5.md` §10).** `nightSpentBy` is unchanged and
       ADR-0012's rule stands as written. Both edges err toward light, which is the direction this app
       errs in everywhere else.
-- [ ] **Ultra dark has a ceiling the platform holds, and 2b has to price it before it starts.**
+- [x] **Ultra dark has a ceiling the platform holds, and 2b has to price it before it starts.**
       *Found by Phase 3's R13, 2026-09-03.* An app overlay that **passes touches** may not obscure
       more than `maximum_obscuring_opacity_for_touch` — unset on the phone and on the API-33
       emulator, so both sit at the framework default of **0.8**, which the window manager writes
@@ -365,6 +365,24 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
         exempt, so it is the wrong place to test touches. Stacking a second full-screen shade window
         is dead too: one uid's opacities add up, and two windows at 0.8 read as 0.96. The readings are
         in `DimBehindWindow`'s KDoc in `src/debug/`.
+      **Closed 2026-09-18 as *priced, and the feature cancelled*.**
+      [ADR-0015](adr/0015-ultra-dark-is-cancelled-the-touch-obscuring-clamp-is-the-floor.md) is the
+      decision and carries the whole table. The box asked 2b to price the ceiling before starting;
+      the price came back at **17%** for breaking both of `shadeValuesFor`'s bounds, so 2b never
+      starts that feature. `PLAN.md`'s Phase 2b is now **the second escape hatch** — the Quick
+      Settings tile — and the Extra dim row on the list above is dead on this ROM as well as
+      unbuilt: the toggle in HyperOS's own Settings does nothing (taps arrive, the secure value
+      stays `0`), while `settings put` works, so the mechanism is fine and the ROM's Settings app
+      is not. A *Darker still* deep link was built and deleted for that reason.
+- [ ] **R2 is owed again, by eye: is the notification's *Stop* still readable at 2.0 nits?**
+      *Raised by the box above, 2026-09-13; kept open when it closed 2026-09-18.* Phase 2's R2 read
+      the escape hatch against a 6.64-nit backlight. [ADR-0010](adr/0010-one-dim-level-drives-both-mechanisms-in-a-fixed-order.md)'s
+      fifth amendment moved `MIN_BACKLIGHT` to the panel's floor for 3.3× more darkness, and the
+      notification and the panel dim with it — that is R5, and it is the cost the change accepted.
+      **The reading is a finger, not adb**: at dim 100, pull the notification shade down and tap
+      *Stop*, once in a dark room and once in a lit one. If it fails, the way back is
+      `MIN_BACKLIGHT = 0.01f`, and the debug build's Settings → Developer switches back up to the old
+      value for the comparison. Nothing downstream is blocked on it; a failure costs the 3.3×.
 - [x] **Read the shade's transmission in light, not in stored values.** Done 2026-09-13, from the
       phone alone, and the ramp now derives the shade alpha from light. The readings and what moved
       are in ADR-0010's seventh amendment.
