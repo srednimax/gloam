@@ -1312,13 +1312,26 @@ BROWSER_CHROME_TRIES = 3
 # looking at all nine frames side by side, which is the only way any of this is visible.
 SCROLL_FROM = 0.85
 SCROLL_END_DEFAULT = 0.18
+# An entry is one drag, or a tuple of them for an article whose furniture is taller than a single
+# drag can carry off — each element is another drag from [SCROLL_FROM] down to that fraction, run in
+# order with a pause between. The pause is load-bearing: it is what keeps two drags from becoming
+# one fling, which is the thing the long comment in [open_url] measured.
 WIKIPEDIA_SCROLL_END = {
     # *Notte* is a stub with a long table of contents: the default put the whole section list in
     # frame and the editor's name under it.
     "it": 0.45,
-    # *Ніч* opens on a `час доби` navigation box rather than a photograph, so it needs to travel
-    # less far to clear it and still not reach the references.
-    "uk": 0.45,
+    # *Nuit* opens under a maintenance banner ("sources (mai 2010)") whose orange tail survived the
+    # default drag by about sixty pixels. A second short drag clears it, and the distance is read off
+    # the picture rather than derived: one long drag to 0.12 and this pair land within a few dozen
+    # pixels of each other, so the arithmetic here is not worth trusting on its own.
+    "fr": (0.18, 0.70),
+    # *Noite* ends on its collapsed section list, and the default landed with the "last edited" bar
+    # cut in half across the bottom edge — a clipped line of text photographs as a broken render
+    # rather than as a page.
+    "pt": 0.40,
+    # *Ніч* has no lead photograph: an infobox sits straight after the intro and is taller than two
+    # drags, so anything shorter than this either leaves it in frame or stops halfway down it.
+    "uk": (0.45, 0.45, 0.45),
 }
 
 WIKIPEDIA_ARTICLE = {
@@ -1427,15 +1440,21 @@ def open_url(url: str) -> None:
     # question. Failing loudly at the end is the point: a cell that cannot hide the toolbar must not
     # become a screenshot.
     width, height = screen_size()
-    end = WIKIPEDIA_SCROLL_END.get(language, SCROLL_END_DEFAULT)
+    ends = WIKIPEDIA_SCROLL_END.get(language, SCROLL_END_DEFAULT)
+    if not isinstance(ends, tuple):
+        ends = (ends,)
     shell("input keyevent 122")  # MOVE_HOME — the top of the document, wherever the browser was
     settle(1.0)
-    shell(
-        f"input swipe {width // 2} {int(height * SCROLL_FROM)} "
-        f"{width // 2} {int(height * end)} 2000"
-    )
-    # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of it.
-    settle(2.0)
+    for end in ends:
+        shell(
+            f"input swipe {width // 2} {int(height * SCROLL_FROM)} "
+            f"{width // 2} {int(height * end)} 2000"
+        )
+        # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of
+        # it. The same wait is what makes a second drag a second *drag*: Chrome takes its momentum
+        # from the velocity it samples at release, and a page that has already come to rest has
+        # none to give it.
+        settle(2.0)
 
     for attempt in range(BROWSER_CHROME_TRIES):
         if not any("url_bar" in node.resource_id for node in dump_ui()):
