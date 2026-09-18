@@ -383,7 +383,10 @@ def main() -> int:
         # No theme here: a separate invocation has no record of what the phone had, and writing a
         # guess is how this line used to leave a dark phone on a sunrise schedule. The run puts the
         # theme back itself — see [read_theme].
-        print("rotation, navigation mode, locale and Do Not Disturb handed back to the phone")
+        print(
+            "rotation, navigation mode, locale, Do Not Disturb and the status bar "
+            "handed back to the phone"
+        )
         return 0
 
     if not args.out:
@@ -470,8 +473,12 @@ def main() -> int:
     # per cell. See [e2e.set_dnd]; the `finally` is because it is a phone-wide setting.
     # The theme is phone-wide too, so it is read before the first cell writes it and put back in the
     # same `finally`.
+    # The status bar is in every frame and starts out full of this phone's own state; demo mode
+    # empties it. See [e2e.set_demo_status_bar] for what HyperOS honours — it is the same `finally`
+    # for the same reason, and a status bar left in demo mode looks like a broken phone.
     phone_theme = read_theme()
     e2e.set_dnd(True)
+    e2e.set_demo_status_bar(True)
     try:
         for theme in themes:
             print(f"\n=== {theme}")
@@ -484,6 +491,7 @@ def main() -> int:
             e2e.reset_to_seeded()
     finally:
         e2e.set_dnd(False)
+        e2e.set_demo_status_bar(False)
         restore_theme(*phone_theme)
 
     manifest["seconds"] = round(time.time() - started)
