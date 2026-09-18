@@ -46,14 +46,23 @@ down in the [privacy policy](docs/privacy-policy.md) rather than here.
 
 ## Screenshots
 
-Light and dark, captured on a Xiaomi/HyperOS device by `scripts/screenshots.py` and padded to Play's
-9:16 by `art/pad-screenshot.py`. Regenerate them rather than replacing them by hand — the walk is the
-asset, not the pixels.
+Captured on a Xiaomi/HyperOS device by `scripts/screenshots.py`, off the build that is actually on
+Play. Regenerate them rather than replacing them by hand — the walk is the asset, not the pixels.
 
-| Dim | Settings | Help and feedback |
-| --- | --- | --- |
-| <img src="docs/screenshots/light-1_dim-en.png" width="220" alt="The Dim screen: a dim level slider at 40%, a warmth slider, and a Start dimming button"> | <img src="docs/screenshots/light-3_settings-en.png" width="220" alt="Settings: appearance, controls, language and after-a-restart sections"> | <img src="docs/screenshots/light-4_support-en.png" width="220" alt="Help and feedback: report a problem, suggest a feature"> |
-| <img src="docs/screenshots/dark-1_dim-en.png" width="220" alt="The Dim screen in dark theme"> | <img src="docs/screenshots/dark-3_settings-en.png" width="220" alt="Settings in dark theme"> | <img src="docs/screenshots/dark-4_support-en.png" width="220" alt="Help and feedback in dark theme"> |
+**Dark only, and that is a property of the app rather than a choice about this page.** Gloam's theme
+preference defaults to dark, so `cmd uimode night` stopped being a lever the moment that preference
+existed: the light cell shot dark anyway, twice, without failing. The driver now refuses
+`--theme light` outright rather than emitting a mislabelled picture.
+
+| Shot | What it shows |
+| --- | --- |
+| [Compact controls](docs/screenshots/1_compact-controls-en.png) | The controls floating over a Wikipedia article: a vertical dim level track, a start arrow, and round buttons for warmth, a timer and closing. This is the app's actual claim — it works on top of whatever you are reading |
+| [Dim](docs/screenshots/2_dim-en.png) | The home screen: the dim level slider, the warmth slider and Start dimming |
+| [Settings](docs/screenshots/3_settings-en.png) | Appearance, controls, language and the after-a-restart section |
+| [Settings, scrolled](docs/screenshots/4_settings-bottom-en.png) | The language grid, which is also where a release build proves the debug section was compiled out rather than hidden |
+
+Links rather than embedded pictures, deliberately: this repo's `README.md` is guarded against image
+embeds, and the same nine-language set is a click away in the listing anyway.
 
 These are Gloam's own screens. **There is deliberately no screenshot of the shade actually down** —
 the shade is an overlay owned by a foreground service, so it cannot be reached by tapping through the
