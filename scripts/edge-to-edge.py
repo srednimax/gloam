@@ -1269,12 +1269,41 @@ def open_url(url: str) -> None:
     # Raw coordinates rather than [swipe_up], deliberately: that one reads a content box out of a
     # uiautomator dump, and the foreground here is an arbitrary browser rather than a Compose screen
     # this repo knows the shape of.
+    #
+    # **One slow drag, not two fast ones, and the difference is the whole point of this block.**
+    # Two 300 ms swipes are a *fling*: Chrome derives momentum from the velocity it samples at
+    # release, that sampling drifts with frame timing, and the page therefore lands somewhere
+    # different every run. Measured 2026-09-17 on the phone, same article and same command, as mean
+    # absolute pixel difference over the article area between two runs with the browser cold:
+    #
+    #   two 300 ms swipes (the fling)      42 / 255      — lands in a different paragraph each time
+    #   two 1400 ms swipes                 54 / 255      — slower is not the fix; still a fling
+    #   load, no scroll at all              0 / 255      — the page itself renders identically
+    #   MOVE_HOME + one 2000 ms drag        5 / 255      — a ~2 px offset, which is nothing
+    #
+    # The third row is what localises the fault: the document is perfectly reproducible, so every
+    # bit of the variance was being injected by the gesture. A drag slow enough to release at
+    # roughly zero velocity leaves Chrome no momentum to compute and simply stops where it is put.
+    #
+    # **It has to be a touch gesture, and that is the platform rather than a preference.** Chrome
+    # hides its toolbar for touch scrolling only — `KEYCODE_PAGE_DOWN` scrolls the document and
+    # leaves the address bar and tab counter sitting in frame, which is the one thing this scroll
+    # exists to prevent. Keyboard scrolling was measured as exactly reproducible and still unusable
+    # for that reason. `MOVE_HOME` is safe because it only ever *precedes* the drag: it pins the
+    # start to the top of the document — the browser is not force-stopped between scenes, so it may
+    # restore a scroll position from the last one — and the drag that follows re-hides the toolbar.
+    # Anything that ends by scrolling *up* brings the chrome straight back.
+    #
+    # The distance is tuned so the article's lead image sits whole under the window rather than
+    # clipped: a listing frame wants a photograph behind the controls, not a wall of body text.
+    # **It is bounded, not controlled** — each language is a different document, so the same offset
+    # lands on different content, and that is what the per-locale review is for.
     width, height = screen_size()
-    for _ in range(2):
-        shell(f"input swipe {width // 2} {int(height * 0.72)} {width // 2} {int(height * 0.28)} 300")
-        settle(0.5)
+    shell("input keyevent 122")  # MOVE_HOME — the top of the document, wherever the browser was
+    settle(1.0)
+    shell(f"input swipe {width // 2} {int(height * 0.85)} {width // 2} {int(height * 0.18)} 2000")
     # The toolbar slides away rather than vanishing, and a frame caught mid-slide has half of it.
-    settle(1.2)
+    settle(2.0)
 
 
 def start_controls() -> None:
