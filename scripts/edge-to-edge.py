@@ -396,6 +396,7 @@ def restore_device() -> None:
     set_nav_mode("gesture" if api_level() >= GESTURE_MIN_API else "threebutton")
     shell("settings put system accelerometer_rotation 1")
     set_dnd(False)
+    set_demo_status_bar(False)
 
 
 def set_dnd(on: bool) -> None:
@@ -420,6 +421,79 @@ def set_dnd(on: bool) -> None:
         # Tolerated rather than fatal: on an emulator with no heads-up banner to suppress this is
         # cosmetic, and losing a whole matrix to a missing device command would not be.
         print("  -- note: `cmd notification set_dnd` unavailable, continuing without it")
+    settle(0.5)
+
+
+# What `sysui_demo_allowed` read before this run turned it on, so teardown puts back what was there
+# rather than a guess. None means "not read yet", the string "null" is the setting being unset.
+_DEMO_ALLOWED: "str | None" = None
+
+
+def set_demo_status_bar(on: bool) -> None:
+    """Empty the status bar of this phone's own state for the length of the run.
+
+    **The status bar is in every screenshot, and by default it is a photograph of somebody's phone.**
+    The first release smoke test caught the browser's tab counter reading *9* and scrolled it out of
+    frame; the status bar is the same defect one row up and cannot be scrolled anywhere. On this
+    phone it carried two notification icons, a network-speed readout in KB/s, bluetooth, Do Not
+    Disturb, a muted bell and a battery percentage — none of which is Gloam, and all of which ships
+    to a store listing in nine languages.
+
+    SystemUI's demo mode is the platform's own answer: a broadcast that tells the status bar to draw
+    a fixed set of icons instead of the real ones. It is gated behind a global that is off by
+    default, so this reads that global before writing it and [restore_device] puts back what it
+    found.
+
+    **HyperOS honours some of it and silently ignores the rest, so what the shots actually get is
+    measured rather than documented.** Against AOSP's command list on 2026-09-18:
+
+      notifications visible false   honoured — the icons go, and so do bluetooth, DND and the bell
+      battery level 100             honoured — the percentage is fixed
+      battery plugged false         *ignored* — the charging bolt stays, and the cable has to be in
+                                    for adb, so the bolt is the one thing that cannot be removed
+      clock hhmm 1200               half honoured, and in the useful half: the requested time is
+                                    ignored, but the clock stops being live and reads a fixed 8:16.
+                                    Measured against a phone whose real time was 07:17. So the
+                                    command is not sent — there is nothing to gain — and the set
+                                    still gets one identical clock across all nine locales, which
+                                    a live clock would not have given it
+      network wifi/mobile show      *ignored*, and not in the direction asked: the signal and wifi
+                                    icons disappear entirely rather than pinning to four bars
+
+    The result is a clock, a battery and a bolt. That is fewer icons than asked for rather than more,
+    which is the safe direction for a listing — a status bar with nothing personal in it. Do not
+    "fix" the ignored rows by pinning them another way: the point is emptiness, not a fake phone.
+
+    Like [set_dnd] this is **phone-wide**, so every caller's `off` belongs in a `finally`. A crashed
+    run must not leave somebody's status bar frozen — and unlike Do Not Disturb, a demo status bar
+    looks like a broken phone rather than a quiet one.
+    """
+    global _DEMO_ALLOWED
+    if on:
+        _DEMO_ALLOWED = shell("settings get global sysui_demo_allowed").strip()
+        shell("settings put global sysui_demo_allowed 1")
+        if not shell_ok("am broadcast -a com.android.systemui.demo -e command enter"):
+            # Tolerated rather than fatal, on [set_dnd]'s reasoning: an emulator or a ROM without
+            # demo mode should cost the shots their clean status bar, not the whole matrix.
+            print("  -- note: SystemUI demo mode unavailable, status bar will show real state")
+            return
+        for command in (
+            "-e command notifications -e visible false",
+            "-e command battery -e level 100 -e plugged false",
+        ):
+            shell(f"am broadcast -a com.android.systemui.demo {command}")
+        settle(1.0)
+        return
+    # Exit unconditionally, even if `enter` was never reached: a previous crashed run is exactly the
+    # state this has to be able to clear, and the broadcast is harmless when nothing is in demo mode.
+    shell("am broadcast -a com.android.systemui.demo -e command exit")
+    if _DEMO_ALLOWED in (None, "null", ""):
+        # It was unset, so delete rather than write a 0 — `put` would leave a row behind that the
+        # phone never had. Behaviourally identical; this is just not leaving litter.
+        shell("settings delete global sysui_demo_allowed")
+    else:
+        shell(f"settings put global sysui_demo_allowed {_DEMO_ALLOWED}")
+    _DEMO_ALLOWED = None
     settle(0.5)
 
 
