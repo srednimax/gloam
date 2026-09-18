@@ -18,7 +18,7 @@ per phase, no task lists. The detail is written when the phase opens, not now.
 - [x] **Phase P** — The pipeline
 - [x] **Phase 1** — The mechanism is complete
 - [ ] **Phase 2** — Safe to hand over ← **the door: closed testing opens here**
-- [ ] **Phase 2b** — The second escape hatch *(ultra dark is cancelled: ADR-0015)*
+- [x] **Phase 2b** — The second escape hatch *(ultra dark is cancelled: ADR-0015)*
 - [x] **Phase 3a** — The controls, from the launcher
 - [x] **Phase 3b** — The panel *(the go/no-go went: `phase-3.md` R1)*
 - [x] **Phase 4** — It turns itself on and off *(the gate went: `phase-4.md` R2)*
@@ -75,7 +75,7 @@ phones, four things stop being free to change:
 | --- | --- | --- |
 | `applicationId` | Registration is keyed to the signing key and cannot be re-pointed | Ratified; **Phase P landed 2026-08-30** — registered and married to the upload key |
 | `minSdk` | Raising it strands existing installs on the last build that fitted them (ADR-0008) | Settled at 33 |
-| Every DataStore key **that has been written** | A key on a real phone cannot be renamed or removed without consequence | `onboardingDone` is the open one — Phase 2 |
+| Every DataStore key **that has been written** | A key on a real phone cannot be renamed or removed without consequence | Closed: `onboardingDone` was **deleted** rather than used (`DOD.md`), and no key has been added since |
 | The escape-hatch inventory | It was ultra dark's gate; ultra dark is cancelled, but the inventory is what 2b's tile is *for* | Phase 2 |
 
 **Anything cheap now and expensive later is pulled in front of the door.** In practice that is
