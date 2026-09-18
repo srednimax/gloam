@@ -418,8 +418,8 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       **`ART_SIZE` went 50 → 60dp with it**: the mark is a disc, so its reach from the centre *is*
       its radius, and 60dp is Android's keyline for a full-bleed circular icon. The script's own
       check reports 30.1dp against a 33dp safe radius, so no circular mask can bite it.
-- [ ] **Write the listing, and shoot the feature graphic and screenshots.** *Moved here from Phase 5
-      on 2026-08-30.* Play will not let a **closed** test open without a complete store listing, and
+- [x] **Write the listing, and shoot the feature graphic and screenshots.** *Moved here from Phase 5
+      on 2026-08-30, closed 2026-09-18 when the last of its six parts landed.* Play will not let a **closed** test open without a complete store listing, and
       the closed test is what the 12-tester window runs on — so these three cannot be polish. The
       graphic comes off the item above (`make-feature-graphic.py` derives from `art/mark.py`), which
       is now a dependency of the door rather than a Phase 5 nicety. `docs/store-listing.md` — every
@@ -640,6 +640,10 @@ changelog line for *"Portuguese could not be selected"* would be addressed to no
       **What is bounded and what is not:** each cell is reproducible, but the *same* framing across
       nine languages is not — each Wikipedia is a different document, so one offset lands on
       different content. Per-locale review is the answer, and no gate can replace it.
+      **Four of the nine needed their own drag in the end** — `it`, `fr`, `pt` and `uk` — and three
+      of those needed *more* travel than one drag from 0.85 can give, which is why an entry in
+      `WIKIPEDIA_SCROLL_END` may be a tuple. Each number was read off the picture: the one attempt
+      to compute a distance was wrong by a factor of two and a half.
 
 ## Standing checks that never close
 
