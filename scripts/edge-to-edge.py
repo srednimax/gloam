@@ -1215,8 +1215,21 @@ def ensure_seed(variant: str) -> None:
 # this exact name" page sitting in the middle of a store listing in a language nobody on this side
 # reads. [open_url] raises on a language that is not here; fill it by opening the article and
 # copying the title out of the URL, never by translating the English one.
+#
+# The eight below were taken from the English article's own interlanguage links — Wikidata's
+# sitelinks for the same item, which is each wiki's real title for the same subject rather than a
+# translation of "Night" — and every one was then confirmed to resolve to an article with a lead
+# photograph. `pt-BR` is not a Wikipedia: [_language] cuts the region off, so it reads `pt`.
 WIKIPEDIA_ARTICLE = {
     "en": "Night",
+    "pl": "Noc",
+    "cs": "Noc",
+    "de": "Nacht",
+    "es": "Noche",
+    "fr": "Nuit",
+    "it": "Notte",
+    "pt": "Noite",
+    "uk": "Ніч",
 }
 
 
