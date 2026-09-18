@@ -428,9 +428,10 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       **Part-done 2026-08-30, and the remainder is named rather than implied:**
       - [x] English short (74/80) and full (2571/4000) descriptions.
       - [x] App name, both locales — `Gloam`, untranslated on purpose, and the file says why.
-      - [x] Three phone screenshots, 1452×2582. **Real, taken 2026-09-05** by
-            `scripts/screenshots.py` against Gloam's own `[SCENES]`. The placeholders unblocked an
-            upload; they do not sell anything.
+      - [x] Phone screenshots. **Superseded 2026-09-18** by the nine-locale set below: 36 shots,
+            1526×2713, four scenes per language. The 2026-09-05 set was three English shots at
+            1452×2582 and is gone rather than kept for comparison — it was light-labelled and shot
+            dark, which is the defect that made `--theme light` a hard error.
       - [x] Icon (512²) and feature graphic (1024×500), regenerated 2026-09-05 off the real mark.
             **The graphic is no longer the template's**: the weight-chart motif it inherited from
             the other app is gone, the tagline is Gloam's own line, and its three colours are
@@ -440,13 +441,16 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
             English B rewrote that morning: 76/80 and 3924/4000, so the Polish full description has
             76 characters of headroom and an English addition means a Polish cut. `--strict`
             passes on the document. The screenshots stay English (`phase-5.md` §4).
-      - [x] Real screenshots off a real mark. Done 2026-09-05: the `[SCENES]` rewrite had already
-            landed in Phase 2's checkpoint F, so this was the capture rather than the walk. Light set
-            in `art/play-screenshots/`, both themes in `docs/screenshots/`.
-      - [ ] A screenshot of the shade actually *down*. Every shot above is of Gloam's own screens,
-            which is a picture of the settings rather than of the product. The shade is an overlay
-            owned by a service, so `[SCENES]` cannot reach it by tapping — it needs the service
-            started and a host app underneath. Phase 5's call, not a blocker for the door.
+      - [x] Real screenshots off a real mark. Done 2026-09-05, redone 2026-09-18 off the **shipped
+            0.8.0 install** rather than a local build — `--build release`, so the walk drives the
+            app Play served this phone, with reseeding refused because that install is the user's
+            own app and its dim level, warmth and schedule are real.
+      - [x] A screenshot of the shade actually *down* — **closed as a refusal**, not as an omission.
+            See §*The shade-down screenshot closes as a refusal* below; the short version is that the
+            backlight override is a window attribute, so `screencap` reads the framebuffer before
+            the panel scales it and the dim is simply not in the file. What *is* now shot is the
+            next best true thing: the compact controls over a real article, which is the overlay
+            doing its job on top of somebody else's app.
 - [x] **The three emulator CI legs are vacuously green.** Closed — Phase 2 checkpoint F, both ways
       at once. The API 26 leg is cut (it could never have installed a `minSdk` 33 app), leaving
       33 + 36 on `aosp_atd`; and `app/src/androidTest` has its first test. `ShadeWindowTest` starts
@@ -623,9 +627,19 @@ changelog line for *"Portuguese could not be selected"* would be addressed to no
       named the seven missing locales before a word was written, and both pass now. Five of seven
       full-description drafts were over Play's 4000 and were cut from enumerations and restatements —
       never from the touch-through paragraph, the floor limits or the closing health line.
-- [ ] **Per-locale screenshots.** Deliberately not taken: three shots in one locale, shown under all
-      nine listings. A quality gap rather than a falsehood, `screenshots.py` already carries the
-      locale tag in its filenames, and it costs a device run per language. Open, not owed.
+- [x] **Per-locale screenshots.** Shot 2026-09-18, one invocation per language: 36 files in
+      `art/play-screenshots/`, four scenes across `en, pl, cs, de, es, fr, it, pt-BR, uk`. About 75
+      seconds per cell, so the whole set is a quarter of an hour rather than the day it was assumed
+      to cost — which is the reason this box stayed open for two weeks.
+      **Three defects the runs found, all of them invisible in a single cell:**
+      the background scroll was a *fling*, landing on a different paragraph every run (a slow drag
+      releases at zero velocity and is reproducible to ~2 px); the status bar was a photograph of
+      this phone's notifications and network speed, which SystemUI demo mode empties; and the
+      compact-controls background needed a checked Wikipedia title per language, taken from the
+      English article's interlanguage links rather than translated.
+      **What is bounded and what is not:** each cell is reproducible, but the *same* framing across
+      nine languages is not — each Wikipedia is a different document, so one offset lands on
+      different content. Per-locale review is the answer, and no gate can replace it.
 
 ## Standing checks that never close
 
