@@ -2,12 +2,18 @@ package app.gloam.shade
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.app.StatusBarManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import androidx.core.content.ContextCompat
 import app.gloam.ControlsActivity
 import app.gloam.MainApplication
+import app.gloam.R
 import app.gloam.data.AppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -206,4 +212,63 @@ class ShadeTile : TileService() {
             startActivityAndCollapse(intent)
         }
     }
+}
+
+/**
+ * **Ask the system to put the tile in Quick Settings, rather than hoping the user finds the tile
+ * editor.**
+ *
+ * `minSdk` 33 is exactly the level this became possible at, which is why `PLAN.md` names it inside
+ * Phase 2b rather than as a later nicety: below 33 there is no call, and an app can only describe
+ * the tile editor in words.
+ *
+ * **What the platform does with this.** It shows *its own* dialog — Gloam draws nothing and cannot
+ * style it — carrying the label and icon passed here, and answers on [onResult] exactly once. The
+ * app must be in the foreground, which is why this hangs off a Settings row rather than off, say,
+ * the service. If the tile is **already** added the platform answers immediately and shows no
+ * dialog at all, and that case is the reason the caller renders a result instead of trusting the
+ * dialog to be the feedback: a button whose entire effect is invisible reads as broken, which is
+ * the same argument [onClick] makes about a tap that declines.
+ *
+ * **No key remembers that this was offered**, and the row that calls it is permanent for the same
+ * reasons `SettingsScreen`'s autostart row is (ADR-0003, and CLAUDE.md on live state in a
+ * backed-up store). There is still no live read of *"is my tile added"* — this call answers for the
+ * moment it runs and nothing preserves the answer.
+ *
+ * **Measured on HyperOS, 2026-09-18, on both paths.** The call is implemented and does not throw.
+ * With the tile already added it answers `TILE_ALREADY_ADDED` immediately and shows nothing, and
+ * the row renders its line — which is the case that would otherwise look like a dead button. With
+ * the tile removed the platform's dialog appears (*"Gloam debug wants to add the following tile to
+ * Quick Settings"*, a preview of the tile, **Add tile** / **Do not add tile**), and accepting
+ * answers `TILE_ADDED`.
+ *
+ * ⚠ **Accepting appends the tile at the end of the list, after `edit`.** Read out of
+ * `settings get secure sysui_qs_tiles` before and after: a tile that sat first came back
+ * twenty-third. So this call puts the hatch *somewhere*, not somewhere visible — on a phone with
+ * twenty tiles the user may have to scroll to reach it. Nothing here can place it; the platform
+ * chooses. It is still better than the tile editor, and it is a reason not to describe the tile as
+ * *one tap* in copy without qualification.
+ *
+ * *(A correction while taking this: HyperOS **does** honour `sysui_qs_tiles`, contrary to what an
+ * earlier session concluded from a Control Center screenshot. Removing the entry removes the tile
+ * and restoring the string restores it, order included.)*
+ *
+ * Kotlin note: the two trailing lambdas are a Java `Executor` and a `java.util.function.Consumer`,
+ * which Kotlin will SAM-convert. [ContextCompat.getMainExecutor] rather than an inline executor
+ * because the result drives Compose state, and Compose state must be written on the main thread —
+ * the platform makes no promise about which thread it answers on.
+ */
+fun Context.requestAddShadeTile(onResult: (Int) -> Unit) {
+    val statusBar = getSystemService(StatusBarManager::class.java)
+    if (statusBar == null) {
+        onResult(StatusBarManager.TILE_ADD_REQUEST_ERROR_NO_STATUS_BAR_SERVICE)
+        return
+    }
+    statusBar.requestAddTileService(
+        ComponentName(this, ShadeTile::class.java),
+        getString(R.string.app_name),
+        Icon.createWithResource(this, R.drawable.ic_notification),
+        ContextCompat.getMainExecutor(this),
+        onResult,
+    )
 }

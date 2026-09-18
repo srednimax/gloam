@@ -56,6 +56,11 @@
     <string name="settings_controls">Sterowanie</string>
     <string name="settings_launcher_compact">Otwieraj małe sterowanie z ikony</string>
     <string name="settings_launcher_compact_hint">Dotknięcie ikony Gloam otwiera same suwaki zamiast całej aplikacji. Powiadomienie zawsze otwiera małe sterowanie.</string>
+    <string name="settings_tile">Kafelek szybkich ustawień</string>
+    <string name="settings_tile_body">Kafelek, który włącza i wyłącza zasłonę z dowolnego miejsca, bez otwierania Gloam. Nie potrzebuje włączonych powiadomień, więc działa także wtedy, gdy powiadomienie nie działa.</string>
+    <string name="settings_tile_add">Dodaj kafelek</string>
+    <string name="settings_tile_added">Kafelek jest w szybkich ustawieniach.</string>
+    <string name="settings_tile_unavailable">Ten telefon nie zaproponował jego dodania. Nadal możesz dodać go ręcznie, edytując szybkie ustawienia.</string>
     <string name="settings_lock_screen">Ekran blokady</string>
     <string name="settings_lock_screen_body">Gloam nie może przyciemnić ekranu blokady: Android pokazuje go z jasnością ustawioną w telefonie. Na noc ustaw niską jasność, żeby ekran blokady nie był najjaśniejszym punktem w ciemnym pokoju.</string>
     <string name="settings_flicker">Migotanie</string>

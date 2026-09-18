@@ -68,6 +68,11 @@
     <string name="settings_controls">Controles</string>
     <string name="settings_launcher_compact">Abrir los controles pequeños desde el icono</string>
     <string name="settings_launcher_compact_hint">Tocar Gloam abre solo los controles en lugar de toda la aplicación. La notificación abre siempre los controles pequeños.</string>
+    <string name="settings_tile">Mosaico de ajustes rápidos</string>
+    <string name="settings_tile_body">Un mosaico que activa y desactiva la capa desde cualquier sitio, sin abrir Gloam. No necesita que las notificaciones estén permitidas, así que sigue funcionando cuando la notificación no lo hace.</string>
+    <string name="settings_tile_add">Añadir el mosaico</string>
+    <string name="settings_tile_added">El mosaico está en los ajustes rápidos.</string>
+    <string name="settings_tile_unavailable">Este teléfono no ha ofrecido añadirlo. Aún puedes añadirlo a mano editando los ajustes rápidos.</string>
     <string name="settings_lock_screen">Pantalla de bloqueo</string>
     <string name="settings_lock_screen_body">Gloam no puede atenuar la pantalla de bloqueo: Android la muestra con el brillo de tu propio teléfono. Mantén ese brillo bajo por la noche, para que la pantalla de bloqueo no sea lo más luminoso de una habitación a oscuras.</string>
     <string name="settings_flicker">Parpadeo</string>

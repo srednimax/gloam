@@ -69,6 +69,11 @@
     <string name="settings_controls">Commandes</string>
     <string name="settings_launcher_compact">Ouvrir les petites commandes depuis l\'icône</string>
     <string name="settings_launcher_compact_hint">Toucher Gloam ouvre seulement les curseurs au lieu de toute l\'application. La notification ouvre toujours les petites commandes.</string>
+    <string name="settings_tile">Tuile des réglages rapides</string>
+    <string name="settings_tile_body">Une tuile qui active et désactive le voile depuis n\'importe où, sans ouvrir Gloam. Elle n\'a pas besoin que les notifications soient autorisées : elle fonctionne donc même quand la notification ne fonctionne pas.</string>
+    <string name="settings_tile_add">Ajouter la tuile</string>
+    <string name="settings_tile_added">La tuile est dans les réglages rapides.</string>
+    <string name="settings_tile_unavailable">Ce téléphone n\'a pas proposé de l\'ajouter. Vous pouvez toujours l\'ajouter vous-même en modifiant les réglages rapides.</string>
     <string name="settings_lock_screen">Écran de verrouillage</string>
     <string name="settings_lock_screen_body">Gloam ne peut pas assombrir l\'écran de verrouillage : Android l\'affiche à la luminosité propre à votre téléphone. Gardez cette luminosité basse la nuit, pour que l\'écran de verrouillage ne soit pas ce qu\'il y a de plus lumineux dans une pièce sombre.</string>
     <string name="settings_flicker">Scintillement</string>

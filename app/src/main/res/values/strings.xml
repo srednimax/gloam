@@ -115,6 +115,19 @@
     <string name="settings_launcher_compact">Open the small controls from the icon</string>
     <string name="settings_launcher_compact_hint">Tapping Gloam opens just the sliders instead of the whole app. The notification always opens the small controls.</string>
 
+    <!--
+      The Quick Settings tile. The body says what the tile is and what it does not depend on, and
+      deliberately stops there. It is tempting to explain that on some phones the notification's
+      Stop action needs a two-finger pull to appear — that was measured, but on one ROM, and §2.3 of
+      the translator brief says the app does not state what it cannot know. If the testers show it
+      generalises, this string gains a sentence.
+    -->
+    <string name="settings_tile">Quick Settings tile</string>
+    <string name="settings_tile_body">A tile that turns the shade on and off from anywhere, without opening Gloam. It does not need notifications to be allowed, so it still works when the notification does not.</string>
+    <string name="settings_tile_add">Add the tile</string>
+    <string name="settings_tile_added">The tile is in Quick Settings.</string>
+    <string name="settings_tile_unavailable">This phone did not offer to add it. You can still add it yourself by editing Quick Settings.</string>
+
     <!-- The lock screen (docs/night-reading-research.md §4). The keyguard hides every overlay
          window, and the shade's backlight override goes with it, so waking the phone at night is the
          brightest moment of the session and nothing Gloam draws can change that. The first sentence
