@@ -1,5 +1,6 @@
 package app.gloam.ui.settings
 
+import android.app.StatusBarManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.gloam.R
 import app.gloam.data.ThemeMode
+import app.gloam.shade.requestAddShadeTile
 import app.gloam.theme.Spacing
 import app.gloam.ui.appViewModelExtras
 import app.gloam.ui.common.SectionHeader
@@ -79,6 +81,8 @@ fun SettingsScreen(
                 checked = state.launcherCompact,
                 onChange = viewModel::setLauncherCompact,
             )
+
+            QuickTileRow()
 
             // Advice rather than a control, because the platform leaves nothing to control: the
             // keyguard hides every `TYPE_APPLICATION_OVERLAY` window, which releases the shade's
@@ -178,6 +182,75 @@ private fun AutostartRow() {
         Text(stringResource(R.string.settings_restart_open))
     }
 }
+
+/**
+ * The Quick Settings tile hand-off: **a permanent row, like the autostart one, and for one of its
+ * three reasons rather than all three.**
+ *
+ * The reason it shares is the load-bearing one: **the app cannot read back whether the tile is
+ * added.** The platform offers `onTileAdded` / `onTileRemoved` and no getter, so the only way to
+ * answer would be to remember — and a remembered `tile_added` key is live state in a store Auto
+ * Backup carries whole to the next phone, where the tile is not added and the key says it is
+ * (CLAUDE.md, and `shade_began_at` is what that cost once). So this row never claims the tile is
+ * there or missing. It offers, every time, and says only what the platform just answered.
+ *
+ * **Placed under *Controls* rather than in a section of its own**, because that section's hint
+ * already names the tile as one of the three routes to the small controls. It is a second escape
+ * hatch as well, which would argue for putting it beside the notification warning on the dim
+ * screen — but that warning is a *live* read that appears when something is wrong, and this is a
+ * standing offer. Mixing the two would make the warning look conditional.
+ *
+ * **The result is Compose state and nothing else.** It is deliberately not remembered across
+ * navigation: it describes one call, and a stale *"the tile is in Quick Settings"* after the user
+ * removed it would be the app asserting something it cannot know. `TILE_NOT_ADDED` renders nothing
+ * — the user just declined a dialog and does not need it repeated back — and so does any result
+ * this `when` does not recognise, which keeps a future platform constant from printing the wrong
+ * sentence.
+ */
+@Composable
+private fun QuickTileRow() {
+    val context = LocalContext.current
+    var result by remember { mutableStateOf<Int?>(null) }
+
+    SectionHeader(stringResource(R.string.settings_tile))
+    Text(
+        text = stringResource(R.string.settings_tile_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = Spacing.base),
+    )
+    Button(
+        onClick = { context.requestAddShadeTile { result = it } },
+        modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
+    ) {
+        Text(stringResource(R.string.settings_tile_add))
+    }
+    result?.tileResultMessage()?.let { message ->
+        Text(
+            text = stringResource(message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.base, vertical = Spacing.snug),
+        )
+    }
+}
+
+/**
+ * `null` means *say nothing*, which is the right answer twice: for a declined dialog, and for any
+ * result this build does not know about.
+ *
+ * The error branch is a range test rather than a list of the six `TILE_ADD_REQUEST_ERROR_*`
+ * constants, because they are contiguous above the results and a seventh would otherwise fall
+ * through to silence — the one case where the button really did nothing.
+ */
+private fun Int.tileResultMessage(): Int? =
+    when {
+        this == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+            this == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED
+        -> R.string.settings_tile_added
+        this >= StatusBarManager.TILE_ADD_REQUEST_ERROR_MISMATCHED_PACKAGE -> R.string.settings_tile_unavailable
+        else -> null
+    }
 
 @Composable
 private fun LanguageRow() {

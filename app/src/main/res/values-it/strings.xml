@@ -66,6 +66,11 @@
     <string name="settings_controls">Comandi</string>
     <string name="settings_launcher_compact">Apri i comandi piccoli dall\'icona</string>
     <string name="settings_launcher_compact_hint">Toccare Gloam apre solo i cursori invece dell\'app intera. La notifica apre sempre i comandi piccoli.</string>
+    <string name="settings_tile">Riquadro delle impostazioni rapide</string>
+    <string name="settings_tile_body">Un riquadro che accende e spegne il velo da qualsiasi punto, senza aprire Gloam. Non ha bisogno che le notifiche siano consentite, quindi funziona anche quando la notifica non funziona.</string>
+    <string name="settings_tile_add">Aggiungi il riquadro</string>
+    <string name="settings_tile_added">Il riquadro è nelle impostazioni rapide.</string>
+    <string name="settings_tile_unavailable">Questo telefono non ha proposto di aggiungerlo. Puoi comunque aggiungerlo a mano modificando le impostazioni rapide.</string>
     <string name="settings_lock_screen">Schermata di blocco</string>
     <string name="settings_lock_screen_body">Gloam non può oscurare la schermata di blocco: Android la mostra con la luminosità del tuo telefono. Tieni bassa quella luminosità di notte, così la schermata di blocco non è la cosa più luminosa in una stanza buia.</string>
     <string name="settings_flicker">Sfarfallio</string>

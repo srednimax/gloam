@@ -409,6 +409,17 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       `PLAN.md`'s Phase 2b bullet from *nice to have* to *the point*.
       **What is not known** is how far this generalises. It is one ROM, and stock Android draws
       action buttons in the collapsed row; the twelve testers are the sample that could say.
+      **Half-answered 2026-09-18: `requestAddTileService()` is built and measured.** Settings grew a
+      *Quick Settings tile* section under *Controls* — a permanent row that offers every time and
+      remembers nothing, for the autostart row's load-bearing reason (the app cannot read back
+      whether the tile is added, and a remembered key would be live state in a backed-up store).
+      Both platform paths were read on the phone: already-added answers immediately and the row says
+      so, and with the tile removed the system's *"wants to add the following tile"* dialog appears
+      and accepting it answers `TILE_ADDED`. **What it does not do is place the tile where anyone
+      will see it** — accepting appended it *twenty-third*, after `edit`, where it had been first.
+      The platform chooses the position and the app cannot. So the box stays open on the question it
+      was opened for: the tile is now easy to *add* and still not certain to be *found*, and whether
+      the notification's action is invisible beyond HyperOS is still a question for the twelve.
 - [x] **Read the shade's transmission in light, not in stored values.** Done 2026-09-13, from the
       phone alone, and the ramp now derives the shade alpha from light. The readings and what moved
       are in ADR-0010's seventh amendment.

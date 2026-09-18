@@ -71,6 +71,11 @@
     <string name="settings_controls">Керування</string>
     <string name="settings_launcher_compact">Відкривати з піктограми мале керування</string>
     <string name="settings_launcher_compact_hint">Дотик до Gloam відкриває лише повзунки замість усього застосунку. Повідомлення завжди відкриває мале керування.</string>
+    <string name="settings_tile">Плитка швидких налаштувань</string>
+    <string name="settings_tile_body">Плитка, яка вмикає та вимикає запону звідусіль, без відкривання Gloam. Їй не потрібні дозволені повідомлення, тож вона працює й тоді, коли повідомлення не працює.</string>
+    <string name="settings_tile_add">Додати плитку</string>
+    <string name="settings_tile_added">Плитка є у швидких налаштуваннях.</string>
+    <string name="settings_tile_unavailable">Цей телефон не запропонував її додати. Ти все одно можеш додати її вручну, відредагувавши швидкі налаштування.</string>
     <string name="settings_lock_screen">Екран блокування</string>
     <string name="settings_lock_screen_body">Gloam не може затемнити екран блокування: Android показує його з яскравістю, встановленою в телефоні. Тримай цю яскравість низькою вночі, щоб екран блокування не був найсвітлішим у темній кімнаті.</string>
     <string name="settings_flicker">Мерехтіння</string>
