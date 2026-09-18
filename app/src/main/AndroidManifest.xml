@@ -251,6 +251,32 @@
             reading in the dark wants — they dim the screen and then leave the app, which is the
             normal way to use this.
         -->
+        <!--
+            Phase 2b's Quick Settings tile — the shade's **second** escape hatch, and the manifest is
+            where its independence from the first one is actually declared. The notification hatch
+            needs `POST_NOTIFICATIONS` and a channel the user has not silenced; this needs neither,
+            because a tile is a component the system binds rather than something the app posts.
+
+            `android:exported="true"` and the `BIND_QUICK_SETTINGS_TILE` permission are one decision,
+            not two: exported so SystemUI (a different process) can bind it at all, and the
+            permission so that *only* something holding a signature-level system permission can. An
+            exported service without it is bindable by any app on the device.
+
+            The label is `@string/app_name` on purpose. It is `translatable="false"` — "Gloam" in
+            every language — so adding this tile owes the translation gate nothing, and the word the
+            user searches the tile editor for is the name of the app they installed.
+        -->
+        <service
+            android:name=".shade.ShadeTile"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_notification"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".shade.ShadeService"
             android:enabled="true"
