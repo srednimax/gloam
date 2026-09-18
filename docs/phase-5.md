@@ -1194,6 +1194,13 @@ close — see* **Done when** *.)*
   log names no cause. One reading survived. On that image the Play package (1.8, a stub) answers no
   `https` intent pinned to it, and the listing URL resolves to Chrome alone. So an API-33 phone
   without a working Play takes the rate row's fallback, and something answers it.
+  **Closed 2026-09-18 as *blocked, and not worth chasing*.** The reading that survived is the one
+  this R existed for — the rate row's fallback on a phone with no working Play — so the segfault
+  cost coverage rather than an answer. What replaces the rest of it is CI: the **API 33 instrumented
+  leg** has passed on #67, #68 and every push to #69, which is the app installing and running on
+  that API level, on an emulator that does not crash. That is a better standing signal than one
+  local image, and it is the reason to stop here rather than debug emulator 37.1.11.0. If a future
+  reading genuinely needs a local API-33 device, the image is the suspect, not the app.
 - **R7** — the artifact checks on the promoted bundle. —
 - **R8** — the listing as a reviewer sees it, both locales. **Not yet read**: the Polish listing goes up
   with F's promotion. One part is already done: on 2026-09-17 the debug build's rate row opened
