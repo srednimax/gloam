@@ -282,11 +282,23 @@ fourth brake on top of the three that workflow already carries.
 **is granted**: Phase 5's gate (`docs/phase-5.md`, R1, 2026-09-17) ran this workflow `internal → alpha`
 with `update_listing: true` and `dry_run: true`, and it uploaded three screenshots and both locales'
 changelogs before Play's validator stopped it on a *field* — a listing write that a missing permission
-would have refused with a 403 first. *Release to production* has **not** been read either way: a
-promotion onto a testing track does not need it, so no run yet has asked. The first production
-promotion is the run that finds out, and a 403 there is this paragraph rather than a broken pipeline.
-The setup steps above still describe the two boxes a *fresh* account starts with, which is what they
-are for.
+would have refused with a 403 first. The first run that **committed** a listing came two days later,
+on 2026-09-19: `internal → alpha`, `update_listing: true`, `dry_run: false`, versionCode 220 (0.9.0)
+— nine listings and 36 screenshots, and Play took the edit into review. 220 was already on alpha,
+promoted by `publish-play-closed.yml` the night before, and re-promoting it was accepted without
+complaint, so **a listing-only push is this workflow re-promoting what alpha already holds**.
+⚠ **Until that run, the Console showed the old listing, and nothing had failed.** Every earlier
+listing run was a dry run, which Play validates and discards, and the closed-testing workflow skips
+the listing by construction. A green closed promotion therefore says nothing about the listing. And
+the listing does not wait for production: it belongs to the app rather than to a track, so any
+promotion through this workflow carries it.
+*Release to production* has **not** been read either way: a promotion onto a testing track does not
+need it. A dry run `internal → production` on 2026-09-18 failed with `Google Api Error: Invalid
+request - Precondition check failed.` rather than a 403, read as the production track not being open
+to the account yet (the closed-test window and the access application, `DOD.md`), so it says
+nothing about the permission. The first production promotion after access is granted is the run
+that finds out, and a 403 there is this paragraph rather than a broken pipeline. The setup steps
+above still describe the two boxes a *fresh* account starts with, which is what they are for.
 
 **Nor is any of it needed to reach closed testing.** `publish-play-closed.yml` promotes onto a
 testing track and skips the listing unconditionally, so the two original boxes cover it - which
