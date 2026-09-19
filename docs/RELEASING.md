@@ -122,10 +122,29 @@ the heading, so "these notes still hold" stays a decision someone made rather th
 ```bash
 python3 scripts/notes-gate.py            # the gate itself
 python3 scripts/notes-gate.py --report   # what does this branch owe?
+python3 scripts/notes-gate.py --pending  # will the release this branch feeds have notes?
 ```
 
 It also checks what the notes must satisfy to be usable at all: a note for every locale the AAB
 carries, and every one inside Play's 500 characters.
+
+**`--pending` moves the failure from the release PR to the branch that caused it.** The gate can only
+fail once release-please has bumped `versionName`, and by then the fix is a separate docs PR — which
+is how 0.2.0, 0.3.0, 0.4.0, 0.7.0 and 0.9.0 all went. `--pending` predicts the number instead: the
+manifest's version on `origin/main`, bumped by the conventional commits since the last release plus
+this branch's own, read the way release-please reads them. Replayed against every release from 0.2.0
+to 0.9.0 it proposed the version release-please actually cut. It exits **2** when that version has no
+`### x.y.z` on the branch or on `main`, and 0 when there is no release pending — a docs-only branch
+never owes notes.
+
+**Claude Code runs it before every `git push` it makes** (`.claude/settings.json`, a `PreToolUse`
+hook filtered to `Bash(git push*)`, so no other command starts it). Exit 2 blocks the push and hands
+Claude the message, so the notes get written on the branch before it leaves; any other failure — the
+script itself broken — only warns, because a broken check must not stop every push. It fetches
+`origin/main` first, since a stale `main` would miss a `feat:` merged elsewhere. It does **not** run on
+pushes from your own terminal; `.githooks/pre-push` stays advisory and about translations.
+⚠ It checks that the heading **exists**, not that it describes everything. A second `feat:` branch
+toward an already-noted 0.10.0 passes, so adding its line to the notes is still a judgement.
 
 ## Checking the artifact before it reaches Play
 

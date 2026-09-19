@@ -5,6 +5,7 @@ Run by CI on every pull request, and worth running by hand before opening one:
 
     python3 scripts/notes-gate.py
     python3 scripts/notes-gate.py --report   # what does this branch owe?
+    python3 scripts/notes-gate.py --pending  # will the release this branch feeds have notes?
 
 The rule: **the version Play is told about is the version the notes describe.** `play-metadata.py`
 takes the newest `### x.y.z` under `## Release notes` in docs/store-listing.md, and nothing else
@@ -38,7 +39,9 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -97,10 +100,126 @@ def notes_versions(text: str) -> list[str]:
     return [m.group("version") for line in lines[start:end] if (m := VERSION_HEADING.match(line))]
 
 
+# --pending: the same rule, one step earlier.
+#
+# The gate above can only fail on release-please's PR, because that is the first place versionName
+# carries the new number - and by then the fix is a separate docs PR, one extra PR per release. --pending
+# predicts the number instead, from the same commits release-please will read, so the notes can be
+# written on the branch that brings the change. It is what Claude Code's push hook runs
+# (.claude/settings.json); nothing in CI calls it.
+
+MANIFEST = ".release-please-manifest.json"
+CONFIG = ROOT / "release-please-config.json"
+CONVENTIONAL = re.compile(r"^(?P<type>[a-z]+)(?:\([^)]*\))?(?P<bang>!)?: ")
+BREAKING_FOOTER = re.compile(r"^BREAKING[ -]CHANGE: ", re.MULTILINE)
+# The types release-please's default changelog shows. Every other type is hidden, and a stretch of
+# only hidden types proposes no release at all - which is why a docs-only branch never owes notes.
+PATCH_TYPES = {"fix", "perf", "revert", "deps"}
+# Distinct from the 1 that sys.exit(message) and an uncaught exception both produce, so the push hook
+# can block on "notes owed" and merely warn when this script itself is broken.
+OWED = 2
+
+
+def git(*args: str) -> str:
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True).stdout
+
+
+def messages(*revs: str) -> list[str]:
+    """Full commit messages for a rev range. Bodies too, because a BREAKING CHANGE footer lives there."""
+    return [m.strip() for m in git("log", "--format=%B%x1e", *revs).split("\x1e") if m.strip()]
+
+
+def bump(message: str) -> int:
+    """0 none, 1 patch, 2 minor, 3 breaking - release-please's reading of one commit."""
+    match = CONVENTIONAL.match(message)
+    if not match:
+        return 0
+    if match["bang"] or BREAKING_FOOTER.search(message):
+        return 3
+    if match["type"] == "feat":
+        return 2
+    return 1 if match["type"] in PATCH_TYPES else 0
+
+
+def next_version(current: str, level: int) -> str | None:
+    """release-please's default versioning strategy, including its two pre-1.0 softenings.
+
+    Read from the config rather than assumed, because they are per-repo choices: below 1.0,
+    `bump-minor-pre-major` turns a breaking change into a minor, and `bump-patch-for-minor-pre-major`
+    turns a `feat` into a patch. Neither ever applies to the other's case.
+    """
+    if level == 0:
+        return None
+    major, minor, patch = order(current)
+    package = json.loads(CONFIG.read_text(encoding="utf-8"))["packages"]["."]
+    pre_major = major == 0
+    if level == 3 and not (pre_major and package.get("bump-minor-pre-major")):
+        return f"{major + 1}.0.0"
+    if level == 3 or (level == 2 and not (pre_major and package.get("bump-patch-for-minor-pre-major"))):
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def pending(base: str) -> int:
+    listing = LISTING.relative_to(ROOT).as_posix()
+    # A repository fresh from bootstrap.py has no remote branch until its first push, and nothing has
+    # been released to compare against - so nothing can be owed yet.
+    if subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", base], capture_output=True).returncode:
+        return 0
+    # The release commit is the last one to touch the manifest - release-please's own record, so no
+    # tag has to have been fetched and no subject line has to be parsed.
+    release = git("log", "-n1", "--format=%H", base, "--", MANIFEST).strip()
+    if not release:
+        sys.exit(f"no commit on {base} touches {MANIFEST}; cannot tell where the last release was")
+    current = json.loads(git("show", f"{base}:{MANIFEST}"))["."]
+
+    # What main already holds since that release, plus what this branch adds. --cherry-pick drops a
+    # branch commit whose patch main already has: rebase merging gives every merged commit a new hash,
+    # so a branch cut before the release would otherwise count work that has already shipped.
+    commits = messages(f"{release}..{base}") + messages(
+        "--cherry-pick", "--right-only", "--no-merges", f"{base}...HEAD"
+    )
+    level = max((bump(m) for m in commits), default=0)
+    upcoming = next_version(current, level)
+    if upcoming is None:
+        return 0
+
+    # Either side counts: notes already merged to main arrive with the rebase even if this branch
+    # predates them. Read from commits, not the working tree - a push sends commits.
+    written = set(notes_versions(git("show", f"HEAD:{listing}"))) | set(
+        notes_versions(git("show", f"{base}:{listing}"))
+    )
+    if upcoming in written:
+        return 0
+
+    releasable = "\n".join(f"  - {m.splitlines()[0]}" for m in commits if bump(m))
+    print(
+        f"Release notes owed. Once this branch merges, release-please will propose {upcoming} (from\n"
+        f"{current}), and {listing} has no `### {upcoming}` under Release notes - not on this branch,\n"
+        f"not on {base}. Its release PR would fail the notes gate. The commits it will count:\n"
+        f"{releasable}\n\n"
+        f"Write `### {upcoming}` on this branch and commit it before pushing: a fenced note per shipped\n"
+        f"locale, English first, the rest translated from it per docs/translator-brief.md. If nothing\n"
+        f"above is owner-visible, move the newest heading to {upcoming} and say why the bodies stand\n"
+        f"unchanged instead (1.8.0 is the worked example).",
+        file=sys.stderr,
+    )
+    return OWED
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--report", action="store_true", help="print the state and always exit 0")
+    parser.add_argument(
+        "--pending",
+        nargs="?",
+        const="origin/main",
+        metavar="BASE",
+        help=f"predict release-please's next version from BASE + this branch; exit {OWED} if its notes are unwritten",
+    )
     args = parser.parse_args()
+    if args.pending:
+        return pending(args.pending)
 
     shipping = version_name()
     text = LISTING.read_text(encoding="utf-8")
