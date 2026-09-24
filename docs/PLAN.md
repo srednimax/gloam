@@ -88,6 +88,15 @@ parked checklist, which was written against a "from 1.0" boundary, is therefore 
 **the first build that reaches a user's phone** — the door — because that boundary is one that will
 actually arrive.
 
+⚠ **Amended 2026-09-24: there is a 1.0 now, and it is the owner's decision rather than the plan's.**
+The first release that reaches the **production** track ships as **1.0.0**, cut the moment Play grants
+production access. Nothing above is retracted: 1.0 is still not a milestone this plan produces on its
+own, release-please still will not jump there by itself, and the sentence about ADR-0001's boundary
+still stands — the door was the boundary that mattered and it has already passed. What changes is that
+somebody is choosing the number, which is the only way RELEASING.md ever said one gets chosen: a
+`Release-As: 1.0.0` footer in a commit body. See `DOD.md`'s production-access item for what has to be
+true on the day.
+
 ### 3. How a phase proves itself
 
 Most of the risk in this plan is device behaviour rather than logic, and none of *that* is reachable
@@ -528,7 +537,7 @@ HyperOS that scheme belongs to Xiaomi's store as well. The tip ships nowhere. An
 one fault the documents had asserted away: a restored `shade_running` put the shade up on a phone the
 user had never dimmed, so `BootReceiver` gained a refusal and rule 3 gained its fifth test.
 
-**The version stays 0.x** (rule 2). There is no 1.0 in this plan and nothing will produce one.
+**The version stays 0.x** (rule 2) — through this phase, which is what the sentence meant. There is no 1.0 *in this plan* and nothing in it produces one; **the owner does, on 2026-09-24**, for the first production release. Rule 2's amendment carries it.
 
 ---
 
