@@ -783,6 +783,16 @@ from *unanswered* was distinguishing between one outcome and itself.
 So the honest version is the short one: **the shipped values stand, each box closes with the reason it
 could not be answered, and nothing waits.**
 
+⚠ **Amended 2026-09-24: a channel *was* opened, and it was not this one.** Applying for production
+access is what surfaced it. A **public survey went to the testers** during the 14-day window, and the
+Support screen's mail route carried replies — so the sentence above that says *no message, no date, no
+owner* is wrong as written about the twelve in general. **It stays exactly true about these four
+questions**: the survey asked none of them, and none of them can be answered by a channel that did not
+carry them. What came back was general and positive, with no bug report and no feature request in it,
+which changes no default and is worth precisely what it sounds like. All four still close as *shipped,
+unasked*; the table below stands. The answers Play was given about that survey are recorded in
+[`play-app-content.md`](play-app-content.md).
+
 | Question | Closes as | Raised by |
 | --- | --- | --- |
 | Auto-off's default — `Hours2` ships provisional | `AutoOff.Default` unchanged; provisional becomes shipped | Phase 2 |

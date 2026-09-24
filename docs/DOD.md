@@ -296,18 +296,29 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       halves, re-read on every resume beside `canDrawShade()` — rather than a remembered outcome,
       because the fix for it is a settings screen the app hands the user off to. It self-clears when
       they fix it and appears if they revoke mid-session.
-- [ ] **The 14-day closed-test window is the only thing between Gloam and production** — the owner,
-      2026-09-17: twelve testers opted in, every Console answer given. **Six continuous days in on
-      2026-09-17, so the window opened about 2026-09-11 and reaches fourteen days about
-      2026-09-25** — the date Phase 5 F is scheduled against. The Console's Dashboard holds the exact
-      count; trust it over this arithmetic. The window wants twelve opted in *continuously*, and
-      there are exactly twelve, so **one tester leaving restarts the count** — the only way this box
-      can slip, and the reason a thirteenth tester is still worth having.
-      **After the window, Play still has to grant production access**: a new personal account applies
-      from the Console's Dashboard, answering questions about how the closed test went, and Play
-      reviews the application before the production track opens. Budget days for that, not minutes.
-      `phase-5.md` §10 is the honest source for those answers — the rule-5 questions were never put
-      to the testers, and the application should not imply they were.
+- [x] **The 14-day closed-test window is closed and the production-access application is in.**
+      The window opened about 2026-09-11 and **completed 2026-09-24** with the twelve still opted in —
+      nobody left, which was the only way this box could have slipped. The application went in from the
+      Console's Dashboard the same day. **Its nine answers are recorded verbatim in
+      [`play-app-content.md`](play-app-content.md)** rather than summarised here, because the Console
+      asks the same set again for the next app on this account and because a remembered answer is not
+      the answer that was given.
+      **And the application corrected this file's own record of the twelve.** A **public survey did go
+      out** to the testers during the window and the Support screen's mail route carried replies, so
+      `phase-5.md` §10's *"no message, no date, no owner"* is wrong as written and is amended there.
+      What came back was **general and positive — no bug report, no feature request** — and the survey
+      asked none of the four rule-5 questions, so all four still close *unanswered* and every shipped
+      default stands. The boxes below are unchanged by it; only their reason is narrower.
+- [ ] **Production access is with a reviewer at Google, and nothing in this repo can move it.**
+      Submitted 2026-09-24. **Until it is granted the production track does not exist**, so Phase 5 F
+      cannot promote and the listing paste that goes up with the build waits with it. Binky's took
+      **one day** — applied 2026-08-18, granted 2026-08-19, `binky-app/docs/phase-9.md` §4 — which is
+      the only datapoint this account has and is not a promise; budget days.
+      **If it comes back rejected, read the reject reason before changing any artifact.** That is
+      Binky's lesson rather than a guess: it held its next upload so a reject reason could be read
+      against the build that earned it, and an artifact changed first makes the reason unreadable.
+      The answers that were given are in [`play-app-content.md`](play-app-content.md), so a rejection
+      can be argued against what was actually said.
 - [x] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
       it is the longest value that is still obviously not "the next day", which is the failure
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.

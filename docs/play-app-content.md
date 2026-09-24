@@ -185,6 +185,64 @@ Would change: a second foreground service, or a different type on this one.
 
 ---
 
+## Production access — the application, and the answers it was given
+
+**Submitted 2026-09-24, the day the 14-day closed test completed. With a reviewer at Google as this is
+written.** The answers are recorded verbatim rather than summarised, for two reasons: the Console asks
+the same set again for the next app on this account, and an answer re-read a year from now has to be
+the one that was actually given rather than the one that would be written today.
+
+**About your closed test**
+
+- *How did you recruit users for your closed test?* — "I asked friends and family first. Then I joined
+  a group where developers test each other's apps, and I also posted the opt-in link online in places
+  where people talk about reading on their phone at night. I did not use a paid testing provider. It
+  took a few weeks to reach twelve."
+- *How easy was it to recruit testers?* — **Difficult.**
+- *Describe the engagement you received from testers* — "The app has no internet permission, so I get
+  no usage data at all. Testers used it at night for reading, mostly the dim slider and starting and
+  stopping the shade. I do not know how many tried the schedule or the warmth setting. No crashes or
+  ANRs were reported in the 14 days."
+- *Provide a summary of the feedback that you received* — "I used an online survey sent to the testers,
+  plus direct messages and the email link inside the app. The feedback was general and positive.
+  Testers said the app is nice and does what it says. Nobody reported a bug or asked for a feature."
+
+**About your app**
+
+- *Who is the intended audience?* — "People who read on their phone in the dark and find the lowest
+  system brightness still too bright. Mostly night readers, e-book and comic readers, and people with
+  sensitive eyes. It is a general tool app for adults, not aimed at children."
+- *Describe how your app provides value to users* — "Android will not let the screen go below a set
+  minimum brightness. Gloam goes lower by lowering the backlight and drawing a dark layer over the
+  screen, so reading in bed does not hurt the eyes. It also has a warm tint, a timer and a night
+  schedule. Free, no ads, no account, works offline."
+- *How many installs do you expect in your first year?* — **0 – 10K.**
+
+**Your production readiness**
+
+- *What changes did you make based on what you learned during your closed test?* — "Testers reported no
+  bugs, so the changes came from my own daily use during the test. I added a Quick Settings tile to stop
+  the dimming in one tap, because on some phones the Stop button in the notification is hard to reach. I
+  also made the screen go darker and added seven more languages."
+- *How did you decide that your app is ready for production?* — "It ran for 14 days on twelve phones
+  with no crashes or ANRs in Play Console. Every change goes through unit tests and lint before it is
+  built, and I test each release on a real phone and on an Android 13 emulator. Everything the store
+  listing describes is finished and translated."
+
+**Three things this set is deliberate about, so a future one does not undo them.**
+
+1. **The audience answer says *adults, not aimed at children*** because *Target audience* above is 18+.
+   The two are read side by side by whoever reviews this, and a mismatch is a question rather than a
+   rejection, but it is a question that costs days.
+2. **The engagement answer says *I do not know* about the schedule and the warmth**, because the app
+   cannot know. No `INTERNET` permission means no telemetry, which is the same fact *Data safety* above
+   rests on — so guessing there would contradict a declaration in this very file.
+3. **The changes answer opens with the testers reporting nothing.** Real work shipped inside the window
+   (the tile, the darker backlight, seven locales), but none of it came from a tester, and presenting it
+   as tester-driven would be the one dishonest sentence in an application that does not need one.
+
+---
+
 ## When Play asks again
 
 1. Run `python3 scripts/aab-permissions.py` against the newest bundle, and compare its table with the
@@ -193,3 +251,6 @@ Would change: a second foreground service, or a different type on this one.
 3. Copy the three values this file does not hold while the Console is open: the IARC category, the
    advertising-ID date, the foreground-service wording.
 4. Re-date the sections you re-answered.
+5. **The production-access answers above are this account's, not this app's.** A second app on the
+   same account is asked the same questions and can reuse the shape, but not the facts: its own
+   testers, its own window, its own changes.
