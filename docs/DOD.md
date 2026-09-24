@@ -319,6 +319,21 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       against the build that earned it, and an artifact changed first makes the reason unreadable.
       The answers that were given are in [`play-app-content.md`](play-app-content.md), so a rejection
       can be argued against what was actually said.
+- [ ] **The first production release is `1.0.0`, and the number is a deliberate act.** Decided by the
+      owner 2026-09-24, amending `PLAN.md` rule 2, which had said this plan produces no 1.0 — it still
+      produces none on its own. **release-please will not jump there**: with the major at 0 even a
+      breaking `feat!:` bumps the minor, so 1.0.0 happens only if a commit body carries
+      `Release-As: 1.0.0` ([`RELEASING.md`](RELEASING.md)). Three things have to be true on the day,
+      and the order is the point:
+      1. **Play has granted production access** — the box above. Nothing below is worth doing first,
+         because a rejection changes what ships before it changes what it is numbered.
+      2. **Release notes for `1.0.0` in all nine locales**, in [`store-listing.md`](store-listing.md).
+         The newest heading there is `### 0.9.0` today, and `scripts/notes-gate.py` fails the release
+         PR if the notes sit behind `versionName` — which is the direction that once shipped Binky's
+         1.9.0 carrying 1.8.0's text. Write them on an ordinary branch **before** the release PR, never
+         on release-please's own branch: it force-pushes over it.
+      3. **The AAB and the listing go up together**, which is `store-listing.md`'s standing rule rather
+         than anything about this release. Upload first, then paste.
 - [x] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
       it is the longest value that is still obviously not "the next day", which is the failure
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
