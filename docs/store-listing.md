@@ -1157,3 +1157,94 @@ Para adicioná-lo, abra Configurações no Gloam e toque em “Adicionar o bloco
 
 Щоб додати її, відкрий Налаштування в Gloam і торкнися «Додати плитку». Якщо телефон цього не запропонує, додай її вручну, відредагувавши швидкі налаштування, — плитка називається Gloam.
 ```
+
+### 1.0.0 — the first production release
+
+**Nothing user-visible changed since 0.9.0, and this note is still not the one-line rename that
+0.8.0's precedent would give it.** Everything between the two tags is documents and tooling. But
+1.0.0 is the first build on the production track, so for almost everybody who reads this note it is
+the first Gloam they have seen, and *"nothing changed"* would be a note about a release they never
+had. So the first paragraph says what the app is, in the listing's own short description where the
+grammar allows, and names three features by what they do rather than by the app's label for them.
+The second paragraph is for the twelve, who update from 0.9.0 onto the same app, and it says that
+plainly rather than letting them hunt for a change.
+
+**The last line of the first paragraph is the listing's headline claim**, in the listing's own
+words where each language had them — *every feature is free*, then the three absences a reader can
+check. It is the one fact a new user can't learn from the first screen.
+
+**No gendered verb for the testers.** Polish, Czech and Ukrainian address them as a group
+(*dla testujących*, *pro testery*, *для тестувальників*) rather than as *ty* in a past tense that
+would have to pick a gender.
+
+**English** — 354/500:
+
+```
+Gloam's first public release. It dims the screen below Android's lowest brightness, for reading in the dark, and adds a warm tint, a schedule that can follow sunset and sunrise, and a Quick Settings tile. Every feature is free: no ads, no account, no network.
+
+If you tested Gloam: nothing has changed since the last test build. Thank you for testing it.
+```
+
+**Polish** — 387/500:
+
+```
+Pierwsze publiczne wydanie Gloam. Przyciemnia ekran poniżej najniższej jasności Androida, by czytać po ciemku, a do tego daje ciepłą barwę, harmonogram, który może podążać za zachodem i wschodem słońca, oraz kafelek szybkich ustawień. Każda funkcja jest za darmo: bez reklam, bez konta, bez sieci.
+
+Dla testujących: od ostatniej wersji testowej nic się nie zmieniło. Dziękujemy za testy.
+```
+
+**Czech** — 355/500:
+
+```
+První veřejné vydání Gloamu. Ztmaví obrazovku pod nejnižší jasnost Androidu, pro čtení ve tmě, a k tomu přidává teplý odstín, plán, který se může řídit západem a východem slunce, a dlaždici v Rychlém nastavení. Všechny funkce jsou zdarma: žádné reklamy, žádný účet, žádná síť.
+
+Pro testery: od poslední testovací verze se nic nezměnilo. Díky za testování.
+```
+
+**German** — 440/500:
+
+```
+Die erste öffentliche Version von Gloam. Es dunkelt den Bildschirm unter Androids niedrigste Helligkeit ab, zum Lesen im Dunkeln, und bringt eine warme Tönung, einen Zeitplan, der Sonnenuntergang und Sonnenaufgang folgen kann, und eine Schnelleinstellungen-Kachel mit. Jede Funktion ist kostenlos: keine Werbung, kein Konto, kein Netz.
+
+Falls du Gloam getestet hast: Seit der letzten Testversion hat sich nichts geändert. Danke fürs Testen.
+```
+
+**Spanish** — 387/500:
+
+```
+La primera versión pública de Gloam. Atenúa la pantalla por debajo del mínimo de Android, para leer a oscuras, y añade un tono cálido, un horario que puede seguir el atardecer y el amanecer, y un mosaico de ajustes rápidos. Todas las funciones son gratuitas: sin anuncios, sin cuenta, sin red.
+
+Si probaste Gloam: nada ha cambiado desde la última versión de prueba. Gracias por probarlo.
+```
+
+**French** — 401/500:
+
+```
+La première version publique de Gloam. Il assombrit l'écran sous le minimum d'Android, pour lire dans le noir, et ajoute une teinte chaude, une programmation qui peut suivre le coucher et le lever du soleil, et une tuile des réglages rapides. Tout est gratuit : ni publicité, ni compte, ni réseau.
+
+Si vous avez testé Gloam : rien n'a changé depuis la dernière version de test. Merci de l'avoir testé.
+```
+
+**Italian** — 400/500:
+
+```
+La prima versione pubblica di Gloam. Oscura lo schermo sotto il minimo di Android, per leggere al buio, e aggiunge una tinta calda, una programmazione che può seguire il tramonto e l'alba e un riquadro delle impostazioni rapide. Ogni funzione è gratuita: niente pubblicità, niente account, niente rete.
+
+Se hai testato Gloam: nulla è cambiato dall'ultima versione di prova. Grazie per averlo testato.
+```
+
+**Brazilian Portuguese** — 392/500:
+
+```
+A primeira versão pública do Gloam. Ele escurece a tela abaixo do mínimo do Android, para ler no escuro, e traz uma tonalidade quente, uma programação que pode seguir o pôr do sol e o nascer do sol e um bloco das configurações rápidas. Todos os recursos são gratuitos: sem anúncios, sem conta, sem rede.
+
+Se você testou o Gloam: nada mudou desde a última versão de teste. Obrigado por testar.
+```
+
+**Ukrainian** — 385/500:
+
+```
+Перший публічний випуск Gloam. Він затемнює екран нижче мінімальної яскравості Android, щоб читати в темряві, а ще має теплий відтінок, розклад, який може йти за заходом і сходом сонця, і плитку швидких налаштувань. Кожна функція безкоштовна: без реклами, без облікового запису, без мережі.
+
+Для тестувальників: від останньої тестової версії нічого не змінилося. Дякуємо за тестування.
+```

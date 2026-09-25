@@ -309,29 +309,21 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       What came back was **general and positive — no bug report, no feature request** — and the survey
       asked none of the four rule-5 questions, so all four still close *unanswered* and every shipped
       default stands. The boxes below are unchanged by it; only their reason is narrower.
-- [ ] **Production access is with a reviewer at Google, and nothing in this repo can move it.**
-      Submitted 2026-09-24. **Until it is granted the production track does not exist**, so Phase 5 F
-      cannot promote and the listing paste that goes up with the build waits with it. Binky's took
-      **one day** — applied 2026-08-18, granted 2026-08-19, `binky-app/docs/phase-9.md` §4 — which is
-      the only datapoint this account has and is not a promise; budget days.
-      **If it comes back rejected, read the reject reason before changing any artifact.** That is
-      Binky's lesson rather than a guess: it held its next upload so a reject reason could be read
-      against the build that earned it, and an artifact changed first makes the reason unreadable.
-      The answers that were given are in [`play-app-content.md`](play-app-content.md), so a rejection
-      can be argued against what was actually said.
+- [x] **Production access is granted.** Submitted 2026-09-24, **granted 2026-09-25** — one day, the
+      same as Binky's (`binky-app/docs/phase-9.md` §4), so this account's two datapoints agree. The
+      production track now exists, which unblocks Phase 5 F and the 1.0.0 cut below. The answers the
+      grant was made on stay in [`play-app-content.md`](play-app-content.md).
 - [ ] **The first production release is `1.0.0`, and the number is a deliberate act.** Decided by the
       owner 2026-09-24, amending `PLAN.md` rule 2, which had said this plan produces no 1.0 — it still
       produces none on its own. **release-please will not jump there**: with the major at 0 even a
       breaking `feat!:` bumps the minor, so 1.0.0 happens only if a commit body carries
       `Release-As: 1.0.0` ([`RELEASING.md`](RELEASING.md)). Three things have to be true on the day,
       and the order is the point:
-      1. **Play has granted production access** — the box above. Nothing below is worth doing first,
-         because a rejection changes what ships before it changes what it is numbered.
-      2. **Release notes for `1.0.0` in all nine locales**, in [`store-listing.md`](store-listing.md).
-         The newest heading there is `### 0.9.0` today, and `scripts/notes-gate.py` fails the release
-         PR if the notes sit behind `versionName` — which is the direction that once shipped Binky's
-         1.9.0 carrying 1.8.0's text. Write them on an ordinary branch **before** the release PR, never
-         on release-please's own branch: it force-pushes over it.
+      1. ✅ **Play has granted production access** — 2026-09-25, the box above.
+      2. ✅ **Release notes for `1.0.0` in all nine locales**, in [`store-listing.md`](store-listing.md),
+         written 2026-09-25 on an ordinary branch, ahead of `versionName` as `scripts/notes-gate.py`
+         allows. Behind it is the direction that once shipped Binky's 1.9.0 carrying 1.8.0's text, and
+         release-please's own branch is no place to fix that: it force-pushes over it.
       3. **The AAB and the listing go up together**, which is `store-listing.md`'s standing rule rather
          than anything about this release. Upload first, then paste.
 - [x] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
