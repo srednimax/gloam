@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/srednimax/gloam/compare/v0.9.0...v1.0.0) (2026-09-25)
+
+
+### Documentation
+
+* record production access and write 1.0.0's release notes ([302edda](https://github.com/srednimax/gloam/commit/302edda2135014df1bbcd2f6e742bef27c56d38e))
+
 ## [0.9.0](https://github.com/srednimax/gloam/compare/v0.8.0...v0.9.0) (2026-09-18)
 
 
