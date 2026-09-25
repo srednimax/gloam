@@ -412,6 +412,15 @@ And a fourth for the first run: **`dry_run` defaults to true**, which passes `--
 Play validates the whole edit and discards it. Nothing publishes, nothing is sent for review. Untick
 it when you mean it.
 
+⚠ **A new app's production track targets no countries, and the API cannot fix that.** The first
+committed production run (Gloam 1.0.0, 2026-09-25) uploaded all nine listings, 36 screenshots and the
+changelogs, then failed at the commit with `Google Api Error: Invalid request - Release in track
+targeting no countries`. Play discards a failed edit whole, so nothing went live. The fix is one-time
+and Console-only: *Test and release → Production → Countries / regions → Add countries / regions*,
+then re-run. A **dry run does not catch this.** The 2026-09-18 dry run stopped earlier, on the
+production track not being open yet, so no validate-only run had ever reached this check. Tick the
+countries before the first real run.
+
 ### It promotes; it does not build
 
 The artifact that reaches production is the **exact one `publish-play.yml` already put on the

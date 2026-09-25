@@ -313,7 +313,7 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
       same as Binky's (`binky-app/docs/phase-9.md` §4), so this account's two datapoints agree. The
       production track now exists, which unblocks Phase 5 F and the 1.0.0 cut below. The answers the
       grant was made on stay in [`play-app-content.md`](play-app-content.md).
-- [ ] **The first production release is `1.0.0`, and the number is a deliberate act.** Decided by the
+- [x] **The first production release is `1.0.0`, and the number is a deliberate act.** Decided by the
       owner 2026-09-24, amending `PLAN.md` rule 2, which had said this plan produces no 1.0 — it still
       produces none on its own. **release-please will not jump there**: with the major at 0 even a
       breaking `feat!:` bumps the minor, so 1.0.0 happens only if a commit body carries
@@ -324,8 +324,14 @@ Cheap now, expensive or impossible once a build sits on twelve strangers' phones
          written 2026-09-25 on an ordinary branch, ahead of `versionName` as `scripts/notes-gate.py`
          allows. Behind it is the direction that once shipped Binky's 1.9.0 carrying 1.8.0's text, and
          release-please's own branch is no place to fix that: it force-pushes over it.
-      3. **The AAB and the listing go up together**, which is `store-listing.md`'s standing rule rather
-         than anything about this release. Upload first, then paste.
+      3. ✅ **The AAB and the listing go up together.** One run of `publish-play-production.yml` on
+         2026-09-25 (run 36176678225, second attempt) promoted versionCode 226 `internal →
+         production` with `update_listing: true`: nine listings, 36 screenshots and nine changelogs
+         in the same edit. It was a **full rollout** (`rollout: 1.0`, `completed`), not the 10% staged
+         default, so every production user gets it once Play's review passes. Before that, 226 was
+         installed from the alpha track on the development phone and checked by hand the same evening.
+         The first attempt failed on the production track targeting no countries, which is now in
+         [`RELEASING.md`](RELEASING.md).
 - [x] **Put auto-off's default to the testers** (`PLAN.md` rule 5). `Hours2` ships **provisional**:
       it is the longest value that is still obviously not "the next day", which is the failure
       auto-off is shaped to design out — but it is a taste argued in a room with one person in it.
